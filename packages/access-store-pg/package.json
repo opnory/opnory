@@ -1,0 +1,34 @@
+{
+  "name": "@opnory/access-store-pg",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./expiration-scheduler": "./dist/expiration-scheduler.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "test": "vitest run",
+    "lint": "eslint src --ext .ts",
+    "migrate": "tsx src/migrate.ts"
+  },
+  "dependencies": {
+    "@opnory/access-approval": "file:../access-approval",
+    "@opnory/access-audit": "file:../access-audit",
+    "@opnory/access-executor": "file:../access-executor",
+    "@opnory/access-types": "file:../access-types",
+    "@opnory/config": "file:../config",
+    "@opnory/observability": "file:../observability",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.10.9",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.0"
+  },
+  "type": "module"
+}
