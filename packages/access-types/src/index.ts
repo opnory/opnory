@@ -109,6 +109,7 @@ export const AccessRequestSchema = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   expiresAt: z.string().datetime().optional(),
+  accessExpiresAt: z.string().datetime().optional(),
   approvedAt: z.string().datetime().optional(),
   approvedBy: z.string().optional(),
   deniedAt: z.string().datetime().optional(),

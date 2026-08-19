@@ -28,6 +28,9 @@ export const AuditEventTypeSchema = z.enum([
   "REVOCATION_STARTED",
   "REVOCATION_SUCCEEDED",
   "REVOCATION_FAILED",
+  "EXPIRATION_SCHEDULED",
+  "EXPIRATION_DUE",
+  "EXPIRATION_SKIPPED",
 ]);
 
 export type AuditEventType = z.infer<typeof AuditEventTypeSchema>;
