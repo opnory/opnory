@@ -384,7 +384,7 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
   });
 
   describe("Reconciliation role mismatch", () => {
-    it("should not FULFILLED if reconciled role doesn't match", async () => {
+    it("should FAIL with RECONCILIATION_MISMATCH if reconciled role doesn't match requested", async () => {
       mockOctokitRequest
         .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
         .mockResolvedValueOnce({ status: 404 }) // getTeamMembership
@@ -408,9 +408,13 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
       
       const result = await executor.grant(request);
       
-      // Current behavior: succeeds with role mismatch in metadata
-      // Could be stricter - this is a design decision
-      expect(result.success).toBe(true);
+      // Should FAIL with RECONCILIATION_MISMATCH
+      expect(result.success).toBe(false);
+      expect(result.status).toBe("FAILED");
+      expect(result.reason).toBe("RECONCILIATION_MISMATCH");
+      expect(result.error).toContain("Reconciliation role mismatch");
+      expect(result.error).toContain("member");
+      expect(result.error).toContain("maintainer");
     });
   });
 });

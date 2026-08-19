@@ -507,9 +507,9 @@ export class GitHubAccessExecutor implements AccessExecutor {
 
       const reconciledMembership = verification.membership!;
 
-      // Check the membership state
-      if (reconciledMembership.state === "active") {
-        // Success - verified active membership
+      // Check the membership state AND role match
+      if (reconciledMembership.state === "active" && reconciledMembership.role === teamRole) {
+        // Success - verified active membership with correct role
         const externalId = `github-team-membership-${githubLogin}-${org}-${teamSlug}`;
 
         await recordAuditEvent(this.auditStore, {
@@ -543,6 +543,39 @@ export class GitHubAccessExecutor implements AccessExecutor {
           success: true,
           externalId,
           message: `Successfully granted ${request.entitlement.name} access (verified)`,
+        };
+      } else if (reconciledMembership.state === "active" && reconciledMembership.role !== teamRole) {
+        // Role mismatch - reconciliation succeeded but role doesn't match requested
+        const errorMessage = `Reconciliation role mismatch: requested ${teamRole}, got ${reconciledMembership.role}`;
+
+        await recordAuditEvent(this.auditStore, {
+          eventId: uuidv4(),
+          requestId: request.id,
+          correlationId: request.correlationId,
+          actor: "system",
+          timestamp: new Date().toISOString(),
+          type: "FULFILLMENT_FAILED",
+          metadata: {
+            entitlementId: request.entitlement.id,
+            error: errorMessage,
+            reason: "RECONCILIATION_MISMATCH",
+            provider: "github",
+            organization: org,
+            teamSlug: teamSlug,
+            githubLogin: githubLogin,
+            requestedRole: teamRole,
+            reconciledState: "active",
+            reconciledRole: reconciledMembership.role,
+          },
+        });
+
+        logger.warn({ requestId: request.id, githubLogin, org, teamSlug, requestedRole: teamRole, actualRole: reconciledMembership.role }, "Reconciliation role mismatch");
+        return {
+          success: false,
+          message: errorMessage,
+          error: errorMessage,
+          status: "FAILED",
+          reason: "RECONCILIATION_MISMATCH",
         };
       } else if (reconciledMembership.state === "pending") {
         // Membership is pending - user needs to accept invitation
