@@ -31,6 +31,7 @@ export const AuditEventTypeSchema = z.enum([
   "EXPIRATION_SCHEDULED",
   "EXPIRATION_DUE",
   "EXPIRATION_SKIPPED",
+  "EXPIRATION_FAILED",
 ]);
 
 export type AuditEventType = z.infer<typeof AuditEventTypeSchema>;

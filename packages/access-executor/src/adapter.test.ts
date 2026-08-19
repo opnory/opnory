@@ -30,39 +30,42 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
   };
 
   const baseRequest = (overrides: Partial<ApprovedAccessRequest> = {}): ApprovedAccessRequest => ({
-    id: "123e4567-e89b-12d3-a456-426614174000",
-    correlationId: "123e4567-e89b-12d3-a456-426614174001",
-    requesterId: "user-789",
-    requesterEmail: "user@example.com",
-    entitlement: {
-      id: "123e4567-e89b-12d3-a456-426614174002",
-      name: "GitHub Engineering Contributor",
-      system: "github",
-      githubConfig: {
-        organization: "opnory-sandbox",
-        teamSlug: "opnory-engineering-contributors",
-        teamRole: "member",
+      id: "123e4567-e89b-12d3-a456-426614174000",
+      correlationId: "123e4567-e89b-12d3-a456-426614174001",
+      requesterId: "user-789",
+      requesterEmail: "user@example.com",
+      entitlement: {
+        id: "123e4567-e89b-12d3-a456-426614174002",
+        name: "GitHub Engineering Contributor",
+        system: "github",
+        githubConfig: {
+          organization: "opnory-sandbox",
+          teamSlug: "opnory-engineering-contributors",
+          teamRole: "member",
+        },
       },
-    },
-    reason: "Need access to engineering repos",
-    status: "APPROVED",
-    version: 1,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    approvedAt: new Date().toISOString(),
-    approvedBy: "manager@example.com",
-    idempotencyKey: "123e4567-e89b-12d3-a456-426614174000:123e4567-e89b-12d3-a456-426614174002:user-789",
-    metadata: {},
-    externalIdentities: {
-      github: {
-        login: "testuser",
-        verified: true,
-        verifiedAt: new Date().toISOString(),
-        source: "admin",
+      reason: "Need access to engineering repos",
+      status: "APPROVED",
+      version: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      approvedAt: new Date().toISOString(),
+      approvedBy: "manager@example.com",
+      idempotencyKey: "123e4567-e89b-12d3-a456-426614174000:***:user-789",
+      metadata: {},
+      externalIdentities: {
+        github: {
+          login: "testuser",
+          verified: true,
+          verifiedAt: new Date().toISOString(),
+          source: "admin",
+        },
       },
-    },
-    ...overrides,
-  });
+      // Expiration retry fields (from AccessRequestSchema)
+      expirationAttemptCount: 0,
+      expirationMaxRetries: 3,
+      ...overrides,
+    });
 
   beforeEach(() => {
     vi.clearAllMocks();

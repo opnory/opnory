@@ -80,7 +80,17 @@ CREATE TABLE IF NOT EXISTS access_requests (
     idempotency_key VARCHAR(500) UNIQUE NOT NULL,
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    -- Expiration retry fields
+    expiration_attempt_count INTEGER NOT NULL DEFAULT 0,
+    expiration_next_attempt_at TIMESTAMPTZ,
+    expiration_max_retries INTEGER NOT NULL DEFAULT 3,
+    expiration_last_error TEXT,
+    expiration_last_attempt_at TIMESTAMPTZ,
+    -- Lease fields for distributed workers
+    lease_owner VARCHAR(255),
+    lease_until TIMESTAMPTZ,
+    lease_acquired_at TIMESTAMPTZ
 );
 
 CREATE INDEX IF NOT EXISTS idx_access_requests_requester ON access_requests(requester_id);
@@ -88,6 +98,9 @@ CREATE INDEX IF NOT EXISTS idx_access_requests_status ON access_requests(status)
 CREATE INDEX IF NOT EXISTS idx_access_requests_correlation ON access_requests(correlation_id);
 CREATE INDEX IF NOT EXISTS idx_access_requests_idempotency ON access_requests(idempotency_key);
 CREATE INDEX IF NOT EXISTS idx_access_requests_access_expires ON access_requests(access_expires_at);
+CREATE INDEX IF NOT EXISTS idx_access_requests_expiration_retry ON access_requests(expiration_next_attempt_at) WHERE expiration_next_attempt_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_access_requests_expiration_lease ON access_requests(access_expires_at, expiration_next_attempt_at) WHERE access_expires_at IS NOT NULL AND status IN ('FULFILLED', 'RETRY');
+CREATE INDEX IF NOT EXISTS idx_access_requests_lease ON access_requests(lease_until) WHERE lease_until IS NOT NULL;
 
 -- Audit Events table
 CREATE TABLE IF NOT EXISTS audit_events (
@@ -163,6 +176,16 @@ export class PgAccessRequestStore {
       metadata: row.metadata || {},
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString(),
+      // Expiration retry fields
+      expirationAttemptCount: row.expiration_attempt_count ?? 0,
+      expirationNextAttemptAt: row.expiration_next_attempt_at?.toISOString(),
+      expirationMaxRetries: row.expiration_max_retries ?? 3,
+      expirationLastError: row.expiration_last_error,
+      expirationLastAttemptAt: row.expiration_last_attempt_at?.toISOString(),
+      // Lease fields for distributed workers
+      leaseOwner: row.lease_owner,
+      leaseUntil: row.lease_until?.toISOString(),
+      leaseAcquiredAt: row.lease_acquired_at?.toISOString(),
     };
   }
 
@@ -209,8 +232,12 @@ export class PgAccessRequestStore {
           status = $2, version = $3, approved_at = $4, approved_by = $5,
           denied_at = $6, denied_by = $7, denied_reason = $8,
           fulfilled_at = $9, fulfillment_error = $10, access_expires_at = $11,
-          external_id = $12, metadata = $13, updated_at = NOW()
-        WHERE id = $1 AND version = $14
+          external_id = $12, metadata = $13, updated_at = NOW(),
+          expiration_attempt_count = $14, expiration_next_attempt_at = $15,
+          expiration_max_retries = $16, expiration_last_error = $17,
+          expiration_last_attempt_at = $18,
+          lease_owner = $19, lease_until = $20, lease_acquired_at = $21
+        WHERE id = $1 AND version = $22
       `;
       params = [
         request.id,
@@ -226,6 +253,14 @@ export class PgAccessRequestStore {
         request.accessExpiresAt ? new Date(request.accessExpiresAt) : null,
         request.externalId,
         JSON.stringify(request.metadata),
+        request.expirationAttemptCount ?? 0,
+        request.expirationNextAttemptAt ? new Date(request.expirationNextAttemptAt) : null,
+        request.expirationMaxRetries ?? 3,
+        request.expirationLastError,
+        request.expirationLastAttemptAt ? new Date(request.expirationLastAttemptAt) : null,
+        request.leaseOwner,
+        request.leaseUntil ? new Date(request.leaseUntil) : null,
+        request.leaseAcquiredAt ? new Date(request.leaseAcquiredAt) : null,
         expectedVersion,
       ];
     } else {
@@ -234,7 +269,11 @@ export class PgAccessRequestStore {
           status = $2, version = $3, approved_at = $4, approved_by = $5,
           denied_at = $6, denied_by = $7, denied_reason = $8,
           fulfilled_at = $9, fulfillment_error = $10, access_expires_at = $11,
-          external_id = $12, metadata = $13, updated_at = NOW()
+          external_id = $12, metadata = $13, updated_at = NOW(),
+          expiration_attempt_count = $14, expiration_next_attempt_at = $15,
+          expiration_max_retries = $16, expiration_last_error = $17,
+          expiration_last_attempt_at = $18,
+          lease_owner = $19, lease_until = $20, lease_acquired_at = $21
         WHERE id = $1
       `;
       params = [
@@ -251,6 +290,14 @@ export class PgAccessRequestStore {
         request.accessExpiresAt ? new Date(request.accessExpiresAt) : null,
         request.externalId,
         JSON.stringify(request.metadata),
+        request.expirationAttemptCount ?? 0,
+        request.expirationNextAttemptAt ? new Date(request.expirationNextAttemptAt) : null,
+        request.expirationMaxRetries ?? 3,
+        request.expirationLastError,
+        request.expirationLastAttemptAt ? new Date(request.expirationLastAttemptAt) : null,
+        request.leaseOwner,
+        request.leaseUntil ? new Date(request.leaseUntil) : null,
+        request.leaseAcquiredAt ? new Date(request.leaseAcquiredAt) : null,
       ];
     }
 

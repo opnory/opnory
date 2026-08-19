@@ -18,6 +18,8 @@ export const AccessRequestStatusSchema = z.enum([
   "AWAITING_EXTERNAL_ACCEPTANCE",
   "REVOCATION_PENDING",
   "REVOKED",
+  "RETRY", // Expiration retry state (retryable failure, waiting for next attempt)
+  "REVOCATION_FAILED", // Terminal expiration failure state
 ]);
 
 export type AccessRequestStatus = z.infer<typeof AccessRequestStatusSchema>;
@@ -28,12 +30,14 @@ export const VALID_TRANSITIONS: Record<AccessRequestStatus, AccessRequestStatus[
   APPROVED: ["FULFILLING", "CANCELLED", "AWAITING_EXTERNAL_ACCEPTANCE"],
   DENIED: ["CANCELLED"],
   FULFILLING: ["FULFILLED", "FAILED"],
-  FULFILLED: ["REVOCATION_PENDING", "CANCELLED"],
+  FULFILLED: ["REVOCATION_PENDING", "CANCELLED", "RETRY", "REVOCATION_FAILED"],
   FAILED: ["FULFILLING", "CANCELLED", "FULFILLED", "AWAITING_EXTERNAL_ACCEPTANCE"],
   CANCELLED: [],
   AWAITING_EXTERNAL_ACCEPTANCE: ["FULFILLED", "FAILED", "CANCELLED", "REVOCATION_PENDING"],
   REVOCATION_PENDING: ["REVOKED", "FAILED"],
   REVOKED: [],
+  RETRY: ["REVOCATION_PENDING", "RETRY", "REVOCATION_FAILED", "FULFILLED"], // Retry can go to pending, retry again, terminal, or extension
+  REVOCATION_FAILED: ["RETRY", "REVOCATION_PENDING"], // Manual recovery can retry
 };
 
 export function canTransition(from: AccessRequestStatus, to: AccessRequestStatus): boolean {
@@ -99,12 +103,12 @@ export type ExternalIdentity = z.infer<typeof ExternalIdentitySchema>;
 export const AccessRequestSchema = z.object({
   id: z.string().uuid(),
   correlationId: z.string().uuid(),
-  requesterId: z.string(),
+  requesterId: z.string().min(1),
   requesterEmail: z.string().email(),
-  externalIdentities: ExternalIdentitySchema.optional().default({}),
+  externalIdentities: ExternalIdentitySchema,
   entitlement: EntitlementRefSchema,
-  reason: z.string().min(1).max(2000),
-  status: AccessRequestStatusSchema.default("PENDING_APPROVAL"),
+  reason: z.string().min(1),
+  status: AccessRequestStatusSchema,
   version: z.number().int().nonnegative().default(0),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -120,6 +124,16 @@ export const AccessRequestSchema = z.object({
   externalId: z.string().optional(),
   idempotencyKey: z.string(),
   metadata: z.record(z.unknown()).optional().default({}),
+  // Expiration retry fields
+  expirationAttemptCount: z.number().int().nonnegative().optional().default(0),
+  expirationNextAttemptAt: z.string().datetime().optional(),
+  expirationMaxRetries: z.number().int().nonnegative().optional().default(3),
+  expirationLastError: z.string().optional(),
+  expirationLastAttemptAt: z.string().datetime().optional(),
+  // Lease fields for distributed workers
+  leaseOwner: z.string().optional(),
+  leaseUntil: z.string().datetime().optional(),
+  leaseAcquiredAt: z.string().datetime().optional(),
 });
 
 export type AccessRequest = z.infer<typeof AccessRequestSchema>;

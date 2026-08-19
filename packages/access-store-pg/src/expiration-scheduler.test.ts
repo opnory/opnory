@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
-import { ExpirationScheduler, createExpirationScheduler, ExpirationResult } from "./expiration-scheduler.js";
+import { describe, it, expect, beforeAll, afterAll, vi, beforeEach } from "vitest";
+import { ExpirationScheduler, createExpirationScheduler, SchedulerMetrics } from "./expiration-scheduler.js";
 import { GitHubAccessExecutor, GitHubExecutorConfig, InMemoryIdempotencyStore } from "@opnory/access-executor";
 import { InMemoryAuditEventStore } from "@opnory/access-audit";
 import { AccessRequest, AccessRequestStatus, FulfilledAccessRequest, EntitlementRef, toFulfilledAccessRequest } from "@opnory/access-types";
 import { randomUUID as uuidv4 } from "crypto";
+import { Pool } from "pg";
 
 describe("ExpirationScheduler", () => {
   let executor: GitHubAccessExecutor;
@@ -49,6 +50,9 @@ describe("ExpirationScheduler", () => {
     externalId: "github-team-membership-testuser-opnory-sandbox-opnory-engineering-contributors",
     idempotencyKey: `grant:${uuidv4()}:${uuidv4()}:test-user`,
     metadata: {},
+    // New expiration retry fields
+    expirationAttemptCount: 0,
+    expirationMaxRetries: 3,
   };
 
   beforeAll(() => {
@@ -68,7 +72,17 @@ describe("ExpirationScheduler", () => {
   });
 
   it("should schedule expiration for a fulfilled request with future expiry", async () => {
-    const scheduler = new ExpirationScheduler(executor, auditStore, undefined, {
+    const mockPool = {
+      query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+      connect: vi.fn().mockResolvedValue({
+        query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+        release: vi.fn(),
+      }),
+      on: vi.fn(),
+      end: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Pool;
+    
+    const scheduler = new ExpirationScheduler(executor, auditStore, mockPool, {
       pollIntervalMs: 1000,
       leaseDurationMs: 5000,
     });
@@ -78,7 +92,17 @@ describe("ExpirationScheduler", () => {
   });
 
   it("should have processDueExpirations method", async () => {
-    const scheduler = new ExpirationScheduler(executor, auditStore, undefined, {
+    const mockPool = {
+      query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+      connect: vi.fn().mockResolvedValue({
+        query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+        release: vi.fn(),
+      }),
+      on: vi.fn(),
+      end: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Pool;
+    
+    const scheduler = new ExpirationScheduler(executor, auditStore, mockPool, {
       pollIntervalMs: 1000,
     });
 
@@ -86,7 +110,17 @@ describe("ExpirationScheduler", () => {
   });
 
   it("should have stop method", async () => {
-    const scheduler = new ExpirationScheduler(executor, auditStore, undefined, {
+    const mockPool = {
+      query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+      connect: vi.fn().mockResolvedValue({
+        query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+        release: vi.fn(),
+      }),
+      on: vi.fn(),
+      end: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Pool;
+    
+    const scheduler = new ExpirationScheduler(executor, auditStore, mockPool, {
       pollIntervalMs: 1000,
     });
 
@@ -94,7 +128,17 @@ describe("ExpirationScheduler", () => {
   });
 
   it("should have start method", async () => {
-    const scheduler = new ExpirationScheduler(executor, auditStore, undefined, {
+    const mockPool = {
+      query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+      connect: vi.fn().mockResolvedValue({
+        query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+        release: vi.fn(),
+      }),
+      on: vi.fn(),
+      end: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Pool;
+    
+    const scheduler = new ExpirationScheduler(executor, auditStore, mockPool, {
       pollIntervalMs: 1000,
     });
 
