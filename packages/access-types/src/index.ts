@@ -147,6 +147,43 @@ export function toApprovedAccessRequest(request: AccessRequest): ApprovedAccessR
 }
 
 // ============================================================================
+// Fulfilled Access Request (for revocation - type-safe boundary)
+// ============================================================================
+
+export const FulfilledAccessRequestSchema = AccessRequestSchema.extend({
+  status: z.literal("FULFILLED"),
+  fulfilledAt: z.string().datetime(),
+  externalId: z.string(),
+});
+
+export type FulfilledAccessRequest = z.infer<typeof FulfilledAccessRequestSchema>;
+
+// Type guard to ensure only fulfilled requests can be revoked
+export function toFulfilledAccessRequest(request: AccessRequest): FulfilledAccessRequest {
+  if (request.status !== "FULFILLED") {
+    throw new Error(`Cannot revoke request in status: ${request.status}. Must be FULFILLED.`);
+  }
+  if (!request.fulfilledAt || !request.externalId) {
+    throw new Error("Fulfilled request missing fulfillment metadata");
+  }
+  return request as FulfilledAccessRequest;
+}
+
+// ============================================================================
+// Revocation Result
+// ============================================================================
+
+export const RevocationResultSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  error: z.string().optional(),
+  reason: z.string().optional(), // e.g., "REVOCATION_RECONCILIATION_FAILED", "EXTERNAL_AUTHORITY_MANAGED"
+  authority: z.string().optional(), // e.g., "github-team-sync"
+});
+
+export type RevocationResult = z.infer<typeof RevocationResultSchema>;
+
+// ============================================================================
 // Approval Decision
 // ============================================================================
 

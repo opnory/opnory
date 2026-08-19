@@ -417,4 +417,233 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
       expect(result.error).toContain("maintainer");
     });
   });
+
+  describe("Revocation - CASE 15: Normal revocation", () => {
+    it("should DELETE and reconcile absence for active member", async () => {
+      // Mock for preflight, GET (active), DELETE, GET (404)
+      mockOctokitRequest
+        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
+        .mockResolvedValueOnce({ // getTeamMembership - active member
+          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        })
+        .mockResolvedValueOnce({}) // DELETE
+        .mockRejectedValueOnce({ status: 404 }); // reconciliation GET - 404 (absent)
+
+      const { toFulfilledAccessRequest } = await import("@opnory/access-types");
+      const fulfilledRequest = toFulfilledAccessRequest({
+        ...baseRequest(),
+        status: "FULFILLED",
+        fulfilledAt: new Date().toISOString(),
+        externalId: "github-team-membership-testuser-opnory-sandbox-opnory-engineering-contributors",
+      });
+
+      const result = await executor.revoke(fulfilledRequest);
+
+      expect(result.success).toBe(true);
+      expect(result.message).toContain("revoked");
+      // Should have called DELETE exactly once
+      const deleteCalls = mockOctokitRequest.mock.calls.filter(
+        (call) => call[0]?.startsWith("DELETE")
+      );
+      expect(deleteCalls.length).toBe(1);
+    });
+  });
+
+  describe("Revocation - CASE 16: Already absent", () => {
+    it("should return idempotent REVOKED when membership already absent", async () => {
+      mockOctokitRequest
+        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
+        .mockRejectedValueOnce({ status: 404 }); // getTeamMembership - already absent
+
+      const { toFulfilledAccessRequest } = await import("@opnory/access-types");
+      const fulfilledRequest = toFulfilledAccessRequest({
+        ...baseRequest(),
+        status: "FULFILLED",
+        fulfilledAt: new Date().toISOString(),
+        externalId: "github-team-membership-testuser-opnory-sandbox-opnory-engineering-contributors",
+      });
+
+      const result = await executor.revoke(fulfilledRequest);
+
+      expect(result.success).toBe(true);
+      expect(result.message).toContain("absent");
+      // Should NOT call DELETE
+      const deleteCalls = mockOctokitRequest.mock.calls.filter(
+        (call) => call[0]?.startsWith("DELETE")
+      );
+      expect(deleteCalls.length).toBe(0);
+    });
+  });
+
+  describe("Revocation - CASE 17: DELETE succeeds but membership remains", () => {
+    it("should FAIL with REVOCATION_RECONCILIATION_FAILED when reconciliation shows still active", async () => {
+      mockOctokitRequest
+        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
+        .mockResolvedValueOnce({ // getTeamMembership - active
+          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        })
+        .mockResolvedValueOnce({}) // DELETE
+        .mockResolvedValueOnce({ // reconciliation GET - still active!
+          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        });
+
+      const { toFulfilledAccessRequest } = await import("@opnory/access-types");
+      const fulfilledRequest = toFulfilledAccessRequest({
+        ...baseRequest(),
+        status: "FULFILLED",
+        fulfilledAt: new Date().toISOString(),
+        externalId: "github-team-membership-testuser-opnory-sandbox-opnory-engineering-contributors",
+      });
+
+      const result = await executor.revoke(fulfilledRequest);
+
+      expect(result.success).toBe(false);
+      expect(result.reason).toBe("REVOCATION_RECONCILIATION_FAILED");
+      expect(result.error).toContain("still has");
+    });
+  });
+
+  describe("Revocation - CASE 18: Generic GitHub failure", () => {
+    it("should not claim access removed on generic failure", async () => {
+      mockOctokitRequest
+        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
+        .mockResolvedValueOnce({ // getTeamMembership - active
+          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        })
+        .mockRejectedValueOnce(new Error("Network error")); // DELETE fails
+
+      const { toFulfilledAccessRequest } = await import("@opnory/access-types");
+      const fulfilledRequest = toFulfilledAccessRequest({
+        ...baseRequest(),
+        status: "FULFILLED",
+        fulfilledAt: new Date().toISOString(),
+        externalId: "github-team-membership-testuser-opnory-sandbox-opnory-engineering-contributors",
+      });
+
+      const result = await executor.revoke(fulfilledRequest);
+
+      expect(result.success).toBe(false);
+      expect(result.message).not.toContain("removed");
+      expect(result.message).not.toContain("revoked");
+    });
+  });
+
+  describe("Revocation - CASE 19: Team-sync/external authority", () => {
+    it("should classify EXTERNAL_AUTHORITY_MANAGED and not mutate", async () => {
+      mockOctokitRequest
+        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
+        .mockResolvedValueOnce({ // getTeamMembership - active
+          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        })
+        .mockRejectedValueOnce(new Error("Team is managed by an external identity provider (team_sync)")); // DELETE fails with team-sync
+
+      const { toFulfilledAccessRequest } = await import("@opnory/access-types");
+      const fulfilledRequest = toFulfilledAccessRequest({
+        ...baseRequest(),
+        status: "FULFILLED",
+        fulfilledAt: new Date().toISOString(),
+        externalId: "github-team-membership-testuser-opnory-sandbox-opnory-engineering-contributors",
+      });
+
+      const result = await executor.revoke(fulfilledRequest);
+
+      expect(result.success).toBe(false);
+      expect(result.reason).toBe("EXTERNAL_AUTHORITY_MANAGED");
+      expect(result.authority).toBe("github-team-sync");
+    });
+  });
+
+  describe("Revocation - CASE 20: Duplicate revoke", () => {
+    it("should be idempotent - second revoke returns success with zero extra DELETE", async () => {
+      // First revoke - full flow
+      mockOctokitRequest
+        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
+        .mockResolvedValueOnce({ // getTeamMembership - active
+          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        })
+        .mockResolvedValueOnce({}) // DELETE
+        .mockRejectedValueOnce({ status: 404 }); // reconciliation GET
+
+      const { toFulfilledAccessRequest } = await import("@opnory/access-types");
+      const fulfilledRequest = toFulfilledAccessRequest({
+        ...baseRequest(),
+        status: "FULFILLED",
+        fulfilledAt: new Date().toISOString(),
+        externalId: "github-team-membership-testuser-opnory-sandbox-opnory-engineering-contributors",
+      });
+
+      const result1 = await executor.revoke(fulfilledRequest);
+      expect(result1.success).toBe(true);
+
+      // Second revoke - should hit idempotency check
+      vi.clearAllMocks();
+      mockOctokitRequest.mockResolvedValue({ data: { account: { login: "opnory-sandbox" } } });
+
+      const result2 = await executor.revoke(fulfilledRequest);
+      expect(result2.success).toBe(true);
+      expect(result2.message).toContain("idempotent");
+      // Should not make ANY API calls
+      expect(mockOctokitRequest).toHaveBeenCalledTimes(0);
+    });
+  });
+
+  describe("Revocation - CASE 21: Wrong lifecycle state", () => {
+    it("should reject revoke for PENDING_APPROVAL request", async () => {
+      const { toFulfilledAccessRequest } = await import("@opnory/access-types");
+      const notFulfilledRequest = {
+        ...baseRequest(),
+        status: "PENDING_APPROVAL" as const,
+        approvedAt: new Date().toISOString(),
+        approvedBy: "manager@example.com",
+        fulfilledAt: undefined,
+        externalId: undefined,
+      };
+
+      expect(() => toFulfilledAccessRequest(notFulfilledRequest)).toThrow("Must be FULFILLED");
+    });
+
+    it("should reject revoke for DENIED request", async () => {
+      const { toFulfilledAccessRequest } = await import("@opnory/access-types");
+      const deniedRequest = {
+        ...baseRequest(),
+        status: "DENIED" as const,
+        approvedAt: new Date().toISOString(),
+        approvedBy: "manager@example.com",
+        deniedAt: new Date().toISOString(),
+        deniedBy: "manager@example.com",
+        fulfilledAt: undefined,
+        externalId: undefined,
+      };
+
+      expect(() => toFulfilledAccessRequest(deniedRequest)).toThrow("Must be FULFILLED");
+    });
+
+    it("should reject revoke for FAILED request", async () => {
+      const { toFulfilledAccessRequest } = await import("@opnory/access-types");
+      const failedRequest = {
+        ...baseRequest(),
+        status: "FAILED" as const,
+        approvedAt: new Date().toISOString(),
+        approvedBy: "manager@example.com",
+        fulfilledAt: undefined,
+        externalId: undefined,
+      };
+
+      expect(() => toFulfilledAccessRequest(failedRequest)).toThrow("Must be FULFILLED");
+    });
+
+    it("should reject revoke for already REVOKED request", async () => {
+      const { toFulfilledAccessRequest } = await import("@opnory/access-types");
+      const revokedRequest = {
+        ...baseRequest(),
+        status: "REVOKED" as const,
+        approvedAt: new Date().toISOString(),
+        approvedBy: "manager@example.com",
+        fulfilledAt: new Date().toISOString(),
+        externalId: "some-external-id",
+      };
+
+      expect(() => toFulfilledAccessRequest(revokedRequest)).toThrow("Must be FULFILLED");
+    });
+  });
 });

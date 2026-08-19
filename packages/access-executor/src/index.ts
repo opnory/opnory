@@ -1,6 +1,6 @@
 import { getLogger } from "@opnory/observability";
 import { v4 as uuidv4 } from "uuid";
-import { ApprovedAccessRequest, ExecutionResult, ExternalIdentity } from "@opnory/access-types";
+import { ApprovedAccessRequest, ExecutionResult, FulfilledAccessRequest, ExternalIdentity, RevocationResult } from "@opnory/access-types";
 import { AuditEventStore, InMemoryAuditEventStore, recordAuditEvent } from "@opnory/access-audit";
 import { Octokit } from "@octokit/rest";
 import { createAppAuth } from "@octokit/auth-app";
@@ -13,7 +13,7 @@ const logger = getLogger().child({ component: "access-executor" });
 
 export interface AccessExecutor {
   grant(request: ApprovedAccessRequest): Promise<ExecutionResult>;
-  revoke?(request: ApprovedAccessRequest): Promise<ExecutionResult>;
+  revoke(request: FulfilledAccessRequest): Promise<RevocationResult>;
 }
 
 // ============================================================================
@@ -164,7 +164,7 @@ export class FakeGitHubAccessExecutor implements AccessExecutor {
     };
   }
 
-  async revoke(request: ApprovedAccessRequest): Promise<ExecutionResult> {
+  async revoke(request: FulfilledAccessRequest): Promise<RevocationResult> {
     // Build idempotency key for revocation
     const idempotencyKey = `revoke:${request.id}:${request.entitlement.id}:${request.requesterId}`;
 
@@ -184,7 +184,7 @@ export class FakeGitHubAccessExecutor implements AccessExecutor {
       correlationId: request.correlationId,
       actor: "system",
       timestamp: new Date().toISOString(),
-      type: "FULFILLMENT_SUCCEEDED",
+      type: "REVOCATION_SUCCEEDED",
       metadata: {
         entitlementId: request.entitlement.id,
         action: "revoke",
@@ -274,7 +274,7 @@ export class GitHubAccessExecutor implements AccessExecutor {
    * Pre-flight checks before any mutation
    * Validates installation auth, allowlist, and verified identity
    */
-  private async preflightChecks(request: ApprovedAccessRequest): Promise<{ org: string; teamSlug: string; teamRole: "member" | "maintainer"; githubLogin: string }> {
+  private async preflightChecks(request: ApprovedAccessRequest | FulfilledAccessRequest): Promise<{ org: string; teamSlug: string; teamRole: "member" | "maintainer"; githubLogin: string }> {
     // Extract GitHub-specific config from entitlement
     const githubConfig = request.entitlement.githubConfig;
     if (!githubConfig) {
@@ -297,6 +297,7 @@ export class GitHubAccessExecutor implements AccessExecutor {
       const installation = await this.octokit.request("GET /app/installations/{installation_id}", {
         installation_id: Number(this.config.installationId),
       });
+
       const account = installation.data.account;
       // account can be User or Organization, both have login
       const accountLogin = (account as { login: string })?.login;
@@ -319,7 +320,7 @@ export class GitHubAccessExecutor implements AccessExecutor {
    * Validates and extracts the verified GitHub username from the request
    * The request must contain a verified github identity in externalIdentities
    */
-  private getGitHubLogin(request: ApprovedAccessRequest): string {
+  private getGitHubLogin(request: ApprovedAccessRequest | FulfilledAccessRequest): string {
     const githubIdentity = request.externalIdentities?.github;
     if (!githubIdentity) {
       throw new Error("Request missing github identity in externalIdentities");
@@ -610,10 +611,10 @@ export class GitHubAccessExecutor implements AccessExecutor {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      
+
       // More precise detection of externally managed team (team-sync)
       // GitHub returns specific error for team-sync: "Team is managed by an external identity provider"
-      const isExternalAuthorityManaged = errorMessage.includes("team_sync") || 
+      const isExternalAuthorityManaged = errorMessage.includes("team_sync") ||
         errorMessage.includes("managed by external") ||
         errorMessage.includes("managed by an external identity provider");
 
@@ -658,33 +659,247 @@ export class GitHubAccessExecutor implements AccessExecutor {
     }
   }
 
-  async revoke(request: ApprovedAccessRequest): Promise<ExecutionResult> {
+  async revoke(request: FulfilledAccessRequest): Promise<RevocationResult> {
     const idempotencyKey = `revoke:${request.id}:${request.entitlement.id}:${request.requesterId}`;
 
     logger.info({ requestId: request.id, idempotencyKey }, "Executing GitHub access revocation");
 
+    // Check idempotency
     const isFirstAttempt = this.idempotencyStore.checkAndMark(idempotencyKey);
     if (!isFirstAttempt) {
+      logger.info({ requestId: request.id, idempotencyKey }, "Revocation idempotency check: already revoked");
+      await recordAuditEvent(this.auditStore, {
+        eventId: uuidv4(),
+        requestId: request.id,
+        correlationId: request.correlationId,
+        actor: "system",
+        timestamp: new Date().toISOString(),
+        type: "REVOCATION_SUCCEEDED",
+        metadata: {
+          entitlementId: request.entitlement.id,
+          action: "revoke",
+          idempotent: true,
+        },
+      });
+
       return {
         success: true,
         message: "Access already revoked (idempotent)",
       };
     }
 
+    // Record revocation requested
+    await recordAuditEvent(this.auditStore, {
+      eventId: uuidv4(),
+      requestId: request.id,
+      correlationId: request.correlationId,
+      actor: "system",
+      timestamp: new Date().toISOString(),
+      type: "REVOCATION_REQUESTED",
+      metadata: {
+        entitlementId: request.entitlement.id,
+        entitlementName: request.entitlement.name,
+        idempotencyKey,
+        executor: "github",
+      },
+    });
+
     try {
       // Pre-flight checks (installation auth, allowlist, verified identity)
       const { org, teamSlug, githubLogin } = await this.preflightChecks(request);
 
-      // Delete team membership
-      await this.deleteTeamMembership(org, teamSlug, githubLogin);
+      // Record revocation started
+      await recordAuditEvent(this.auditStore, {
+        eventId: uuidv4(),
+        requestId: request.id,
+        correlationId: request.correlationId,
+        actor: "system",
+        timestamp: new Date().toISOString(),
+        type: "REVOCATION_STARTED",
+        metadata: {
+          entitlementId: request.entitlement.id,
+          entitlementName: request.entitlement.name,
+          org,
+          teamSlug,
+          githubLogin,
+        },
+      });
 
-      // Verify revocation by checking membership
-      const verification = await this.getTeamMembership(org, teamSlug, githubLogin);
-      
-      if (verification.exists && verification.membership?.state === "active") {
-        // If still active, something went wrong
-        throw new Error("Revocation verification failed - user still has active membership");
+      // Step 1: GET existing membership (check if already absent)
+      const existingMembership = await this.getTeamMembership(org, teamSlug, githubLogin);
+
+      if (!existingMembership.exists) {
+        // Already absent - idempotent revocation success
+        await recordAuditEvent(this.auditStore, {
+          eventId: uuidv4(),
+          requestId: request.id,
+          correlationId: request.correlationId,
+          actor: "system",
+          timestamp: new Date().toISOString(),
+          type: "REVOCATION_SUCCEEDED",
+          metadata: {
+            entitlementId: request.entitlement.id,
+            entitlementName: request.entitlement.name,
+            reconciled: true,
+            idempotent: true,
+            previousState: "absent",
+            org,
+            teamSlug,
+            githubLogin,
+          },
+        });
+
+        logger.info({ requestId: request.id, githubLogin, org, teamSlug }, "Already absent - idempotent revocation success");
+        return {
+          success: true,
+          message: "Access already absent (idempotent revocation)",
+        };
       }
+
+      // Check for external authority management
+      if (existingMembership.membership?.state === "active") {
+        // Step 2: DELETE team membership
+        try {
+          await this.deleteTeamMembership(org, teamSlug, githubLogin);
+        } catch (deleteError) {
+          const deleteErrorMessage = deleteError instanceof Error ? deleteError.message : "Unknown error";
+
+          // Check for external authority (team-sync)
+          const isExternalAuthorityManaged = deleteErrorMessage.includes("team_sync") ||
+            deleteErrorMessage.includes("managed by external") ||
+            deleteErrorMessage.includes("managed by an external identity provider");
+
+          if (isExternalAuthorityManaged) {
+            await recordAuditEvent(this.auditStore, {
+              eventId: uuidv4(),
+              requestId: request.id,
+              correlationId: request.correlationId,
+              actor: "system",
+              timestamp: new Date().toISOString(),
+              type: "REVOCATION_FAILED",
+              metadata: {
+                entitlementId: request.entitlement.id,
+                error: deleteErrorMessage,
+                reason: "EXTERNAL_AUTHORITY_MANAGED",
+                authority: "github-team-sync",
+                provider: "github",
+                organization: org,
+                teamSlug: teamSlug,
+                githubLogin: githubLogin,
+              },
+            });
+
+            logger.warn({ requestId: request.id, error: deleteErrorMessage }, "Team membership managed by external authority (e.g., Okta/Entra ID)");
+            return {
+              success: false,
+              message: "Team membership is managed by an external identity provider (e.g., Okta/Entra ID). Cannot modify via GitHub API.",
+              error: deleteErrorMessage,
+              reason: "EXTERNAL_AUTHORITY_MANAGED",
+              authority: "github-team-sync",
+            };
+          }
+          throw deleteError;
+        }
+
+        // Step 3: RECONCILIATION - GET to verify absence
+        const verification = await this.getTeamMembership(org, teamSlug, githubLogin);
+
+        if (!verification.exists) {
+          // Successfully revoked - confirmed absent
+          await recordAuditEvent(this.auditStore, {
+            eventId: uuidv4(),
+            requestId: request.id,
+            correlationId: request.correlationId,
+            actor: "system",
+            timestamp: new Date().toISOString(),
+            type: "REVOCATION_SUCCEEDED",
+            metadata: {
+              entitlementId: request.entitlement.id,
+              entitlementName: request.entitlement.name,
+              reconciled: true,
+              previousState: "active",
+              reconciledAbsent: true,
+              org,
+              teamSlug,
+              githubLogin,
+              provider: "github",
+            },
+          });
+
+          logger.info({ requestId: request.id, githubLogin, org, teamSlug }, "Access revoked and verified successfully");
+          return {
+            success: true,
+            message: `Successfully revoked ${request.entitlement.name} access (verified)`,
+          };
+        } else {
+          // DELETE appeared to succeed but membership still exists
+          const reconciledState = verification.membership?.state || "unknown";
+          const reconciledRole = verification.membership?.role || "unknown";
+
+          await recordAuditEvent(this.auditStore, {
+            eventId: uuidv4(),
+            requestId: request.id,
+            correlationId: request.correlationId,
+            actor: "system",
+            timestamp: new Date().toISOString(),
+            type: "REVOCATION_FAILED",
+            metadata: {
+              entitlementId: request.entitlement.id,
+              error: `Revocation reconciliation failed: user still has ${reconciledState}/${reconciledRole} membership`,
+              reason: "REVOCATION_RECONCILIATION_FAILED",
+              provider: "github",
+              organization: org,
+              teamSlug: teamSlug,
+              githubLogin: githubLogin,
+              reconciledState,
+              reconciledRole,
+            },
+          });
+
+          logger.error({ requestId: request.id, githubLogin, org, teamSlug, reconciledState, reconciledRole }, "Revocation reconciliation failed - user still has membership");
+          return {
+            success: false,
+            message: `Revocation reconciliation failed: user still has ${reconciledState}/${reconciledRole} membership`,
+            error: `Revocation verification failed - user still has ${reconciledState}/${reconciledRole} membership`,
+            reason: "REVOCATION_RECONCILIATION_FAILED",
+          };
+        }
+      } else {
+        // Membership exists but not active (e.g., pending)
+        await recordAuditEvent(this.auditStore, {
+          eventId: uuidv4(),
+          requestId: request.id,
+          correlationId: request.correlationId,
+          actor: "system",
+          timestamp: new Date().toISOString(),
+          type: "REVOCATION_FAILED",
+          metadata: {
+            entitlementId: request.entitlement.id,
+            error: `Unexpected membership state for revocation: ${existingMembership.membership?.state || "unknown"}`,
+            reason: "UNEXPECTED_MEMBERSHIP_STATE",
+            provider: "github",
+            organization: org,
+            teamSlug: teamSlug,
+            githubLogin: githubLogin,
+            reconciledState: existingMembership.membership?.state,
+          },
+        });
+
+        logger.error({ requestId: request.id, githubLogin, org, teamSlug, state: existingMembership.membership?.state }, "Unexpected membership state for revocation");
+        return {
+          success: false,
+          message: `Unexpected membership state for revocation: ${existingMembership.membership?.state || "unknown"}`,
+          error: `Unexpected membership state for revocation: ${existingMembership.membership?.state || "unknown"}`,
+          reason: "UNEXPECTED_MEMBERSHIP_STATE",
+        };
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+      // Check for external authority (team-sync) in error
+      const isExternalAuthorityManaged = errorMessage.includes("team_sync") ||
+        errorMessage.includes("managed by external") ||
+        errorMessage.includes("managed by an external identity provider");
 
       await recordAuditEvent(this.auditStore, {
         eventId: uuidv4(),
@@ -692,23 +907,31 @@ export class GitHubAccessExecutor implements AccessExecutor {
         correlationId: request.correlationId,
         actor: "system",
         timestamp: new Date().toISOString(),
-        type: "FULFILLMENT_SUCCEEDED",
+        type: "REVOCATION_FAILED",
         metadata: {
           entitlementId: request.entitlement.id,
-          action: "revoke",
-          reconciled: true,
-          org,
-          teamSlug,
-          githubLogin,
+          entitlementName: request.entitlement.name,
+          error: errorMessage,
+          externalAuthorityManaged: isExternalAuthorityManaged,
+          authority: isExternalAuthorityManaged ? "github-team-sync" : undefined,
+          provider: "github",
+          organization: request.entitlement.githubConfig?.organization,
+          teamSlug: request.entitlement.githubConfig?.teamSlug,
+          githubLogin: request.externalIdentities?.github?.login,
         },
       });
 
-      return {
-        success: true,
-        message: `Successfully revoked ${request.entitlement.name} access`,
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      if (isExternalAuthorityManaged) {
+        logger.warn({ requestId: request.id, error: errorMessage }, "Team membership managed by external authority (e.g., Okta/Entra ID)");
+        return {
+          success: false,
+          message: "Team membership is managed by an external identity provider (e.g., Okta/Entra ID). Cannot modify via GitHub API.",
+          error: errorMessage,
+          reason: "EXTERNAL_AUTHORITY_MANAGED",
+          authority: "github-team-sync",
+        };
+      }
+
       logger.error({ requestId: request.id, error: errorMessage }, "Revocation failed");
       return {
         success: false,
