@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "declarationDir": "dist",
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo",
+    "composite": true,
+    "paths": {
+      "@opnory/*": ["../../packages/*/dist"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"],
+  "references": [
+    { "path": "../../packages/types" },
+    { "path": "../../packages/config" },
+    { "path": "../../packages/observability" },
+    { "path": "../../packages/knowledge" },
+    { "path": "../../packages/escalation" },
+    { "path": "../../packages/agent" },
+    { "path": "../../packages/access-types" },
+    { "path": "../../packages/access-service" }
+  ]
+}
