@@ -526,8 +526,7 @@ export class GitHubAccessExecutor implements AccessExecutor {
             reconciled: true,
             membershipState: "active",
             membershipRole: reconciledMembership.role,
-            githubUserId: reconciledMembership.user.id,
-            // Safe diagnostic metadata
+            githubUserId: reconciledMembership.user?.id,
             provider: "github",
             organization: org,
             teamSlug: teamSlug,
@@ -595,7 +594,7 @@ export class GitHubAccessExecutor implements AccessExecutor {
             reconciled: true,
             membershipState: "pending",
             awaitingExternalAcceptance: true,
-            githubUserId: reconciledMembership.user.id,
+            githubUserId: reconciledMembership.user?.id,
           },
         });
 
