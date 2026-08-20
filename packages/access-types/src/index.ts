@@ -129,6 +129,7 @@ export const AccessRequestSchema = z.object({
   expirationNextAttemptAt: z.string().datetime().optional(),
   expirationMaxRetries: z.number().int().nonnegative().optional().default(3),
   expirationLastError: z.string().optional(),
+  expirationLastErrorCode: z.number().optional(),
   expirationLastAttemptAt: z.string().datetime().optional(),
   // Lease fields for distributed workers
   leaseOwner: z.string().optional(),
@@ -197,6 +198,15 @@ export const RevocationResultSchema = z.object({
 });
 
 export type RevocationResult = z.infer<typeof RevocationResultSchema>;
+
+// ============================================================================
+// Access Executor Interface (shared to break circular dependency)
+// ============================================================================
+
+export interface AccessExecutor {
+  grant(request: ApprovedAccessRequest): Promise<ExecutionResult>;
+  revoke(request: FulfilledAccessRequest): Promise<RevocationResult>;
+}
 
 // ============================================================================
 // Approval Decision

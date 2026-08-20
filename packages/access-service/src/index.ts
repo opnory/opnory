@@ -195,6 +195,8 @@ export class AccessRequestService {
         policyId: policyResult.policyId,
         ...params.metadata,
       },
+      expirationAttemptCount: 0,
+      expirationMaxRetries: 3,
     };
 
     // Store request

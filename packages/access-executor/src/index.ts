@@ -1,20 +1,11 @@
 import { getLogger } from "@opnory/observability";
 import { v4 as uuidv4 } from "uuid";
-import { ApprovedAccessRequest, ExecutionResult, FulfilledAccessRequest, ExternalIdentity, RevocationResult } from "@opnory/access-types";
+import { ApprovedAccessRequest, ExecutionResult, FulfilledAccessRequest, ExternalIdentity, RevocationResult, AccessExecutor } from "@opnory/access-types";
 import { AuditEventStore, InMemoryAuditEventStore, recordAuditEvent } from "@opnory/access-audit";
 import { Octokit } from "@octokit/rest";
 import { createAppAuth } from "@octokit/auth-app";
 
 const logger = getLogger().child({ component: "access-executor" });
-
-// ============================================================================
-// Access Executor Interface
-// ============================================================================
-
-export interface AccessExecutor {
-  grant(request: ApprovedAccessRequest): Promise<ExecutionResult>;
-  revoke(request: FulfilledAccessRequest): Promise<RevocationResult>;
-}
 
 // ============================================================================
 // Idempotency Store

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { GitHubAccessExecutor, InMemoryIdempotencyStore, GitHubExecutorConfig } from "./index.js";
 import { InMemoryAuditEventStore } from "@opnory/access-audit";
 import { ApprovedAccessRequest } from "@opnory/access-types";

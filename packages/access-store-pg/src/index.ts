@@ -15,7 +15,6 @@ import {
   AuditEvent,
   AuditEventType,
 } from "@opnory/access-audit";
-import { AccessExecutor, FakeGitHubAccessExecutor, InMemoryIdempotencyStore } from "@opnory/access-executor";
 
 const logger = getLogger().child({ component: "access-store-pg" });
 
