@@ -43,6 +43,7 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
           teamSlug: "opnory-engineering-contributors",
           teamRole: "member",
         },
+        metadata: {},
       },
       reason: "Need access to engineering repos",
       status: "APPROVED",
@@ -64,6 +65,14 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
       // Expiration retry fields (from AccessRequestSchema)
       expirationAttemptCount: 0,
       expirationMaxRetries: 3,
+      // Governance reconciliation fields
+      governanceRetryCount: 0,
+      governanceLeaseOwner: undefined,
+      governanceLeaseUntil: undefined,
+      governanceLeaseAcquiredAt: undefined,
+      governanceAttemptCount: 0,
+      governanceNextAttemptAt: undefined,
+      governanceLastAttemptAt: undefined,
       ...overrides,
     });
 

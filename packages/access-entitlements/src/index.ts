@@ -1,5 +1,11 @@
 import { z } from "zod";
 import { getLogger } from "@opnory/observability";
+import {
+  GovernanceConfigSchema,
+  LocalGovernanceConfigSchema,
+  EntraGovernanceConfigSchema,
+  OktaGovernanceConfigSchema,
+} from "@opnory/access-types";
 
 const logger = getLogger().child({ component: "access-entitlements" });
 
@@ -24,17 +30,20 @@ export const EntitlementSchema = z.object({
       teamRole: z.enum(["member", "maintainer"]).default("member"),
     })
     .optional(),
+  // Governance configuration (typed discriminated union)
+  governance: GovernanceConfigSchema.optional(),
 });
 
 export type Entitlement = z.infer<typeof EntitlementSchema>;
+export const EntitlementTypeGuard = (value: unknown): value is Entitlement => EntitlementSchema.safeParse(value).success;
 
 // ============================================================================
 // Entitlement Catalog
 // ============================================================================
 
 export class EntitlementCatalog {
-  private entitlements: Map<string, Entitlement> = new Map();
-  private entitlementsBySystem: Map<string, Entitlement[]> = new Map();
+  private entitlements = new Map<string, Entitlement>();
+  private entitlementsBySystem = new Map<string, Entitlement[]>();
 
   constructor(entitlements: Entitlement[] = []) {
     for (const entitlement of entitlements) {
@@ -44,13 +53,17 @@ export class EntitlementCatalog {
 
   register(entitlement: Entitlement): void {
     const validated = EntitlementSchema.parse(entitlement);
+    const system = validated.system as string;
     this.entitlements.set(validated.id, validated);
 
-    const systemEntitlements = this.entitlementsBySystem.get(validated.system) || [];
-    systemEntitlements.push(validated);
-    this.entitlementsBySystem.set(validated.system, systemEntitlements);
+    const systemEntitlements = this.entitlementsBySystem.get(system);
+    if (systemEntitlements) {
+      systemEntitlements.push(validated);
+    } else {
+      this.entitlementsBySystem.set(system, [validated]);
+    }
 
-    logger.info({ entitlementId: validated.id, system: validated.system }, "Entitlement registered");
+    logger.info({ entitlementId: validated.id, system }, "Entitlement registered");
   }
 
   getById(id: string): Entitlement | undefined {
@@ -67,7 +80,7 @@ export class EntitlementCatalog {
 
   findByName(name: string): Entitlement | undefined {
     for (const entitlement of this.entitlements.values()) {
-      if (entitlement.name.toLowerCase() === name.toLowerCase()) {
+      if ((entitlement.name as string).toLowerCase() === name.toLowerCase()) {
         return entitlement;
       }
     }
@@ -79,9 +92,9 @@ export class EntitlementCatalog {
     const lowerQuery = query.toLowerCase();
 
     return candidates.filter((e) =>
-      e.name.toLowerCase().includes(lowerQuery) ||
-      e.description.toLowerCase().includes(lowerQuery) ||
-      e.id.toLowerCase().includes(lowerQuery)
+      (e.name as string).toLowerCase().includes(lowerQuery) ||
+      (e.description as string).toLowerCase().includes(lowerQuery) ||
+      (e.id as string).toLowerCase().includes(lowerQuery)
     );
   }
 }
@@ -109,6 +122,9 @@ export const canonicalEngineeringContributorEntitlement: Entitlement = {
     organization: "opnory-sandbox",
     teamSlug: "opnory-engineering-contributors",
     teamRole: "member",
+  },
+  governance: {
+    provider: "local",
   },
 };
 

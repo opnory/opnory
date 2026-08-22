@@ -2,4 +2,10 @@
 frozenLockfile = false
 
 [test]
-# preload = ["./test/preload.ts"]
+# Explicitly set test root directories to avoid workspace-linked copies
+root = ["./packages", "./apps"]
+# Ignore workspace-linked copies in node_modules/.bun/ to prevent duplicate test discovery
+pathIgnorePatterns = [
+  "node_modules/**",
+  "node_modules/.bun/**"
+]

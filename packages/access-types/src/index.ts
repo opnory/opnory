@@ -4,6 +4,245 @@ import { getLogger } from "@opnory/observability";
 const logger = getLogger().child({ component: "access-types" });
 
 // ============================================================================
+// Governance Provider Type
+// ============================================================================
+
+export const GovernanceProviderTypeSchema = z.enum(["local", "entra", "okta"]);
+
+export type GovernanceProviderType = z.infer<typeof GovernanceProviderTypeSchema>;
+
+// ============================================================================
+// Governance Authority (who decides)
+// ============================================================================
+
+export const GovernanceAuthoritySchema = z.enum(["local", "entra", "okta"]);
+
+export type GovernanceAuthority = z.infer<typeof GovernanceAuthoritySchema>;
+
+// ============================================================================
+// Governance Ownership (who owns what)
+// ============================================================================
+
+export const GovernanceOwnerSchema = z.enum(["opnory", "entra", "okta"]);
+
+export type GovernanceOwner = z.infer<typeof GovernanceOwnerSchema>;
+
+export const GovernanceOwnershipSchema = z.object({
+  authority: GovernanceAuthoritySchema,
+  approvalOwner: GovernanceOwnerSchema,
+  fulfillmentOwner: GovernanceOwnerSchema,
+  expirationOwner: GovernanceOwnerSchema,
+});
+
+export type GovernanceOwnership = z.infer<typeof GovernanceOwnershipSchema>;
+
+// ============================================================================
+// Typed Governance Configuration (replaces metadata for governance)
+// ============================================================================
+
+export const LocalGovernanceConfigSchema = z.object({
+  provider: z.literal("local"),
+});
+
+export const EntraGovernanceConfigSchema = z.object({
+  provider: z.literal("entra"),
+  tenantId: z.string().min(1),
+  accessPackageId: z.string().min(1),
+  assignmentPolicyId: z.string().min(1),
+  fulfillmentOwner: z.enum(["opnory", "entra", "okta"]).default("entra"),
+  expirationOwner: z.enum(["opnory", "entra", "okta"]).default("entra"),
+});
+
+export const OktaGovernanceConfigSchema = z.object({
+  provider: z.literal("okta"),
+  orgUrl: z.string().url(),
+  appId: z.string().min(1),
+  groupId: z.string().min(1),
+  fulfillmentOwner: z.enum(["opnory", "entra", "okta"]).default("okta"),
+  expirationOwner: z.enum(["opnory", "entra", "okta"]).default("okta"),
+});
+
+export const GovernanceConfigSchema = z.discriminatedUnion("provider", [
+  LocalGovernanceConfigSchema,
+  EntraGovernanceConfigSchema,
+  OktaGovernanceConfigSchema,
+]);
+
+export type GovernanceConfig = z.infer<typeof GovernanceConfigSchema>;
+
+// ============================================================================
+// Governance Subject (resolved user identity in target authority system)
+// ============================================================================
+
+export const GovernanceSubjectSchema = z.object({
+  id: z.string().min(1), // e.g., Entra objectId, Okta user ID, GitHub user ID
+  displayName: z.string().optional(),
+  email: z.string().email().optional(),
+  source: z.enum(["entra", "okta", "github", "manual"]),
+  raw: z.record(z.unknown()).optional(), // Preserve original resolution data
+});
+
+export type GovernanceSubject = z.infer<typeof GovernanceSubjectSchema>;
+
+// ============================================================================
+// Governed Entitlement (entitlement mapped to external authority)
+// ============================================================================
+
+export const GovernedEntitlementSchema = z.object({
+  entitlementId: z.string().uuid(), // Opnory entitlement ID
+  authority: GovernanceAuthoritySchema,
+  externalId: z.string().min(1), // e.g., Entra access package ID, Okta group/app ID, GitHub team slug
+  externalName: z.string().optional(),
+  metadata: z.record(z.unknown()).optional().default({}),
+});
+
+export type GovernedEntitlement = z.infer<typeof GovernedEntitlementSchema>;
+
+// ============================================================================
+// Governed Access Request (request submitted to external authority)
+// ============================================================================
+
+export const GovernedAccessRequestSchema = z.object({
+  requestId: z.string().uuid(), // Opnory request ID
+  subject: GovernanceSubjectSchema,
+  entitlement: GovernedEntitlementSchema,
+  justification: z.string().min(1),
+  requestedDuration: z.string().optional(), // ISO 8601 duration, e.g., "P90D"
+  metadata: z.record(z.unknown()).optional().default({}),
+});
+
+export type GovernedAccessRequest = z.infer<typeof GovernedAccessRequestSchema>;
+
+// ============================================================================
+// Normalized Provider Result Types (authority-agnostic)
+// ============================================================================
+
+export const GovernanceDecisionStatusSchema = z.enum([
+  "PENDING",
+  "APPROVED",
+  "DENIED",
+  "CANCELLED",
+  "FAILED",
+]);
+
+export type GovernanceDecisionStatus = z.infer<typeof GovernanceDecisionStatusSchema>;
+
+export const GovernanceAssignmentStatusSchema = z.enum([
+  "ACTIVE",
+  "PENDING",
+  "REVOKED",
+  "NOT_FOUND",
+]);
+
+export type GovernanceAssignmentStatus = z.infer<typeof GovernanceAssignmentStatusSchema>;
+
+// ============================================================================
+// Governance Request (submitted to external authority)
+// ============================================================================
+
+export const GovernanceRequestSchema = z.object({
+  externalRequestId: z.string().min(1), // Entra request ID, Okta request ID, GitHub PR number, etc.
+  authority: GovernanceAuthoritySchema,
+  status: GovernanceDecisionStatusSchema, // Normalized decision status
+  submittedAt: z.string().datetime(),
+  decidedAt: z.string().datetime().optional(),
+  decidedBy: z.string().optional(),
+  decisionReason: z.string().optional(),
+  assignmentId: z.string().optional(), // Entra assignment ID, Okta membership ID, GitHub membership ID
+  assignmentExpiresAt: z.string().datetime().optional(),
+  metadata: z.record(z.unknown()).optional().default({}),
+});
+
+export type GovernanceRequest = z.infer<typeof GovernanceRequestSchema>;
+
+// ============================================================================
+// Governance Request Status (for polling - normalized)
+// ============================================================================
+
+export const GovernanceRequestStatusSchema = z.object({
+  externalRequestId: z.string().min(1),
+  status: GovernanceDecisionStatusSchema,
+  assignmentId: z.string().optional(),
+  assignmentExpiresAt: z.string().datetime().optional(),
+  lastPolledAt: z.string().datetime(),
+  rawResponse: z.record(z.unknown()).optional(),
+});
+
+export type GovernanceRequestStatus = z.infer<typeof GovernanceRequestStatusSchema>;
+
+// ============================================================================
+// Governance Assignment (active assignment from authority)
+// ============================================================================
+
+export const GovernanceAssignmentSchema = z.object({
+  assignmentId: z.string().min(1), // Entra assignment ID, Okta membership ID, GitHub membership ID
+  subject: GovernanceSubjectSchema,
+  entitlement: GovernedEntitlementSchema,
+  authority: GovernanceAuthoritySchema,
+  grantedAt: z.string().datetime(),
+  expiresAt: z.string().datetime().optional(),
+  status: GovernanceAssignmentStatusSchema,
+  raw: z.record(z.unknown()).optional(),
+});
+
+export type GovernanceAssignment = z.infer<typeof GovernanceAssignmentSchema>;
+
+// ============================================================================
+// Governance Revocation Result
+// ============================================================================
+
+export const GovernanceRevocationResultSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  error: z.string().optional(),
+  reason: z.string().optional(),
+  authority: z.string().optional(),
+  assignmentId: z.string().optional(),
+  metadata: z.record(z.unknown()).optional(),
+  // Explicit status for authoritative mutation outcome
+  status: z.enum(["REVOKED", "OBSERVE_ONLY"]).optional(),
+  // Whether authoritative mutation was actually performed
+  authoritativeMutationPerformed: z.boolean().optional(),
+  // Reason for observe-only fallback
+  fallbackReason: z.string().optional(),
+});
+
+export type GovernanceRevocationResult = z.infer<typeof GovernanceRevocationResultSchema>;
+
+// ============================================================================
+// Governance Provider Interface
+// ============================================================================
+
+export interface GovernanceProvider {
+  readonly authority: GovernanceAuthority;
+
+  // Resolve Opnory identity to governance subject
+  resolveSubject(identity: { 
+    requesterId: string; 
+    requesterEmail: string; 
+    externalIdentities: any 
+  }): Promise<GovernanceSubject>;
+
+  // Resolve Opnory entitlement to governed entitlement
+  resolveEntitlement(entitlement: any): Promise<GovernedEntitlement>;
+
+  // Submit request to external authority
+  submitRequest(request: GovernedAccessRequest): Promise<GovernanceRequest>;
+
+  // Get status of submitted request
+  getRequestStatus(externalRequestId: string): Promise<GovernanceRequestStatus>;
+
+  // Get active assignment for subject+entitlement
+  getAssignment(
+    subject: GovernanceSubject, 
+    entitlement: GovernedEntitlement
+  ): Promise<GovernanceAssignment | null>;
+
+  // Revoke assignment
+  revokeAssignment(assignment: GovernanceAssignment): Promise<GovernanceRevocationResult>;
+}
+
+// ============================================================================
 // Access Request State Machine
 // ============================================================================
 
@@ -20,13 +259,14 @@ export const AccessRequestStatusSchema = z.enum([
   "REVOKED",
   "RETRY", // Expiration retry state (retryable failure, waiting for next attempt)
   "REVOCATION_FAILED", // Terminal expiration failure state
+  "AWAITING_AUTHORITY_DECISION", // Waiting for external governance authority decision
 ]);
 
 export type AccessRequestStatus = z.infer<typeof AccessRequestStatusSchema>;
 
 // Valid status transitions
 export const VALID_TRANSITIONS: Record<AccessRequestStatus, AccessRequestStatus[]> = {
-  PENDING_APPROVAL: ["APPROVED", "DENIED", "CANCELLED"],
+  PENDING_APPROVAL: ["APPROVED", "DENIED", "CANCELLED", "AWAITING_AUTHORITY_DECISION"],
   APPROVED: ["FULFILLING", "CANCELLED", "AWAITING_EXTERNAL_ACCEPTANCE"],
   DENIED: ["CANCELLED"],
   FULFILLING: ["FULFILLED", "FAILED"],
@@ -38,6 +278,7 @@ export const VALID_TRANSITIONS: Record<AccessRequestStatus, AccessRequestStatus[
   REVOKED: [],
   RETRY: ["REVOCATION_PENDING", "RETRY", "REVOCATION_FAILED", "FULFILLED"], // Retry can go to pending, retry again, terminal, or extension
   REVOCATION_FAILED: ["RETRY", "REVOCATION_PENDING"], // Manual recovery can retry
+  AWAITING_AUTHORITY_DECISION: ["APPROVED", "DENIED", "CANCELLED"],
 };
 
 export function canTransition(from: AccessRequestStatus, to: AccessRequestStatus): boolean {
@@ -74,6 +315,10 @@ export const EntitlementRefSchema = z.object({
       teamRole: z.enum(["member", "maintainer"]).default("member"),
     })
     .optional(),
+  // Governance configuration for this entitlement (typed discriminated union)
+  governance: GovernanceConfigSchema.optional(),
+  // Additional metadata for governance providers
+  metadata: z.record(z.unknown()).optional().default({}),
 });
 
 export type EntitlementRef = z.infer<typeof EntitlementRefSchema>;
@@ -135,6 +380,24 @@ export const AccessRequestSchema = z.object({
   leaseOwner: z.string().optional(),
   leaseUntil: z.string().datetime().optional(),
   leaseAcquiredAt: z.string().datetime().optional(),
+  // Governance fields for Entra/external authority
+  governanceExternalRequestId: z.string().optional(),
+  governanceAuthority: GovernanceAuthoritySchema.optional(),
+  governanceAssignmentId: z.string().optional(),
+  governanceAssignmentExpiresAt: z.string().datetime().optional(),
+  // Reconciliation state fields
+  governanceLastCheckedAt: z.string().datetime().optional(),
+  governanceNextCheckAt: z.string().datetime().optional(),
+  governanceRetryCount: z.number().int().nonnegative().optional().default(0),
+  governanceLastError: z.string().optional(),
+  governanceLastErrorCode: z.number().optional(),
+  // Governance lease fields for distributed reconciliation worker
+  governanceLeaseOwner: z.string().optional(),
+  governanceLeaseUntil: z.string().datetime().optional(),
+  governanceLeaseAcquiredAt: z.string().datetime().optional(),
+  governanceAttemptCount: z.number().int().nonnegative().optional().default(0),
+  governanceNextAttemptAt: z.string().datetime().optional(),
+  governanceLastAttemptAt: z.string().datetime().optional(),
 });
 
 export type AccessRequest = z.infer<typeof AccessRequestSchema>;
@@ -162,6 +425,17 @@ export function toApprovedAccessRequest(request: AccessRequest): ApprovedAccessR
   return request as ApprovedAccessRequest;
 }
 
+// Type guard for retry fulfillment (allows FULFILLING status from retry)
+export function toRetryFulfillmentRequest(request: AccessRequest): ApprovedAccessRequest {
+  if (request.status !== "APPROVED" && request.status !== "FULFILLING") {
+    throw new Error(`Cannot execute request in status: ${request.status}. Must be APPROVED or FULFILLING.`);
+  }
+  if (!request.approvedAt || !request.approvedBy) {
+    throw new Error("Approved request missing approval metadata");
+  }
+  return request as ApprovedAccessRequest;
+}
+
 // ============================================================================
 // Fulfilled Access Request (for revocation - type-safe boundary)
 // ============================================================================
@@ -170,6 +444,13 @@ export const FulfilledAccessRequestSchema = AccessRequestSchema.extend({
   status: z.literal("FULFILLED"),
   fulfilledAt: z.string().datetime(),
   externalId: z.string(),
+  // Governance lease fields (inherited from AccessRequestSchema)
+  governanceLeaseOwner: z.string().optional(),
+  governanceLeaseUntil: z.string().datetime().optional(),
+  governanceLeaseAcquiredAt: z.string().datetime().optional(),
+  governanceAttemptCount: z.number().int().nonnegative().optional().default(0),
+  governanceNextAttemptAt: z.string().datetime().optional(),
+  governanceLastAttemptAt: z.string().datetime().optional(),
 });
 
 export type FulfilledAccessRequest = z.infer<typeof FulfilledAccessRequestSchema>;
@@ -209,8 +490,58 @@ export interface AccessExecutor {
 }
 
 // ============================================================================
-// Approval Decision
+// Governance Reconciliation
 // ============================================================================
+
+export const ReconciliationResultSchema = z.object({
+  requestsChecked: z.number().int().nonnegative(),
+  requestsUpdated: z.number().int().nonnegative(),
+  driftDetected: z.number().int().nonnegative(),
+  errors: z.array(z.object({
+    externalRequestId: z.string().optional(),
+    error: z.string(),
+    errorCode: z.number().optional(),
+  })),
+});
+
+export type ReconciliationResult = z.infer<typeof ReconciliationResultSchema>;
+
+export const GovernanceReconcilerConfigSchema = z.object({
+  provider: z.enum(["local", "entra", "okta"]),
+  maxRetries: z.number().int().nonnegative().default(3),
+  retryBackoffMs: z.number().int().nonnegative().default(5000),
+  driftDetectionEnabled: z.boolean().default(true),
+});
+
+export type GovernanceReconcilerConfig = z.infer<typeof GovernanceReconcilerConfigSchema>;
+
+export interface GovernanceReconciler {
+  reconcilePendingRequests(): Promise<ReconciliationResult>;
+  reconcileAssignments(): Promise<ReconciliationResult>;
+  reconcileRevocations(): Promise<ReconciliationResult>;
+}
+
+// Reconciliation state for access requests
+export const ReconciliationStateSchema = z.object({
+  lastCheckedAt: z.string().datetime().optional(),
+  nextCheckAt: z.string().datetime().optional(),
+  retryCount: z.number().int().nonnegative().default(0),
+  lastError: z.string().optional(),
+  lastErrorCode: z.number().optional(),
+});
+
+export type ReconciliationState = z.infer<typeof ReconciliationStateSchema>;
+
+// Audit event types for reconciliation
+export const ReconciliationAuditEventTypeSchema = z.enum([
+  "GOVERNANCE_RECONCILIATION_STARTED",
+  "GOVERNANCE_RECONCILIATION_SUCCEEDED",
+  "GOVERNANCE_RECONCILIATION_FAILED",
+  "GOVERNANCE_DRIFT_DETECTED",
+  "GOVERNANCE_STATE_CORRECTED",
+]);
+
+export type ReconciliationAuditEventType = z.infer<typeof ReconciliationAuditEventTypeSchema>;
 
 export const ApprovalDecisionSchema = z.object({
   decision: z.enum(["APPROVE", "DENY"]),

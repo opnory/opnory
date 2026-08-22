@@ -29,11 +29,38 @@ import {
   EntitlementRef,
   canTransition,
   toApprovedAccessRequest,
+  toRetryFulfillmentRequest,
   ExecutionResult,
   ExternalIdentity,
 } from "@opnory/access-types";
 
 const logger = getLogger().child({ component: "access-service" });
+
+// Per-request locks to serialize concurrent decisions on the same request
+const requestLocks = new Map<string, Promise<unknown>>();
+
+async function withRequestLock<T>(requestId: string, fn: () => Promise<T>): Promise<T> {
+  // Wait for any in-flight operation on this request to complete
+  const existingLock = requestLocks.get(requestId);
+  if (existingLock) {
+    await existingLock;
+  }
+
+  // Create new lock for this operation
+  let resolveLock: () => void;
+  const lockPromise = new Promise<void>((resolve) => {
+    resolveLock = resolve;
+  });
+  requestLocks.set(requestId, lockPromise);
+
+  try {
+    return await fn();
+  } finally {
+    // Release lock
+    requestLocks.delete(requestId);
+    resolveLock!();
+  }
+}
 
 // ============================================================================
 // Access Service Configuration
@@ -123,6 +150,8 @@ export class AccessRequestService {
       name: entitlement.name,
       system: entitlement.system,
       githubConfig: entitlement.githubConfig,
+      metadata: entitlement.metadata || {},
+      governance: entitlement.governance,
     };
 
     // Audit: entitlement identified
@@ -197,6 +226,24 @@ export class AccessRequestService {
       },
       expirationAttemptCount: 0,
       expirationMaxRetries: 3,
+      // Governance fields
+      governanceExternalRequestId: undefined,
+      governanceAuthority: undefined,
+      governanceAssignmentId: undefined,
+      governanceAssignmentExpiresAt: undefined,
+      // Reconciliation state fields
+      governanceLastCheckedAt: undefined,
+      governanceNextCheckAt: undefined,
+      governanceRetryCount: 0,
+      governanceLastError: undefined,
+      governanceLastErrorCode: undefined,
+      // Governance lease fields
+      governanceLeaseOwner: undefined,
+      governanceLeaseUntil: undefined,
+      governanceLeaseAcquiredAt: undefined,
+      governanceAttemptCount: 0,
+      governanceNextAttemptAt: undefined,
+      governanceLastAttemptAt: undefined,
     };
 
     // Store request
@@ -233,18 +280,20 @@ export class AccessRequestService {
     decision: ApprovalDecision,
     correlationId: string
   ): Promise<AccessRequest> {
-    // This will audit APPROVED/DENIED and validate self-approval
-    const result = await this.approvalService.approve(requestId, decision, correlationId);
-    const updatedRequest = result.request;
+    return withRequestLock(requestId, async () => {
+      // This will audit APPROVED/DENIED and validate self-approval
+      const result = await this.approvalService.approve(requestId, decision, correlationId);
+      const updatedRequest = result.request;
 
-    // If approved, start fulfillment and wait for completion
-    if (updatedRequest.status === "APPROVED") {
-      await this.fulfillRequest(updatedRequest, correlationId);
-      // Return the final state after fulfillment
-      return this.approvalService["store"].getById(requestId) as Promise<AccessRequest>;
-    }
+      // If approved or retrying from FAILED, start fulfillment and wait for completion
+      if (updatedRequest.status === "APPROVED" || updatedRequest.status === "FULFILLING") {
+        await this.fulfillRequest(updatedRequest, correlationId);
+        // Return the final state after fulfillment
+        return this.approvalService["store"].getById(requestId) as Promise<AccessRequest>;
+      }
 
-    return updatedRequest;
+      return updatedRequest;
+    });
   }
 
   // ============================================================================
@@ -260,51 +309,61 @@ export class AccessRequestService {
     if (!currentRequest) {
       throw new Error(`Request ${approvedRequest.id} not found`);
     }
-    
-    if (!canTransition(currentRequest.status, "FULFILLING")) {
-      throw new Error(`Cannot fulfill request in status: ${currentRequest.status}`);
+
+    let fulfillingRequest: AccessRequest | undefined;
+
+    // If already in FULFILLING (from retry), proceed directly to execution
+    if (currentRequest.status !== "FULFILLING") {
+      if (!canTransition(currentRequest.status, "FULFILLING")) {
+        throw new Error(`Cannot fulfill request in status: ${currentRequest.status}`);
+      }
+
+      fulfillingRequest = {
+        ...currentRequest,
+        status: "FULFILLING",
+        updatedAt: new Date().toISOString(),
+        version: currentRequest.version + 1,
+      };
+
+      await this.approvalService["store"].update(fulfillingRequest, currentRequest.version);
     }
 
-    const fulfillingRequest: AccessRequest = {
-      ...currentRequest,
-      status: "FULFILLING",
-      updatedAt: new Date().toISOString(),
-      version: currentRequest.version + 1,
-    };
-
-    await this.approvalService["store"].update(fulfillingRequest, currentRequest.version);
-
     // Convert to ApprovedAccessRequest for executor (type-safe)
-    const executorRequest = toApprovedAccessRequest(currentRequest);
+    // Use toRetryFulfillmentRequest if already FULFILLING (from retry), otherwise toApprovedAccessRequest
+        const executorRequest = currentRequest.status === "FULFILLING"
+          ? toRetryFulfillmentRequest(currentRequest)
+          : toApprovedAccessRequest(approvedRequest);
 
     // Execute via executor (defense in depth: executor verifies approval)
     const result = await this.executor.grant(executorRequest);
 
     if (result.success) {
       // Transition to FULFILLED
+      const baseRequest = currentRequest.status === "FULFILLING" ? currentRequest : fulfillingRequest!;
       const fulfilledRequest: AccessRequest = {
-        ...fulfillingRequest,
+        ...baseRequest,
         status: "FULFILLED",
         fulfilledAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         metadata: {
-          ...fulfillingRequest.metadata,
+          ...baseRequest.metadata,
           externalId: result.externalId,
         },
       };
 
-      await this.approvalService["store"].update(fulfilledRequest, fulfillingRequest.version);
+      await this.approvalService["store"].update(fulfilledRequest, baseRequest.version);
       logger.info({ requestId: approvedRequest.id }, "Access request fulfilled");
     } else {
       // Transition to FAILED
+      const baseRequest = currentRequest.status === "FULFILLING" ? currentRequest : fulfillingRequest!;
       const failedRequest: AccessRequest = {
-        ...fulfillingRequest,
+        ...baseRequest,
         status: "FAILED",
         fulfillmentError: result.error,
         updatedAt: new Date().toISOString(),
       };
 
-      await this.approvalService["store"].update(failedRequest, fulfillingRequest.version);
+      await this.approvalService["store"].update(failedRequest, baseRequest.version);
       logger.error({ requestId: approvedRequest.id, error: result.error }, "Access request fulfillment failed");
     }
   }

@@ -487,6 +487,8 @@ export class ExpirationScheduler {
           name: row.entitlement_name,
           system: row.entitlement_system,
           githubConfig: row.metadata?.githubConfig,
+          metadata: row.metadata?.entitlementMetadata || {},
+          governance: row.metadata?.governance,
         },
         reason: row.reason,
         status: "FULFILLED",
@@ -507,6 +509,24 @@ export class ExpirationScheduler {
         metadata: row.metadata || {},
         expirationAttemptCount: row.expiration_attempt_count ?? 0,
         expirationMaxRetries: row.expiration_max_retries ?? 3,
+        // Governance fields
+        governanceExternalRequestId: row.governance_external_request_id,
+        governanceAuthority: row.governance_authority,
+        governanceAssignmentId: row.governance_assignment_id,
+        governanceAssignmentExpiresAt: row.governance_assignment_expires_at?.toISOString(),
+        // Reconciliation state fields
+        governanceLastCheckedAt: row.governance_last_checked_at?.toISOString(),
+        governanceNextCheckAt: row.governance_next_check_at?.toISOString(),
+        governanceRetryCount: row.governance_retry_count ?? 0,
+        governanceLastError: row.governance_last_error,
+        governanceLastErrorCode: row.governance_last_error_code,
+        // Governance lease fields
+        governanceLeaseOwner: row.governance_lease_owner,
+        governanceLeaseUntil: row.governance_lease_until?.toISOString(),
+        governanceLeaseAcquiredAt: row.governance_lease_acquired_at?.toISOString(),
+        governanceAttemptCount: row.governance_attempt_count ?? 0,
+        governanceNextAttemptAt: row.governance_next_attempt_at?.toISOString(),
+        governanceLastAttemptAt: row.governance_last_attempt_at?.toISOString(),
       };
 
       // Execute revocation

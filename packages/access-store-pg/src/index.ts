@@ -89,7 +89,25 @@ CREATE TABLE IF NOT EXISTS access_requests (
     -- Lease fields for distributed workers
     lease_owner VARCHAR(255),
     lease_until TIMESTAMPTZ,
-    lease_acquired_at TIMESTAMPTZ
+    lease_acquired_at TIMESTAMPTZ,
+    -- Governance fields
+    governance_external_request_id VARCHAR(255),
+    governance_authority VARCHAR(50),
+    governance_assignment_id VARCHAR(255),
+    governance_assignment_expires_at TIMESTAMPTZ,
+    -- Reconciliation state fields
+    governance_last_checked_at TIMESTAMPTZ,
+    governance_next_check_at TIMESTAMPTZ,
+    governance_retry_count INTEGER NOT NULL DEFAULT 0,
+    governance_last_error TEXT,
+    governance_last_error_code INTEGER,
+    -- Governance lease fields for distributed reconciliation worker
+    governance_lease_owner VARCHAR(255),
+    governance_lease_until TIMESTAMPTZ,
+    governance_lease_acquired_at TIMESTAMPTZ,
+    governance_attempt_count INTEGER NOT NULL DEFAULT 0,
+    governance_next_attempt_at TIMESTAMPTZ,
+    governance_last_attempt_at TIMESTAMPTZ
 );
 
 CREATE INDEX IF NOT EXISTS idx_access_requests_requester ON access_requests(requester_id);
@@ -100,6 +118,9 @@ CREATE INDEX IF NOT EXISTS idx_access_requests_access_expires ON access_requests
 CREATE INDEX IF NOT EXISTS idx_access_requests_expiration_retry ON access_requests(expiration_next_attempt_at) WHERE expiration_next_attempt_at IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_access_requests_expiration_lease ON access_requests(access_expires_at, expiration_next_attempt_at) WHERE access_expires_at IS NOT NULL AND status IN ('FULFILLED', 'RETRY');
 CREATE INDEX IF NOT EXISTS idx_access_requests_lease ON access_requests(lease_until) WHERE lease_until IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_access_requests_governance_lease ON access_requests(governance_lease_until) WHERE governance_lease_until IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_access_requests_governance_next_check ON access_requests(governance_next_check_at) WHERE governance_next_check_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_access_requests_governance_retry ON access_requests(governance_next_attempt_at) WHERE governance_next_attempt_at IS NOT NULL;
 
 -- Audit Events table
 CREATE TABLE IF NOT EXISTS audit_events (
@@ -158,6 +179,8 @@ export class PgAccessRequestStore {
         id: row.entitlement_id,
         name: row.entitlement_name,
         system: row.entitlement_system,
+        metadata: row.metadata?.entitlementMetadata || {},
+        governance: row.metadata?.governance,
       },
       reason: row.reason,
       status: row.status as AccessRequestStatus,
@@ -185,6 +208,24 @@ export class PgAccessRequestStore {
       leaseOwner: row.lease_owner,
       leaseUntil: row.lease_until?.toISOString(),
       leaseAcquiredAt: row.lease_acquired_at?.toISOString(),
+      // Governance fields
+      governanceExternalRequestId: row.governance_external_request_id,
+      governanceAuthority: row.governance_authority,
+      governanceAssignmentId: row.governance_assignment_id,
+      governanceAssignmentExpiresAt: row.governance_assignment_expires_at?.toISOString(),
+      // Reconciliation state fields
+      governanceLastCheckedAt: row.governance_last_checked_at?.toISOString(),
+      governanceNextCheckAt: row.governance_next_check_at?.toISOString(),
+      governanceRetryCount: row.governance_retry_count ?? 0,
+      governanceLastError: row.governance_last_error,
+      governanceLastErrorCode: row.governance_last_error_code,
+      // Governance lease fields
+      governanceLeaseOwner: row.governance_lease_owner,
+      governanceLeaseUntil: row.governance_lease_until?.toISOString(),
+      governanceLeaseAcquiredAt: row.governance_lease_acquired_at?.toISOString(),
+      governanceAttemptCount: row.governance_attempt_count ?? 0,
+      governanceNextAttemptAt: row.governance_next_attempt_at?.toISOString(),
+      governanceLastAttemptAt: row.governance_last_attempt_at?.toISOString(),
     };
   }
 
@@ -235,8 +276,13 @@ export class PgAccessRequestStore {
           expiration_attempt_count = $14, expiration_next_attempt_at = $15,
           expiration_max_retries = $16, expiration_last_error = $17,
           expiration_last_attempt_at = $18,
-          lease_owner = $19, lease_until = $20, lease_acquired_at = $21
-        WHERE id = $1 AND version = $22
+          lease_owner = $19, lease_until = $20, lease_acquired_at = $21,
+          governance_external_request_id = $22, governance_authority = $23,
+          governance_assignment_id = $24, governance_assignment_expires_at = $25,
+          governance_last_checked_at = $26, governance_next_check_at = $27,
+          governance_retry_count = $28, governance_last_error = $29,
+          governance_last_error_code = $30
+        WHERE id = $1 AND version = $31
       `;
       params = [
         request.id,
@@ -260,6 +306,15 @@ export class PgAccessRequestStore {
         request.leaseOwner,
         request.leaseUntil ? new Date(request.leaseUntil) : null,
         request.leaseAcquiredAt ? new Date(request.leaseAcquiredAt) : null,
+        request.governanceExternalRequestId,
+        request.governanceAuthority,
+        request.governanceAssignmentId,
+        request.governanceAssignmentExpiresAt ? new Date(request.governanceAssignmentExpiresAt) : null,
+        request.governanceLastCheckedAt ? new Date(request.governanceLastCheckedAt) : null,
+        request.governanceNextCheckAt ? new Date(request.governanceNextCheckAt) : null,
+        request.governanceRetryCount ?? 0,
+        request.governanceLastError,
+        request.governanceLastErrorCode,
         expectedVersion,
       ];
     } else {
@@ -272,7 +327,12 @@ export class PgAccessRequestStore {
           expiration_attempt_count = $14, expiration_next_attempt_at = $15,
           expiration_max_retries = $16, expiration_last_error = $17,
           expiration_last_attempt_at = $18,
-          lease_owner = $19, lease_until = $20, lease_acquired_at = $21
+          lease_owner = $19, lease_until = $20, lease_acquired_at = $21,
+          governance_external_request_id = $22, governance_authority = $23,
+          governance_assignment_id = $24, governance_assignment_expires_at = $25,
+          governance_last_checked_at = $26, governance_next_check_at = $27,
+          governance_retry_count = $28, governance_last_error = $29,
+          governance_last_error_code = $30
         WHERE id = $1
       `;
       params = [
@@ -297,6 +357,15 @@ export class PgAccessRequestStore {
         request.leaseOwner,
         request.leaseUntil ? new Date(request.leaseUntil) : null,
         request.leaseAcquiredAt ? new Date(request.leaseAcquiredAt) : null,
+        request.governanceExternalRequestId,
+        request.governanceAuthority,
+        request.governanceAssignmentId,
+        request.governanceAssignmentExpiresAt ? new Date(request.governanceAssignmentExpiresAt) : null,
+        request.governanceLastCheckedAt ? new Date(request.governanceLastCheckedAt) : null,
+        request.governanceNextCheckAt ? new Date(request.governanceNextCheckAt) : null,
+        request.governanceRetryCount ?? 0,
+        request.governanceLastError,
+        request.governanceLastErrorCode,
       ];
     }
 
