@@ -70,8 +70,7 @@ jobs:
         if: runner.os == 'Linux'
 
       - name: Run database migrations
-        run: |
-          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opnory bun -e "import { migrate } from './packages/access-store-pg/src/index.js'; await migrate();" 2>&1 || true
+        run: DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opnory bun -e "import { migrate } from './packages/access-store-pg/src/index.js'; await migrate();" 2>&1 || true
         if: runner.os == 'Linux'
 
       - name: Build all packages
@@ -83,7 +82,7 @@ jobs:
       - name: Run tests
         run: bun test
         env:
-          DATABASE_URL: postgresql://postgres@localhost:5432/opnory
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opnory
           PGUSER: postgres
           PGPASSWORD: postgres
           OPNORY_ALLOW_UNPINNED_LIVE_TEST: "true"
