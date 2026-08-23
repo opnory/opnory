@@ -10,8 +10,6 @@ import { Pool, PoolClient } from "pg";
 // Test Infrastructure
 // ============================================================================
 
-const databaseUrl = process.env.DATABASE_URL || "postgresql://raelldottin@localhost:5432/opnory";
-
 let testPool: Pool;
 let testExecutor: MockExecutor;
 let testAuditStore: InMemoryAuditEventStore;
@@ -241,7 +239,7 @@ beforeAll(async () => {
   }
 
   testPool = new Pool({
-    connectionString: databaseUrl,
+    connectionString: process.env.DATABASE_URL,
     max: 5,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,

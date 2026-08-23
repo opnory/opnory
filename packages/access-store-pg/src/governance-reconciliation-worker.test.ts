@@ -170,7 +170,10 @@ function createMockReconciliationProvider(): GovernanceProvider & {
 // ============================================================================
 
 function getTestDbConfig() {
-  const databaseUrl = process.env.DATABASE_URL || "postgresql://opnory:***@localhost:5432/opnory";
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error("DATABASE_URL not set");
+  }
   // Parse the URL to extract components
   const url = new URL(databaseUrl);
   return {
