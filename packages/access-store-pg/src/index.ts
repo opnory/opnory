@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS access_requests (
     expiration_next_attempt_at TIMESTAMPTZ,
     expiration_max_retries INTEGER NOT NULL DEFAULT 3,
     expiration_last_error TEXT,
+    expiration_last_error_code INTEGER,
     expiration_last_attempt_at TIMESTAMPTZ,
     -- Lease fields for distributed workers
     lease_owner VARCHAR(255),
