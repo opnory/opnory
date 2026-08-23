@@ -16,6 +16,7 @@ import {
 } from "@opnory/access-types";
 import { GovernanceReconciliationWorker } from "./governance-reconciliation-worker";
 import { randomUUID } from "crypto";
+import { resetPool } from "./index.js";
 
 // ============================================================================
 // Mock Provider for Reconciliation Worker Tests
@@ -316,6 +317,9 @@ describe("Governance Reconciliation Worker Conformance (CASE 65-72)", () => {
   };
 
   beforeAll(async () => {
+    // Reset the global pool so it picks up the test DATABASE_URL
+    resetPool();
+    
     adminPool = await createAdminPool();
     testSchemaName = `test_governance_reconciliation_${randomUUID().replaceAll("-", "")}`;
     

@@ -4,12 +4,12 @@ import { AccessRequest, AccessRequestStatus, EntitlementRef } from "@opnory/acce
 import { PgAuditEventStore } from "@opnory/access-store-pg";
 import { randomUUID as uuidv4 } from "crypto";
 import { Pool } from "pg";
+import { resetPool } from "./index.js";
 
 // ============================================================================
 // 10K Chaos Test Configuration
 // ============================================================================
 
-const DATABASE_URL = process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/opnory";
 const CHAOS_RECORD_COUNT = 10000;
 const WORKER_COUNT = 20;
 const LEASE_DURATION_MS = 5000;
@@ -462,7 +462,14 @@ function printClassification(result: ClassificationResult, phase: string) {
 
 describe.skip("10K Chaos / Recovery Validation", () => {
   beforeAll(async () => {
-    testPool = new Pool({ connectionString: DATABASE_URL, max: 30 });
+    if (!process.env.DATABASE_URL) {
+      console.log("Skipping 10K chaos tests - no DATABASE_URL");
+      return;
+    }
+    // Reset the global pool so it picks up the test DATABASE_URL
+    resetPool();
+    
+    testPool = new Pool({ connectionString: process.env.DATABASE_URL, max: 30 });
     await testPool.query("SELECT 1");
     
     const config: SchedulerConfig = {
