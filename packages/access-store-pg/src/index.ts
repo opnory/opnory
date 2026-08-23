@@ -19,16 +19,19 @@ import {
 const logger = getLogger().child({ component: "access-store-pg" });
 
 // ============================================================================
-// PostgreSQL Connection Pool
+// PostgreSQL Connection Pool (lazy, environment-bound)
 // ============================================================================
 
-let pgPool: Pool | null = null;
+let pgPool: Pool | undefined;
 
 export function getPool(): Pool {
   if (!pgPool) {
-    // Read DATABASE_URL directly from env to avoid cached config issues in tests
-    const databaseUrl = process.env.DATABASE_URL || "postgresql://opnory:***@localhost:5432/opnory";
-    
+    const databaseUrl = process.env.DATABASE_URL;
+
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL is required but not set in environment");
+    }
+
     pgPool = new Pool({
       connectionString: databaseUrl,
       max: 20,
@@ -46,14 +49,14 @@ export function getPool(): Pool {
 export async function closePool(): Promise<void> {
   if (pgPool) {
     await pgPool.end();
-    pgPool = null;
+    pgPool = undefined;
   }
 }
 
-export function resetPool(): void {
+export async function resetPool(): Promise<void> {
   if (pgPool) {
-    pgPool.end().catch(() => {});
-    pgPool = null;
+    await pgPool.end().catch(() => {});
+    pgPool = undefined;
   }
 }
 
@@ -171,8 +174,8 @@ export async function migrate(): Promise<void> {
 export class PgAccessRequestStore {
   private pool: Pool;
 
-  constructor(pool?: Pool) {
-    this.pool = pool || getPool();
+  constructor(pool: Pool) {
+    this.pool = pool;
   }
 
   private mapRowToRequest(row: any): AccessRequest {
@@ -404,8 +407,8 @@ export class PgAccessRequestStore {
 export class PgAuditEventStore implements AuditEventStore {
   private pool: Pool;
 
-  constructor(pool?: Pool) {
-    this.pool = pool || getPool();
+  constructor(pool: Pool) {
+    this.pool = pool;
   }
 
   async append(event: AuditEvent): Promise<void> {
@@ -461,8 +464,8 @@ export class PgAuditEventStore implements AuditEventStore {
 export class PgIdempotencyStore {
   private pool: Pool;
 
-  constructor(pool?: Pool) {
-    this.pool = pool || getPool();
+  constructor(pool: Pool) {
+    this.pool = pool;
   }
 
   async checkAndSet(key: string, ttlSeconds: number = 86400): Promise<boolean> {
@@ -500,50 +503,24 @@ export class PgIdempotencyStore {
     const result = await this.pool.query(
       `DELETE FROM idempotency_keys WHERE expires_at < NOW()`
     );
-    return result.rowCount || 0;
+    return result.rowCount ?? 0;
   }
 }
 
 // ============================================================================
-// PostgreSQL Approval Store (wraps PgAccessRequestStore for ApprovalService)
+// Exports
 // ============================================================================
 
-export interface ApprovalStore {
-  create(request: AccessRequest): Promise<void>;
-  getById(id: string): Promise<AccessRequest | undefined>;
-  update(request: AccessRequest, expectedVersion?: number): Promise<void>;
-  getAll(): Promise<AccessRequest[]>;
-}
+export {
+  ExpirationScheduler,
+  createExpirationScheduler,
+  DEFAULT_SCHEDULER_CONFIG,
+} from "./expiration-scheduler.js";
 
-export class PgApprovalStore implements ApprovalStore {
-  private store: PgAccessRequestStore;
+export type { SchedulerConfig, SchedulerMetrics } from "./expiration-scheduler.js";
 
-  constructor(pool?: Pool) {
-    this.store = new PgAccessRequestStore(pool);
-  }
+export {
+  GovernanceReconciliationWorker,
+} from "./governance-reconciliation-worker.js";
 
-  async create(request: AccessRequest): Promise<void> {
-    return this.store.create(request);
-  }
-
-  async getById(id: string): Promise<AccessRequest | undefined> {
-    return this.store.getById(id);
-  }
-
-  async update(request: AccessRequest, expectedVersion?: number): Promise<void> {
-    return this.store.update(request, expectedVersion);
-  }
-
-  async getAll(): Promise<AccessRequest[]> {
-    return this.store.getAll();
-  }
-}
-
-// ============================================================================
-// Export all stores and utilities
-// ============================================================================
-
-export type { AccessRequest, AuditEvent, ApprovalDecision, ExecutionResult };
-export type { SchedulerConfig } from "./expiration-scheduler.js";
-export { ExpirationScheduler, createExpirationScheduler, DEFAULT_SCHEDULER_CONFIG } from "./expiration-scheduler.js";
-export { GovernanceReconciliationWorker } from "./governance-reconciliation-worker.js";
+export type { ReconciliationWorkerConfig } from "./governance-reconciliation-worker.js";

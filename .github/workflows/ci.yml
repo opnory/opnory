@@ -9,6 +9,11 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opnory
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      OPNORY_ALLOW_UNPINNED_LIVE_TEST: "true"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -18,38 +23,8 @@ jobs:
         with:
           bun-version: 1.3.14
 
-      - name: Debug checkout
-        run: |
-          echo "=== Current directory ==="
-          pwd
-          echo ""
-          echo "=== Root package.json ==="
-          cat package.json | head -20
-          echo ""
-          echo "=== All directories ==="
-          ls -la
-          echo ""
-          echo "=== Packages directory ==="
-          ls -la packages/
-          echo ""
-          echo "=== Root tsconfig.json ==="
-          cat tsconfig.json | head -20
-          echo ""
-          echo "=== packages/types/tsconfig.json ==="
-          cat packages/types/tsconfig.json
-
       - name: Install dependencies
         run: bun install
-
-      - name: Debug workspace
-        run: |
-          echo "=== Workspace packages ==="
-          for d in packages/*/; do
-            if [ -f "$d/package.json" ]; then
-              echo "--- $d ---"
-              cat "$d/package.json" | head -5
-            fi
-          done
 
       - name: Start PostgreSQL
         run: |
@@ -70,7 +45,7 @@ jobs:
         if: runner.os == 'Linux'
 
       - name: Run database migrations
-        run: DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opnory bun -e "import { migrate } from './packages/access-store-pg/src/index.js'; await migrate();" 2>&1 || true
+        run: bun -e "import { migrate } from './packages/access-store-pg/src/index.js'; await migrate();"
         if: runner.os == 'Linux'
 
       - name: Build all packages
@@ -80,9 +55,4 @@ jobs:
         run: bun run typecheck
 
       - name: Run tests
-        run: bun -e "import { resetPool } from './packages/access-store-pg/src/index.js'; resetPool();" && bun test
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opnory
-          PGUSER: postgres
-          PGPASSWORD: postgres
-          OPNORY_ALLOW_UNPINNED_LIVE_TEST: "true"
+        run: bun test
