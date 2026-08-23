@@ -26,8 +26,8 @@ let pgPool: Pool | null = null;
 
 export function getPool(): Pool {
   if (!pgPool) {
-    const config = loadConfig();
-    const databaseUrl = config.database?.url || "postgresql://opnory:opnory@localhost:5432/opnory";
+    // Read DATABASE_URL directly from env to avoid cached config issues in tests
+    const databaseUrl = process.env.DATABASE_URL || "postgresql://opnory:***@localhost:5432/opnory";
     
     pgPool = new Pool({
       connectionString: databaseUrl,
