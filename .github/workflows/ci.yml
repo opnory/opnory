@@ -61,6 +61,8 @@ jobs:
             fi
             sleep 1
           done
+          # Set password for postgres user
+          sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
           # Create database using postgres user
           sudo -u postgres createdb opnory || true
           # Verify database exists and is accessible
@@ -77,3 +79,6 @@ jobs:
         run: bun test
         env:
           DATABASE_URL: postgresql://postgres@localhost:5432/opnory
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          OPNORY_ALLOW_UNPINNED_LIVE_TEST: "true"
