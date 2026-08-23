@@ -30,7 +30,13 @@ jobs:
           ls -la
           echo ""
           echo "=== Packages directory ==="
-          ls -la packages/ || echo "packages/ not found"
+          ls -la packages/
+          echo ""
+          echo "=== Root tsconfig.json ==="
+          cat tsconfig.json | head -20
+          echo ""
+          echo "=== packages/types/tsconfig.json ==="
+          cat packages/types/tsconfig.json
 
       - name: Install dependencies
         run: bun install
