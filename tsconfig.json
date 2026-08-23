@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "isolatedModules": true,
+    "paths": {
+      "@opnory/*": ["packages/*/dist"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "build", ".turbo", "scripts"],
+  "references": [
+    { "path": "./packages/types" },
+    { "path": "./packages/config" },
+    { "path": "./packages/observability" },
+    { "path": "./packages/knowledge" },
+    { "path": "./packages/escalation" },
+    { "path": "./packages/agent" },
+    { "path": "./packages/access-entitlements" },
+    { "path": "./packages/access-types" },
+    { "path": "./packages/access-policy" },
+    { "path": "./packages/access-approval" },
+    { "path": "./packages/access-audit" },
+    { "path": "./packages/access-executor" },
+    { "path": "./packages/access-service" },
+    { "path": "./packages/access-store-pg" },
+    { "path": "./apps/api" },
+    { "path": "./apps/slack" }
+  ]
+}
