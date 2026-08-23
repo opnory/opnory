@@ -1,5 +1,5 @@
 {
-  "lockfileVersion": 1,
+  "lockfileVersion": 2,
   "configVersion": 1,
   "workspaces": {
     "": {
@@ -547,7 +547,7 @@
 
     "@types/retry": ["@types/retry@0.12.0", "", {}, "sha512-wWKOClTTiizcZhXnPY4wikVAwmdYHp8q6DmC+EJUzAMsycb7HB32Kh9RN4+0gExjmPmZSAQjgURXIGATPegAvA=="],
 
-    "@types/send": ["@types/send@0.17.6", "", { "dependencies": { "@types/mime": "^1", "@types/node": "*" } }, "sha512-Uqt8rPBE8SY0RK8JB1EzVOIZ32uqy8HwdxCnoCOsYrvnswqmFZ/k+9Ikidlk/ImhsdvBsloHbAlewb2IEBV/Og=="],
+    "@types/send": ["@types/send@1.2.1", "", { "dependencies": { "@types/node": "*" } }, "sha512-arsCikDvlU99zl1g69TcAB3mzZPpxgw0UQnaHeC1Nwb015xp8bknZv5rIfri9xTOcMuaVgvabfIRA7PSZVuZIQ=="],
 
     "@types/serve-static": ["@types/serve-static@1.15.10", "", { "dependencies": { "@types/http-errors": "*", "@types/node": "*", "@types/send": "<1" } }, "sha512-tRs1dB+g8Itk72rlSI2ZrW6vZg0YrLI81iQSTkMmOqnqCaNr/8Ek4VwWcN5vZgCYWbg/JJSGBlUaYGAOP73qBw=="],
 
@@ -745,7 +745,7 @@
 
     "fast-safe-stringify": ["fast-safe-stringify@2.1.1", "", {}, "sha512-W+KJc2dmILlPplD/H4K9l9LcAHAfPtP6BY84uVLXQ6Evcz9Lcg33Y2z1IVblT6xdY54PXYVHEv+0Wpq8Io6zkA=="],
 
-    "fast-uri": ["fast-uri@2.4.4", "", {}, "sha512-GntYZbd2KSiFfoZI3Y02rXKihfsPwdWfiHrwKVLuU1i810D0SYw7fCarLxaRO2VvneTrbzCxSz3GnvEfUiApug=="],
+    "fast-uri": ["fast-uri@2.4.5", "", {}, "sha512-k9Nq2gfGrPow/wJcIQ+dbhLqSTdHx2eH+e6IAjAam0Xs9W5Uda8eXu6Ns73byuuyYvIXYnEJ9ziARtlXm9opgw=="],
 
     "fastify": ["fastify@4.29.1", "", { "dependencies": { "@fastify/ajv-compiler": "^3.5.0", "@fastify/error": "^3.4.0", "@fastify/fast-json-stringify-compiler": "^4.3.0", "abstract-logging": "^2.0.1", "avvio": "^8.3.0", "fast-content-type-parse": "^1.1.0", "fast-json-stringify": "^5.8.0", "find-my-way": "^8.0.0", "light-my-request": "^5.11.0", "pino": "^9.0.0", "process-warning": "^3.0.0", "proxy-addr": "^2.0.7", "rfdc": "^1.3.0", "secure-json-parse": "^2.7.0", "semver": "^7.5.4", "toad-cache": "^3.3.0" } }, "sha512-m2kMNHIG92tSNWv+Z3UeTR9AWLLuo7KctC7mlFPtMEVrfjIhmQhkQnT9v15qA/BfVq3vvj134Y0jl9SBje3jXQ=="],
 
@@ -1231,139 +1231,55 @@
 
     "@octokit/request/fast-content-type-parse": ["fast-content-type-parse@2.0.1", "", {}, "sha512-nGqtvLrj5w0naR6tDPfB4cUmYCqouzyQiz6C5y/LtcDllJdrcc6WaWW6iXyIIOErTa/XRybj28aasdn4LkVk6Q=="],
 
-    "@opnory/access-approval/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-entitlements/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-executor/@opnory/access-audit": ["@opnory/access-audit@file:packages/access-audit", { "dependencies": { "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-executor/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-executor/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-executor/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-policy/@opnory/access-entitlements": ["@opnory/access-entitlements@file:packages/access-entitlements", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-policy/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-policy/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-policy/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-approval": ["@opnory/access-approval@file:packages/access-approval", { "dependencies": { "@opnory/access-audit": "file:../access-audit", "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "uuid": "^14.0.1", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-audit": ["@opnory/access-audit@file:packages/access-audit", { "dependencies": { "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-entitlements": ["@opnory/access-entitlements@file:packages/access-entitlements", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-executor": ["@opnory/access-executor@file:packages/access-executor", { "dependencies": { "@octokit/auth-app": "^7.2.2", "@octokit/rest": "^21.1.1", "@opnory/access-audit": "file:../access-audit", "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "uuid": "^14.0.1", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-policy": ["@opnory/access-policy@file:packages/access-policy", { "dependencies": { "@opnory/access-entitlements": "file:../access-entitlements", "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-approval": ["@opnory/access-approval@file:packages/access-approval", { "dependencies": { "@opnory/access-audit": "file:../access-audit", "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "uuid": "^14.0.1", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-audit": ["@opnory/access-audit@file:packages/access-audit", { "dependencies": { "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-executor": ["@opnory/access-executor@file:packages/access-executor", { "dependencies": { "@octokit/auth-app": "^7.2.2", "@octokit/rest": "^21.1.1", "@opnory/access-audit": "file:../access-audit", "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "uuid": "^14.0.1", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/config": ["@opnory/config@file:packages/config", { "dependencies": { "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/agent/@opnory/config": ["@opnory/config@file:packages/config", { "dependencies": { "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/agent/@opnory/escalation": ["@opnory/escalation@file:packages/escalation", { "dependencies": { "@opnory/config": "file:../config", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "uuid": "^10.0.0", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "@types/uuid": "^10.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/agent/@opnory/knowledge": ["@opnory/knowledge@file:packages/knowledge", { "dependencies": { "@opnory/config": "file:../config", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/agent/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/agent/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
     "@opnory/agent/uuid": ["uuid@10.0.0", "", { "bin": { "uuid": "dist/bin/uuid" } }, "sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ=="],
-
-    "@opnory/api/@opnory/access-audit": ["@opnory/access-audit@file:packages/access-audit", { "dependencies": { "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service": ["@opnory/access-service@file:packages/access-service", { "dependencies": { "@opnory/access-approval": "file:../access-approval", "@opnory/access-audit": "file:../access-audit", "@opnory/access-entitlements": "file:../access-entitlements", "@opnory/access-executor": "file:../access-executor", "@opnory/access-policy": "file:../access-policy", "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "uuid": "^14.0.2", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/agent": ["@opnory/agent@file:packages/agent", { "dependencies": { "@opnory/config": "file:../config", "@opnory/escalation": "file:../escalation", "@opnory/knowledge": "file:../knowledge", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "uuid": "^10.0.0", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "@types/uuid": "^10.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/config": ["@opnory/config@file:packages/config", { "dependencies": { "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/escalation": ["@opnory/escalation@file:packages/escalation", { "dependencies": { "@opnory/config": "file:../config", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "uuid": "^10.0.0", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "@types/uuid": "^10.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/knowledge": ["@opnory/knowledge@file:packages/knowledge", { "dependencies": { "@opnory/config": "file:../config", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/config/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/escalation/@opnory/config": ["@opnory/config@file:packages/config", { "dependencies": { "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/escalation/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/escalation/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
 
     "@opnory/escalation/uuid": ["uuid@10.0.0", "", { "bin": { "uuid": "dist/bin/uuid" } }, "sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ=="],
 
-    "@opnory/knowledge/@opnory/config": ["@opnory/config@file:packages/config", { "dependencies": { "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/knowledge/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/knowledge/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-approval": ["@opnory/access-approval@file:packages/access-approval", { "dependencies": { "@opnory/access-audit": "file:../access-audit", "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "uuid": "^14.0.1", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-audit": ["@opnory/access-audit@file:packages/access-audit", { "dependencies": { "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service": ["@opnory/access-service@file:packages/access-service", { "dependencies": { "@opnory/access-approval": "file:../access-approval", "@opnory/access-audit": "file:../access-audit", "@opnory/access-entitlements": "file:../access-entitlements", "@opnory/access-executor": "file:../access-executor", "@opnory/access-policy": "file:../access-policy", "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "uuid": "^14.0.2", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg": ["@opnory/access-store-pg@file:packages/access-store-pg", { "dependencies": { "@opnory/access-approval": "file:../access-approval", "@opnory/access-audit": "file:../access-audit", "@opnory/access-executor": "file:../access-executor", "@opnory/access-types": "file:../access-types", "@opnory/config": "file:../config", "@opnory/observability": "file:../observability", "pg": "^8.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/pg": "^8.10.9", "tsx": "^4.7.0", "typescript": "^5.3.3" } }],
-
-    "@opnory/slack/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/agent": ["@opnory/agent@file:packages/agent", { "dependencies": { "@opnory/config": "file:../config", "@opnory/escalation": "file:../escalation", "@opnory/knowledge": "file:../knowledge", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "uuid": "^10.0.0", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "@types/uuid": "^10.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/config": ["@opnory/config@file:packages/config", { "dependencies": { "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
     "@opnory/slack/@types/node": ["@types/node@20.19.43", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA=="],
+
+    "@slack/logger/@types/node": ["@types/node@26.2.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg=="],
 
     "@slack/oauth/@slack/logger": ["@slack/logger@3.0.0", "", { "dependencies": { "@types/node": ">=12.0.0" } }, "sha512-DTuBFbqu4gGfajREEMrkq5jBhcnskinhr4+AnfJEk48zhVeEv3XnUKGIX98B74kxhYsIMfApGGySTn7V3b5yBA=="],
 
+    "@slack/oauth/@types/node": ["@types/node@26.2.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg=="],
+
     "@slack/socket-mode/@slack/logger": ["@slack/logger@3.0.0", "", { "dependencies": { "@types/node": ">=12.0.0" } }, "sha512-DTuBFbqu4gGfajREEMrkq5jBhcnskinhr4+AnfJEk48zhVeEv3XnUKGIX98B74kxhYsIMfApGGySTn7V3b5yBA=="],
+
+    "@slack/socket-mode/@types/node": ["@types/node@26.2.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg=="],
 
     "@slack/web-api/@slack/logger": ["@slack/logger@3.0.0", "", { "dependencies": { "@types/node": ">=12.0.0" } }, "sha512-DTuBFbqu4gGfajREEMrkq5jBhcnskinhr4+AnfJEk48zhVeEv3XnUKGIX98B74kxhYsIMfApGGySTn7V3b5yBA=="],
 
+    "@slack/web-api/@types/node": ["@types/node@26.2.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg=="],
+
     "@slack/web-api/eventemitter3": ["eventemitter3@3.1.2", "", {}, "sha512-tvtQIeLVHjDkJYnzf2dgVMxfuSGJeM/7UCG17TT4EumTfNtF+0nebF/4zWOIkCreAbtNqhGEboB6BWrwqNaw4Q=="],
+
+    "@types/body-parser/@types/node": ["@types/node@26.2.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg=="],
+
+    "@types/connect/@types/node": ["@types/node@26.2.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg=="],
+
+    "@types/express-serve-static-core/@types/node": ["@types/node@26.2.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg=="],
+
+    "@types/is-stream/@types/node": ["@types/node@26.2.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg=="],
+
+    "@types/jsonwebtoken/@types/node": ["@types/node@26.2.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg=="],
+
+    "@types/pg/@types/node": ["@types/node@26.2.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg=="],
+
+    "@types/send/@types/node": ["@types/node@26.2.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg=="],
+
+    "@types/serve-static/@types/node": ["@types/node@26.2.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg=="],
+
+    "@types/serve-static/@types/send": ["@types/send@0.17.6", "", { "dependencies": { "@types/mime": "^1", "@types/node": "*" } }, "sha512-Uqt8rPBE8SY0RK8JB1EzVOIZ32uqy8HwdxCnoCOsYrvnswqmFZ/k+9Ikidlk/ImhsdvBsloHbAlewb2IEBV/Og=="],
+
+    "@types/ws/@types/node": ["@types/node@26.2.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg=="],
 
     "ajv-formats/ajv": ["ajv@8.20.0", "", { "dependencies": { "fast-deep-equal": "^3.1.3", "fast-uri": "^3.0.1", "json-schema-traverse": "^1.0.0", "require-from-string": "^2.0.2" } }, "sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA=="],
 
     "axios/form-data": ["form-data@4.0.6", "", { "dependencies": { "asynckit": "^0.4.0", "combined-stream": "^1.0.8", "es-set-tostringtag": "^2.1.0", "hasown": "^2.0.4", "mime-types": "^2.1.35" } }, "sha512-vKatAh4SlVfgbv+YtmhiRjhEMJsYpsG1Y2rMQtR+SVSbytsSD1YGzDIcrAJmdFec88u/+VoGmxnl+80gL1tRCQ=="],
 
     "body-parser/debug": ["debug@2.6.9", "", { "dependencies": { "ms": "2.0.0" } }, "sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA=="],
+
+    "bun-types/@types/node": ["@types/node@26.2.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg=="],
 
     "express/debug": ["debug@2.6.9", "", { "dependencies": { "ms": "2.0.0" } }, "sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA=="],
 
@@ -1381,7 +1297,7 @@
 
     "send/debug": ["debug@2.6.9", "", { "dependencies": { "ms": "2.0.0" } }, "sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA=="],
 
-    "@fastify/ajv-compiler/ajv/fast-uri": ["fast-uri@3.1.5", "", {}, "sha512-gHwA1O9LDIcKunMKhObS/HimwtehO1nPUECKAu5TpKgaO19fcWEl4bliWe1jWxVFvIXztJjjQ4L8XQ1EU9f7Jw=="],
+    "@fastify/ajv-compiler/ajv/fast-uri": ["fast-uri@3.1.6", "", {}, "sha512-7Ical1vFEMr0onbVzEDIreM22I4khW+fzyQPwvAFWBp1iwdshSZRsL4jjRvPG9JP1uiqMHRto+YU6R2/CzDz5Q=="],
 
     "@fastify/ajv-compiler/ajv/json-schema-traverse": ["json-schema-traverse@1.0.0", "", {}, "sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug=="],
 
@@ -1389,898 +1305,48 @@
 
     "@octokit/plugin-rest-endpoint-methods/@octokit/types/@octokit/openapi-types": ["@octokit/openapi-types@24.2.0", "", {}, "sha512-9sIH3nSUttelJSXUrmGzl7QUBFul0/mB8HRYl3fOlgHbIWG+WnYDXU3v/2zMtAvuzZ/ed00Ei6on975FhBfzrg=="],
 
-    "@opnory/access-executor/@opnory/access-audit/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
+    "@slack/logger/@types/node/undici-types": ["undici-types@8.3.0", "", {}, "sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ=="],
 
-    "@opnory/access-executor/@opnory/access-audit/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
+    "@slack/oauth/@types/node/undici-types": ["undici-types@8.3.0", "", {}, "sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ=="],
 
-    "@opnory/access-executor/@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
+    "@slack/socket-mode/@types/node/undici-types": ["undici-types@8.3.0", "", {}, "sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ=="],
 
-    "@opnory/access-executor/@opnory/access-audit/@types/node": ["@types/node@20.19.43", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA=="],
+    "@slack/web-api/@types/node/undici-types": ["undici-types@8.3.0", "", {}, "sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ=="],
 
-    "@opnory/access-executor/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
+    "@types/body-parser/@types/node/undici-types": ["undici-types@8.3.0", "", {}, "sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ=="],
 
-    "@opnory/access-executor/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
+    "@types/connect/@types/node/undici-types": ["undici-types@8.3.0", "", {}, "sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ=="],
 
-    "@opnory/access-executor/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
+    "@types/express-serve-static-core/@types/node/undici-types": ["undici-types@8.3.0", "", {}, "sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ=="],
 
-    "@opnory/access-policy/@opnory/access-entitlements/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
+    "@types/is-stream/@types/node/undici-types": ["undici-types@8.3.0", "", {}, "sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ=="],
 
-    "@opnory/access-policy/@opnory/access-entitlements/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
+    "@types/jsonwebtoken/@types/node/undici-types": ["undici-types@8.3.0", "", {}, "sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ=="],
 
-    "@opnory/access-policy/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
+    "@types/pg/@types/node/undici-types": ["undici-types@8.3.0", "", {}, "sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ=="],
 
-    "@opnory/access-policy/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
+    "@types/send/@types/node/undici-types": ["undici-types@8.3.0", "", {}, "sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ=="],
 
-    "@opnory/access-policy/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
+    "@types/serve-static/@types/node/undici-types": ["undici-types@8.3.0", "", {}, "sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ=="],
 
-    "@opnory/access-service/@opnory/access-approval/@opnory/access-audit": ["@opnory/access-audit@file:packages/access-audit", { "dependencies": { "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
+    "@types/ws/@types/node/undici-types": ["undici-types@8.3.0", "", {}, "sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ=="],
 
-    "@opnory/access-service/@opnory/access-approval/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-approval/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-approval/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-approval/@types/node": ["@types/node@20.19.43", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA=="],
-
-    "@opnory/access-service/@opnory/access-audit/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-audit/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-audit/@types/node": ["@types/node@20.19.43", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA=="],
-
-    "@opnory/access-service/@opnory/access-entitlements/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-entitlements/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-executor/@opnory/access-audit": ["@opnory/access-audit@file:packages/access-audit", { "dependencies": { "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-executor/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-executor/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-executor/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-executor/@types/node": ["@types/node@20.19.43", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA=="],
-
-    "@opnory/access-service/@opnory/access-policy/@opnory/access-entitlements": ["@opnory/access-entitlements@file:packages/access-entitlements", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-policy/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-policy/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-policy/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-approval/@opnory/access-audit": ["@opnory/access-audit@file:packages/access-audit", { "dependencies": { "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-approval/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-approval/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-approval/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-approval/@types/node": ["@types/node@20.19.43", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA=="],
-
-    "@opnory/access-store-pg/@opnory/access-audit/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-audit/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-audit/@types/node": ["@types/node@20.19.43", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA=="],
-
-    "@opnory/access-store-pg/@opnory/access-executor/@opnory/access-audit": ["@opnory/access-audit@file:packages/access-audit", { "dependencies": { "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-executor/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-executor/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-executor/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-executor/@types/node": ["@types/node@20.19.43", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA=="],
-
-    "@opnory/access-store-pg/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/config/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/agent/@opnory/config/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/agent/@opnory/escalation/@opnory/config": ["@opnory/config@file:packages/config", { "dependencies": { "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/agent/@opnory/escalation/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/agent/@opnory/escalation/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/agent/@opnory/knowledge/@opnory/config": ["@opnory/config@file:packages/config", { "dependencies": { "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/agent/@opnory/knowledge/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/agent/@opnory/knowledge/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/agent/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-audit/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-audit/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-audit/@types/node": ["@types/node@20.19.43", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA=="],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-approval": ["@opnory/access-approval@file:packages/access-approval", { "dependencies": { "@opnory/access-audit": "file:../access-audit", "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "uuid": "^14.0.1", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-audit": ["@opnory/access-audit@file:packages/access-audit", { "dependencies": { "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-entitlements": ["@opnory/access-entitlements@file:packages/access-entitlements", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-executor": ["@opnory/access-executor@file:packages/access-executor", { "dependencies": { "@octokit/auth-app": "^7.2.2", "@octokit/rest": "^21.1.1", "@opnory/access-audit": "file:../access-audit", "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "uuid": "^14.0.1", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-policy": ["@opnory/access-policy@file:packages/access-policy", { "dependencies": { "@opnory/access-entitlements": "file:../access-entitlements", "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/agent/@opnory/config": ["@opnory/config@file:packages/config", { "dependencies": { "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/agent/@opnory/escalation": ["@opnory/escalation@file:packages/escalation", { "dependencies": { "@opnory/config": "file:../config", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "uuid": "^10.0.0", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "@types/uuid": "^10.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/agent/@opnory/knowledge": ["@opnory/knowledge@file:packages/knowledge", { "dependencies": { "@opnory/config": "file:../config", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/agent/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/agent/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/agent/uuid": ["uuid@10.0.0", "", { "bin": { "uuid": "dist/bin/uuid" } }, "sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ=="],
-
-    "@opnory/api/@opnory/config/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/escalation/@opnory/config": ["@opnory/config@file:packages/config", { "dependencies": { "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/escalation/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/escalation/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/escalation/uuid": ["uuid@10.0.0", "", { "bin": { "uuid": "dist/bin/uuid" } }, "sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ=="],
-
-    "@opnory/api/@opnory/knowledge/@opnory/config": ["@opnory/config@file:packages/config", { "dependencies": { "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/knowledge/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/knowledge/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/escalation/@opnory/config/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/escalation/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/knowledge/@opnory/config/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/knowledge/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-approval/@opnory/access-audit": ["@opnory/access-audit@file:packages/access-audit", { "dependencies": { "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-approval/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-approval/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-approval/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-audit/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-audit/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-approval": ["@opnory/access-approval@file:packages/access-approval", { "dependencies": { "@opnory/access-audit": "file:../access-audit", "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "uuid": "^14.0.1", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-audit": ["@opnory/access-audit@file:packages/access-audit", { "dependencies": { "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-entitlements": ["@opnory/access-entitlements@file:packages/access-entitlements", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-executor": ["@opnory/access-executor@file:packages/access-executor", { "dependencies": { "@octokit/auth-app": "^7.2.2", "@octokit/rest": "^21.1.1", "@opnory/access-audit": "file:../access-audit", "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "uuid": "^14.0.1", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-policy": ["@opnory/access-policy@file:packages/access-policy", { "dependencies": { "@opnory/access-entitlements": "file:../access-entitlements", "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-approval": ["@opnory/access-approval@file:packages/access-approval", { "dependencies": { "@opnory/access-audit": "file:../access-audit", "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "uuid": "^14.0.1", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-audit": ["@opnory/access-audit@file:packages/access-audit", { "dependencies": { "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-executor": ["@opnory/access-executor@file:packages/access-executor", { "dependencies": { "@octokit/auth-app": "^7.2.2", "@octokit/rest": "^21.1.1", "@opnory/access-audit": "file:../access-audit", "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "uuid": "^14.0.1", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/config": ["@opnory/config@file:packages/config", { "dependencies": { "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/slack/@opnory/agent/@opnory/config": ["@opnory/config@file:packages/config", { "dependencies": { "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/agent/@opnory/escalation": ["@opnory/escalation@file:packages/escalation", { "dependencies": { "@opnory/config": "file:../config", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "uuid": "^10.0.0", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "@types/uuid": "^10.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/agent/@opnory/knowledge": ["@opnory/knowledge@file:packages/knowledge", { "dependencies": { "@opnory/config": "file:../config", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/agent/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/agent/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/agent/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/slack/@opnory/agent/uuid": ["uuid@10.0.0", "", { "bin": { "uuid": "dist/bin/uuid" } }, "sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ=="],
-
-    "@opnory/slack/@opnory/config/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "ajv-formats/ajv/fast-uri": ["fast-uri@3.1.5", "", {}, "sha512-gHwA1O9LDIcKunMKhObS/HimwtehO1nPUECKAu5TpKgaO19fcWEl4bliWe1jWxVFvIXztJjjQ4L8XQ1EU9f7Jw=="],
+    "ajv-formats/ajv/fast-uri": ["fast-uri@3.1.6", "", {}, "sha512-7Ical1vFEMr0onbVzEDIreM22I4khW+fzyQPwvAFWBp1iwdshSZRsL4jjRvPG9JP1uiqMHRto+YU6R2/CzDz5Q=="],
 
     "ajv-formats/ajv/json-schema-traverse": ["json-schema-traverse@1.0.0", "", {}, "sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug=="],
 
     "body-parser/debug/ms": ["ms@2.0.0", "", {}, "sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A=="],
 
+    "bun-types/@types/node/undici-types": ["undici-types@8.3.0", "", {}, "sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ=="],
+
     "express/debug/ms": ["ms@2.0.0", "", {}, "sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A=="],
 
-    "fast-json-stringify/ajv/fast-uri": ["fast-uri@3.1.5", "", {}, "sha512-gHwA1O9LDIcKunMKhObS/HimwtehO1nPUECKAu5TpKgaO19fcWEl4bliWe1jWxVFvIXztJjjQ4L8XQ1EU9f7Jw=="],
+    "fast-json-stringify/ajv/fast-uri": ["fast-uri@3.1.6", "", {}, "sha512-7Ical1vFEMr0onbVzEDIreM22I4khW+fzyQPwvAFWBp1iwdshSZRsL4jjRvPG9JP1uiqMHRto+YU6R2/CzDz5Q=="],
 
     "fast-json-stringify/ajv/json-schema-traverse": ["json-schema-traverse@1.0.0", "", {}, "sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug=="],
 
     "finalhandler/debug/ms": ["ms@2.0.0", "", {}, "sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A=="],
 
     "send/debug/ms": ["ms@2.0.0", "", {}, "sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A=="],
-
-    "@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/access-executor/@opnory/access-audit/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-executor/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-policy/@opnory/access-entitlements/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-policy/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-approval/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-approval/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-approval/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/access-service/@opnory/access-approval/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-audit/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-audit/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-audit/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/access-service/@opnory/access-audit/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-entitlements/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-executor/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-executor/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-executor/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/access-service/@opnory/access-executor/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-policy/@opnory/access-entitlements/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-policy/@opnory/access-entitlements/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-policy/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-policy/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-policy/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-approval/@opnory/access-audit/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-approval/@opnory/access-audit/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-approval/@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-approval/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-approval/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-approval/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/access-store-pg/@opnory/access-approval/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-audit/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-audit/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-audit/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/access-store-pg/@opnory/access-audit/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-executor/@opnory/access-audit/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-executor/@opnory/access-audit/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-executor/@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-executor/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-executor/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-executor/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/access-store-pg/@opnory/access-executor/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/agent/@opnory/escalation/@opnory/config/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/agent/@opnory/escalation/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/agent/@opnory/knowledge/@opnory/config/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/agent/@opnory/knowledge/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-audit/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-audit/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-audit/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/api/@opnory/access-audit/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-approval/@opnory/access-audit": ["@opnory/access-audit@file:packages/access-audit", { "dependencies": { "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-approval/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-approval/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-approval/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-approval/@types/node": ["@types/node@20.19.43", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA=="],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-audit/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-audit/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-audit/@types/node": ["@types/node@20.19.43", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA=="],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-entitlements/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-entitlements/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-executor/@opnory/access-audit": ["@opnory/access-audit@file:packages/access-audit", { "dependencies": { "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-executor/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-executor/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-executor/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-executor/@types/node": ["@types/node@20.19.43", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA=="],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-policy/@opnory/access-entitlements": ["@opnory/access-entitlements@file:packages/access-entitlements", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-policy/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-policy/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-policy/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/agent/@opnory/config/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/agent/@opnory/escalation/@opnory/config": ["@opnory/config@file:packages/config", { "dependencies": { "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/agent/@opnory/escalation/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/agent/@opnory/escalation/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/agent/@opnory/knowledge/@opnory/config": ["@opnory/config@file:packages/config", { "dependencies": { "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/agent/@opnory/knowledge/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/agent/@opnory/knowledge/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/agent/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/escalation/@opnory/config/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/escalation/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/knowledge/@opnory/config/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/knowledge/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-approval/@opnory/access-audit/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-approval/@opnory/access-audit/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-approval/@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-approval/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-approval/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-approval/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/slack/@opnory/access-approval/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-audit/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-audit/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-audit/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/slack/@opnory/access-audit/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-approval/@opnory/access-audit": ["@opnory/access-audit@file:packages/access-audit", { "dependencies": { "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-approval/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-approval/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-approval/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-approval/@types/node": ["@types/node@20.19.43", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA=="],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-audit/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-audit/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-audit/@types/node": ["@types/node@20.19.43", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA=="],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-entitlements/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-entitlements/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-executor/@opnory/access-audit": ["@opnory/access-audit@file:packages/access-audit", { "dependencies": { "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-executor/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-executor/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-executor/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-executor/@types/node": ["@types/node@20.19.43", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA=="],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-policy/@opnory/access-entitlements": ["@opnory/access-entitlements@file:packages/access-entitlements", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-policy/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-policy/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-policy/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-approval/@opnory/access-audit": ["@opnory/access-audit@file:packages/access-audit", { "dependencies": { "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-approval/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-approval/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-approval/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-audit/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-audit/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-executor/@opnory/access-audit": ["@opnory/access-audit@file:packages/access-audit", { "dependencies": { "@opnory/access-types": "file:../access-types", "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-executor/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-executor/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-executor/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/config/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/agent/@opnory/config/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/agent/@opnory/escalation/@opnory/config": ["@opnory/config@file:packages/config", { "dependencies": { "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/agent/@opnory/escalation/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/agent/@opnory/escalation/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/agent/@opnory/knowledge/@opnory/config": ["@opnory/config@file:packages/config", { "dependencies": { "@opnory/types": "file:../types", "zod": "^3.23.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/agent/@opnory/knowledge/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/agent/@opnory/knowledge/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/agent/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-approval/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-audit/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-executor/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-policy/@opnory/access-entitlements/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-policy/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/access-store-pg/@opnory/access-approval/@opnory/access-audit/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-approval/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-audit/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/access-store-pg/@opnory/access-executor/@opnory/access-audit/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-executor/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-audit/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-approval/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-approval/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-approval/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-approval/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-audit/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-audit/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-audit/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-audit/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-entitlements/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-executor/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-executor/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-executor/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-executor/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-policy/@opnory/access-entitlements/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-policy/@opnory/access-entitlements/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-policy/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-policy/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-policy/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/agent/@opnory/escalation/@opnory/config/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/agent/@opnory/escalation/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/agent/@opnory/knowledge/@opnory/config/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/agent/@opnory/knowledge/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/slack/@opnory/access-approval/@opnory/access-audit/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-approval/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-audit/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-approval/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-approval/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-approval/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-approval/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-audit/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-audit/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-audit/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-audit/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-entitlements/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-executor/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-executor/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-executor/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-executor/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-policy/@opnory/access-entitlements/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-policy/@opnory/access-entitlements/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-policy/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-policy/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-policy/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-approval/@opnory/access-audit/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-approval/@opnory/access-audit/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-approval/@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-approval/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-approval/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-approval/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-approval/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-audit/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-audit/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-audit/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-audit/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-executor/@opnory/access-audit/@opnory/access-types": ["@opnory/access-types@file:packages/access-types", { "dependencies": { "@opnory/observability": "file:../observability", "@opnory/types": "file:../types", "zod": "^3.25.76" }, "devDependencies": { "@types/bun": "^1.2.0", "@types/node": "^22.0.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-executor/@opnory/access-audit/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-executor/@opnory/access-audit/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-executor/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-executor/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-executor/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-executor/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/agent/@opnory/escalation/@opnory/config/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/agent/@opnory/escalation/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/agent/@opnory/knowledge/@opnory/config/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/agent/@opnory/knowledge/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/access-store-pg/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-approval/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-audit/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-executor/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-policy/@opnory/access-entitlements/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-policy/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-approval/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-audit/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-executor/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-policy/@opnory/access-entitlements/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-policy/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-approval/@opnory/access-audit/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-approval/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-audit/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@opnory/observability": ["@opnory/observability@file:packages/observability", { "dependencies": { "@opnory/types": "file:../types", "pino": "^9.14.0", "pino-pretty": "^11.0.0" }, "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-executor/@opnory/access-audit/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-executor/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/api/@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-service/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-approval/@opnory/access-audit/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
-
-    "@opnory/slack/@opnory/access-store-pg/@opnory/access-executor/@opnory/access-audit/@opnory/access-types/@opnory/observability/@opnory/types": ["@opnory/types@file:packages/types", { "devDependencies": { "@types/bun": "^1.2.0", "eslint": "^9.0.0", "typescript": "^5.5.0" } }],
   }
 }

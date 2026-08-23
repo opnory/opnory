@@ -24,6 +24,7 @@ import { loadConfig } from "@opnory/config";
 import { Octokit } from "@octokit/rest";
 import { createAppAuth } from "@octokit/auth-app";
 import { randomUUID } from "crypto";
+import { existsSync, statSync, readFileSync } from "fs";
 
 import {
   EvidenceRecorder,
@@ -51,7 +52,7 @@ interface OktaSandboxConfig {
   orgUrl: string;
   clientId: string;
   keyId: string;
-  privateKey: string;
+  privateKeyPath: string;
   testPrincipalEmail: string;
   expectedPrincipalId: string;
   requestConditionId: string;
@@ -64,7 +65,7 @@ function loadOktaConfig(): OktaSandboxConfig {
     "OPNORY_OKTA_ORG_URL",
     "OPNORY_OKTA_CLIENT_ID",
     "OPNORY_OKTA_KEY_ID",
-    "OPNORY_OKTA_PRIVATE_KEY",
+    "OPNORY_OKTA_PRIVATE_KEY_PATH",
     "OPNORY_OKTA_TEST_PRINCIPAL_EMAIL",
     "OPNORY_OKTA_EXPECTED_PRINCIPAL_ID",
     "OPNORY_OKTA_REQUEST_CONDITION_ID",
@@ -72,11 +73,27 @@ function loadOktaConfig(): OktaSandboxConfig {
     "OPNORY_OKTA_FULFILLMENT_OWNER",
   ]);
 
+  const privateKeyPath = getEnv("OPNORY_OKTA_PRIVATE_KEY_PATH");
+  
+  // Validate private key file exists and has restrictive permissions
+  if (!existsSync(privateKeyPath)) {
+    throw new Error(`Okta private key file not found: ${privateKeyPath}`);
+  }
+  
+  // Check file permissions (0o600 = read/write for owner only)
+  const stats = statSync(privateKeyPath);
+  const mode = stats.mode & 0o777;
+  if (mode !== 0o600) {
+    console.warn(`⚠️  Okta private key file has permissions ${mode.toString(8)}, expected 0600`);
+  }
+  
+  const privateKey = readFileSync(privateKeyPath, "utf-8").trim();
+
   return {
     orgUrl: getEnv("OPNORY_OKTA_ORG_URL"),
     clientId: getEnv("OPNORY_OKTA_CLIENT_ID"),
     keyId: getEnv("OPNORY_OKTA_KEY_ID"),
-    privateKey: getEnv("OPNORY_OKTA_PRIVATE_KEY"),
+    privateKey,
     testPrincipalEmail: getEnv("OPNORY_OKTA_TEST_PRINCIPAL_EMAIL"),
     expectedPrincipalId: getEnv("OPNORY_OKTA_EXPECTED_PRINCIPAL_ID"),
     requestConditionId: getEnv("OPNORY_OKTA_REQUEST_CONDITION_ID"),

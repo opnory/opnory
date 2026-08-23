@@ -1,0 +1,35 @@
+{
+  "name": "@opnory/slack",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "test": "bun test",
+    "lint": "eslint src --ext .ts",
+    "test:watch": "bun test --watch"
+  },
+  "dependencies": {
+    "@slack/bolt": "^3.17.1",
+    "uuid": "^14.0.1",
+    "@opnory/access-service": "file:../../packages/access-service",
+    "@opnory/access-types": "file:../../packages/access-types",
+    "@opnory/access-approval": "file:../../packages/access-approval",
+    "@opnory/access-audit": "file:../../packages/access-audit",
+    "@opnory/access-store-pg": "file:../../packages/access-store-pg",
+    "@opnory/agent": "file:../../packages/agent",
+    "@opnory/config": "file:../../packages/config",
+    "@opnory/observability": "file:../../packages/observability",
+    "@opnory/types": "file:../../packages/types"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0",
+    "@types/bun": "^1.2.0",
+    "@types/uuid": "^10.0.0"
+  },
+  "type": "module"
+}
