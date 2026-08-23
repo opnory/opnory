@@ -61,9 +61,10 @@ jobs:
             fi
             sleep 1
           done
-          createdb opnory || true
+          # Create database using postgres user
+          sudo -u postgres createdb opnory || true
           # Verify database exists and is accessible
-          psql -c "SELECT 1" opnory
+          sudo -u postgres psql -c "SELECT 1" opnory
         if: runner.os == 'Linux'
 
       - name: Build all packages
