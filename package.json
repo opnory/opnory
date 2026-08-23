@@ -10,7 +10,9 @@
     "build": "turbo build",
     "test": "bun test",
     "typecheck": "turbo typecheck",
-    "format": "prettier --write \"**/*.{ts,tsx,json,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+    "live:entra": "OPNORY_LIVE_GOVERNANCE_TESTS=true bun run scripts/live-governance/entra.ts",
+    "live:okta": "OPNORY_LIVE_GOVERNANCE_TESTS=true bun run scripts/live-governance/okta.ts"
   },
   "devDependencies": {
     "prettier": "^3.0.0",
