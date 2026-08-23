@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS access_requests (
     fulfilled_at TIMESTAMPTZ,
     fulfillment_error TEXT,
     access_expires_at TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ,
     external_id VARCHAR(255),
     idempotency_key VARCHAR(500) UNIQUE NOT NULL,
     metadata JSONB DEFAULT '{}',
