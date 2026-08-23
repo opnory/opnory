@@ -79,16 +79,8 @@ jobs:
       - name: Type check
         run: bun run typecheck
 
-      - name: Reset database pool for tests
-        run: bun -e "import { resetPool } from './packages/access-store-pg/src/index.js'; resetPool();"
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opnory
-          PGUSER: postgres
-          PGPASSWORD: postgres
-        if: runner.os == 'Linux'
-
       - name: Run tests
-        run: bun test
+        run: bun -e "import { resetPool } from './packages/access-store-pg/src/index.js'; resetPool();" && bun test
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opnory
           PGUSER: postgres
