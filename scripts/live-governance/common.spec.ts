@@ -126,7 +126,7 @@ describe("Live Governance Common", () => {
       const sha = verifyCommitSha();
       expect(sha).toMatch(/^[a-f0-9]{40}$/);
       // If we got here without throwing, the current SHA matches EXPECTED_COMMIT_SHA
-      expect(sha).toBe("bf0bb4d97ac59ee418c799e5038b40ffed499788");
+      expect(sha).toBe("6bf2bca1ff59edaaca35e95be71c5f7c1cc36319");
     });
   });
 

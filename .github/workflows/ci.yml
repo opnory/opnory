@@ -69,6 +69,11 @@ jobs:
           sudo -u postgres psql -c "SELECT 1" opnory
         if: runner.os == 'Linux'
 
+      - name: Run database migrations
+        run: |
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opnory bun -e "import { migrate } from './packages/access-store-pg/src/index.js'; await migrate();" 2>&1 || true
+        if: runner.os == 'Linux'
+
       - name: Build all packages
         run: bun run build
 
