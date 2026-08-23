@@ -22,6 +22,22 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Debug workspace
+        run: |
+          echo "=== Root package.json ==="
+          cat package.json | head -20
+          echo ""
+          echo "=== Packages directory ==="
+          ls -la packages/
+          echo ""
+          echo "=== Workspace packages ==="
+          for d in packages/*/; do
+            if [ -f "$d/package.json" ]; then
+              echo "--- $d ---"
+              cat "$d/package.json" | head -5
+            fi
+          done
+
       - name: Start PostgreSQL
         run: |
           sudo systemctl start postgresql
