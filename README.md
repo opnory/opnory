@@ -30,6 +30,18 @@ For the hosted subscription service, see [Opnory Cloud](https://opnory.com).
 - **Security Policy:** [SECURITY.md](SECURITY.md) (see also the central policy at https://github.com/opnory/support/blob/main/SECURITY.md)
 - **Privacy Policy:** https://github.com/opnory/support/blob/main/PRIVACY.md
 - **Cloud Terms:** https://github.com/opnory/support/blob/main/CLOUD_TERMS.md
+- **Code of Conduct:** [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md)
+
+---
+
+## Trademark Notice
+
+Opnory is licensed under the BSD-2-Clause License.
+
+The Opnory name, logo, and associated trademarks are not granted under
+the BSD-2-Clause License. Use of Opnory trademarks must not imply
+endorsement, affiliation, or official distribution without permission.
 
 ---
 

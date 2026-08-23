@@ -33,3 +33,9 @@ coverage/
 
 # Turbo
 .turbo/
+
+# Gitleaks report
+gitleaks-report.json
+
+# Live governance TypeScript config (generated)
+scripts/live-governance/tsconfig.json
