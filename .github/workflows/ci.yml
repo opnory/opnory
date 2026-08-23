@@ -24,6 +24,9 @@ jobs:
 
       - name: Debug workspace
         run: |
+          echo "=== Current directory ==="
+          pwd
+          echo ""
           echo "=== Root package.json ==="
           cat package.json | head -20
           echo ""
