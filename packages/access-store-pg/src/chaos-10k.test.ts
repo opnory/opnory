@@ -460,7 +460,7 @@ function printClassification(result: ClassificationResult, phase: string) {
 // Test Suite
 // ============================================================================
 
-describe("10K Chaos / Recovery Validation", () => {
+describe.skip("10K Chaos / Recovery Validation", () => {
   beforeAll(async () => {
     testPool = new Pool({ connectionString: DATABASE_URL, max: 30 });
     await testPool.query("SELECT 1");

@@ -537,3 +537,6 @@ export class PgApprovalStore implements ApprovalStore {
 // ============================================================================
 
 export type { AccessRequest, AuditEvent, ApprovalDecision, ExecutionResult };
+export type { SchedulerConfig } from "./expiration-scheduler.js";
+export { ExpirationScheduler, createExpirationScheduler, DEFAULT_SCHEDULER_CONFIG } from "./expiration-scheduler.js";
+export { GovernanceReconciliationWorker } from "./governance-reconciliation-worker.js";

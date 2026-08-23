@@ -4,7 +4,9 @@ import { InMemoryAuditEventStore } from "@opnory/access-audit";
 import { ApprovedAccessRequest, toFulfilledAccessRequest } from "@opnory/access-types";
 import { v4 as uuidv4 } from "uuid";
 
-describe("GitHubAccessExecutor - Live Revocation Test", () => {
+describe.skipIf(!process.env.OPNORY_LIVE_GITHUB_TESTS)(
+  "GitHubAccessExecutor - Live Revocation Test",
+  () => {
   let executor: GitHubAccessExecutor;
   let idempotencyStore: InMemoryIdempotencyStore;
   let auditStore: InMemoryAuditEventStore;
