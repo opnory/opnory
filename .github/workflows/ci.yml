@@ -28,6 +28,9 @@ jobs:
           createdb opnory || true
         if: runner.os == 'Linux'
 
+      - name: Build all packages
+        run: bun run build
+
       - name: Type check
         run: bun run typecheck
 
@@ -35,6 +38,3 @@ jobs:
         run: bun test
         env:
           DATABASE_URL: postgresql://postgres@localhost:5432/opnory
-
-      - name: Build
-        run: bun run build
