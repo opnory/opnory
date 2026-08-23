@@ -116,6 +116,7 @@ describe("Live Governance Common", () => {
 
   describe("verifyCommitSha", () => {
     it("should return the current commit SHA", () => {
+      process.env.OPNORY_ALLOW_UNPINNED_LIVE_TEST = "true";
       const sha = verifyCommitSha();
       expect(sha).toMatch(/^[a-f0-9]{40}$/);
       // Also verify it matches the current git HEAD
@@ -126,6 +127,7 @@ describe("Live Governance Common", () => {
     it("should return current HEAD SHA when OPNORY_ALLOW_UNPINNED_LIVE_TEST is set", () => {
       // When OPNORY_ALLOW_UNPINNED_LIVE_TEST=true, verifyCommitSha returns actual HEAD
       // without throwing, so we just verify it returns a valid SHA format
+      process.env.OPNORY_ALLOW_UNPINNED_LIVE_TEST = "true";
       const sha = verifyCommitSha();
       expect(sha).toMatch(/^[a-f0-9]{40}$/);
       // Also verify it matches the current git HEAD
