@@ -44,12 +44,12 @@ jobs:
           sudo -u postgres psql -c "SELECT 1" opnory
         if: runner.os == 'Linux'
 
+      - name: Build all packages
+        run: bun run build
+
       - name: Run database migrations
         run: bun -e "import { migrate } from './packages/access-store-pg/src/index.js'; await migrate();"
         if: runner.os == 'Linux'
-
-      - name: Build all packages
-        run: bun run build
 
       - name: Type check
         run: bun run typecheck
