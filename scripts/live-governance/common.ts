@@ -233,7 +233,7 @@ export class EvidenceStepHandle {
 // Git/Commit Guards
 // ============================================================================
 
-export const EXPECTED_COMMIT_SHA = "325fb1843304906e6da0ea16e3cf7ee87cfde8a2";
+export const EXPECTED_COMMIT_SHA = "f1cc211ba4d159a9b98c51ef4ee25920982bd8a1";
 
 export function verifyCommitSha(): string {
   const sha = execSync("git rev-parse HEAD", { cwd: PROJECT_ROOT, encoding: "utf-8" }).trim();
