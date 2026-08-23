@@ -50,6 +50,13 @@ export async function closePool(): Promise<void> {
   }
 }
 
+export function resetPool(): void {
+  if (pgPool) {
+    pgPool.end().catch(() => {});
+    pgPool = null;
+  }
+}
+
 // ============================================================================
 // Schema Migration
 // ============================================================================

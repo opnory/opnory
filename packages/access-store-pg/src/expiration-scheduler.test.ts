@@ -5,6 +5,7 @@ import { InMemoryAuditEventStore, AuditEventStore } from "@opnory/access-audit";
 import { AccessRequest, AccessRequestStatus, FulfilledAccessRequest, EntitlementRef, toFulfilledAccessRequest, ApprovedAccessRequest, ExecutionResult, RevocationResult } from "@opnory/access-types";
 import { randomUUID as uuidv4 } from "crypto";
 import { Pool, PoolClient } from "pg";
+import { resetPool } from "./index.js";
 
 // ============================================================================
 // Test Infrastructure
@@ -237,6 +238,9 @@ beforeAll(async () => {
     console.log("Skipping scheduler tests - no DATABASE_URL");
     return;
   }
+  
+  // Reset the global pool so it picks up the test DATABASE_URL
+  resetPool();
 
   testPool = new Pool({
     connectionString: process.env.DATABASE_URL,
