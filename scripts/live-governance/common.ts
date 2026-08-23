@@ -24,6 +24,7 @@ export interface EvidenceStep {
 }
 
 export interface EvidenceSummary {
+  schemaVersion: number;
   provider: string;
   commitSha: string;
   sandboxTenant: string;
@@ -128,6 +129,7 @@ export class EvidenceRecorder {
   getSummary(): EvidenceSummary {
     const overallStatus = this.steps.some(s => s.status === "FAIL") ? "FAIL" : "PASS";
     return {
+      schemaVersion: 1,
       provider: this.provider,
       commitSha: this.commitSha,
       sandboxTenant: this.sandboxTenant,
@@ -231,7 +233,7 @@ export class EvidenceStepHandle {
 // Git/Commit Guards
 // ============================================================================
 
-export const EXPECTED_COMMIT_SHA = "086dc0843d4d428f8fa3029674db47a92b2aefca";
+export const EXPECTED_COMMIT_SHA = "f863169128cae2d3b549d02359293fa8ebfc93a8";
 
 export function verifyCommitSha(): string {
   const sha = execSync("git rev-parse HEAD", { cwd: PROJECT_ROOT, encoding: "utf-8" }).trim();
