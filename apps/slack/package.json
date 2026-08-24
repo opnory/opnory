@@ -14,15 +14,15 @@
   "dependencies": {
     "@slack/bolt": "^3.17.1",
     "uuid": "^14.0.1",
-    "@opnory/access-service": "file:../../packages/access-service",
-    "@opnory/access-types": "file:../../packages/access-types",
-    "@opnory/access-approval": "file:../../packages/access-approval",
-    "@opnory/access-audit": "file:../../packages/access-audit",
-    "@opnory/access-store-pg": "file:../../packages/access-store-pg",
-    "@opnory/agent": "file:../../packages/agent",
-    "@opnory/config": "file:../../packages/config",
-    "@opnory/observability": "file:../../packages/observability",
-    "@opnory/types": "file:../../packages/types"
+    "@opnory/access-service": "workspace:*",
+    "@opnory/access-types": "workspace:*",
+    "@opnory/access-approval": "workspace:*",
+    "@opnory/access-audit": "workspace:*",
+    "@opnory/access-store-pg": "workspace:*",
+    "@opnory/agent": "workspace:*",
+    "@opnory/config": "workspace:*",
+    "@opnory/observability": "workspace:*",
+    "@opnory/types": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.10.6",

@@ -16,11 +16,11 @@
     "test:watch": "bun test --watch"
   },
   "dependencies": {
-    "@opnory/types": "file:../types",
-    "@opnory/config": "file:../config",
-    "@opnory/knowledge": "file:../knowledge",
-    "@opnory/escalation": "file:../escalation",
-    "@opnory/observability": "file:../observability",
+    "@opnory/types": "workspace:*",
+    "@opnory/config": "workspace:*",
+    "@opnory/knowledge": "workspace:*",
+    "@opnory/escalation": "workspace:*",
+    "@opnory/observability": "workspace:*",
     "zod": "^3.23.0",
     "uuid": "^10.0.0"
   },

@@ -15,10 +15,10 @@
     "test:watch": "bun test --watch"
   },
   "dependencies": {
-    "@opnory/access-entitlements": "file:../access-entitlements",
-    "@opnory/access-types": "file:../access-types",
-    "@opnory/observability": "file:../observability",
-    "@opnory/types": "file:../types",
+    "@opnory/access-entitlements": "workspace:*",
+    "@opnory/access-types": "workspace:*",
+    "@opnory/observability": "workspace:*",
+    "@opnory/types": "workspace:*",
     "zod": "^3.23.0"
   },
   "devDependencies": {

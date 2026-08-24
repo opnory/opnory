@@ -15,14 +15,14 @@
     "test:watch": "bun test --watch"
   },
   "dependencies": {
-    "@opnory/access-approval": "file:../access-approval",
-    "@opnory/access-audit": "file:../access-audit",
-    "@opnory/access-entitlements": "file:../access-entitlements",
-    "@opnory/access-executor": "file:../access-executor",
-    "@opnory/access-policy": "file:../access-policy",
-    "@opnory/access-types": "file:../access-types",
-    "@opnory/observability": "file:../observability",
-    "@opnory/types": "file:../types",
+    "@opnory/access-approval": "workspace:*",
+    "@opnory/access-audit": "workspace:*",
+    "@opnory/access-entitlements": "workspace:*",
+    "@opnory/access-executor": "workspace:*",
+    "@opnory/access-policy": "workspace:*",
+    "@opnory/access-types": "workspace:*",
+    "@opnory/observability": "workspace:*",
+    "@opnory/types": "workspace:*",
     "uuid": "^14.0.2",
     "zod": "^3.23.0"
   },

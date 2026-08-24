@@ -17,12 +17,12 @@
     "test:watch": "bun test --watch"
   },
   "dependencies": {
-    "@opnory/access-approval": "file:../access-approval",
-    "@opnory/access-audit": "file:../access-audit",
-    "@opnory/access-executor": "file:../access-executor",
-    "@opnory/access-types": "file:../access-types",
-    "@opnory/config": "file:../config",
-    "@opnory/observability": "file:../observability",
+    "@opnory/access-approval": "workspace:*",
+    "@opnory/access-audit": "workspace:*",
+    "@opnory/access-executor": "workspace:*",
+    "@opnory/access-types": "workspace:*",
+    "@opnory/config": "workspace:*",
+    "@opnory/observability": "workspace:*",
     "pg": "^8.23.0"
   },
   "devDependencies": {

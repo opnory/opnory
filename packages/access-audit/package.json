@@ -15,9 +15,9 @@
     "test:watch": "bun test --watch"
   },
   "dependencies": {
-    "@opnory/access-types": "file:../access-types",
-    "@opnory/observability": "file:../observability",
-    "@opnory/types": "file:../types",
+    "@opnory/access-types": "workspace:*",
+    "@opnory/observability": "workspace:*",
+    "@opnory/types": "workspace:*",
     "zod": "^3.25.76"
   },
   "devDependencies": {

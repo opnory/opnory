@@ -5,11 +5,13 @@
     "rootDir": "src",
     "declarationDir": "dist",
     "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo",
-    "composite": true,
-    "paths": {
-      "@opnory/*": ["../*/dist"]
-    }
+    "composite": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

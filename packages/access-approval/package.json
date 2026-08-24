@@ -15,10 +15,10 @@
     "test:watch": "bun test --watch"
   },
   "dependencies": {
-    "@opnory/access-audit": "file:../access-audit",
-    "@opnory/access-types": "file:../access-types",
-    "@opnory/observability": "file:../observability",
-    "@opnory/types": "file:../types",
+    "@opnory/access-audit": "workspace:*",
+    "@opnory/access-types": "workspace:*",
+    "@opnory/observability": "workspace:*",
+    "@opnory/types": "workspace:*",
     "uuid": "^14.0.1",
     "zod": "^3.25.76"
   },

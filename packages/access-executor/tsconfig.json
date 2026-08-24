@@ -5,17 +5,30 @@
     "rootDir": "src",
     "declarationDir": "dist",
     "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo",
-    "composite": true,
-    "paths": {
-      "@opnory/*": ["../*/dist"]
-    }
+    "composite": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/live-expiration.test.ts", "src/live-revoke.test.ts", "src/live.test.ts"],
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/live-expiration.test.ts",
+    "src/live-revoke.test.ts",
+    "src/live.test.ts"
+  ],
   "references": [
-    { "path": "../types" },
-    { "path": "../observability" },
-    { "path": "../access-types" },
-    { "path": "../access-audit" }
+    {
+      "path": "../types"
+    },
+    {
+      "path": "../observability"
+    },
+    {
+      "path": "../access-types"
+    },
+    {
+      "path": "../access-audit"
+    }
   ]
 }

@@ -5,22 +5,42 @@
     "rootDir": "src",
     "declarationDir": "dist",
     "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo",
-    "composite": true,
-    "paths": {
-      "@opnory/*": ["../../packages/*/dist"]
-    }
+    "composite": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"],
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ],
   "references": [
-    { "path": "../../packages/types" },
-    { "path": "../../packages/config" },
-    { "path": "../../packages/observability" },
-    { "path": "../../packages/access-types" },
-    { "path": "../../packages/access-service" },
-    { "path": "../../packages/access-approval" },
-    { "path": "../../packages/access-audit" },
-    { "path": "../../packages/access-store-pg" },
-    { "path": "../../packages/agent" }
+    {
+      "path": "../../packages/types"
+    },
+    {
+      "path": "../../packages/config"
+    },
+    {
+      "path": "../../packages/observability"
+    },
+    {
+      "path": "../../packages/access-types"
+    },
+    {
+      "path": "../../packages/access-service"
+    },
+    {
+      "path": "../../packages/access-approval"
+    },
+    {
+      "path": "../../packages/access-audit"
+    },
+    {
+      "path": "../../packages/access-store-pg"
+    },
+    {
+      "path": "../../packages/agent"
+    }
   ]
 }

@@ -5,21 +5,40 @@
     "rootDir": "src",
     "declarationDir": "dist",
     "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo",
-    "composite": true,
-    "paths": {
-      "@opnory/*": ["../*/dist"]
-    }
+    "composite": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"],
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts"
+  ],
   "references": [
-    { "path": "../types" },
-    { "path": "../observability" },
-    { "path": "../access-types" },
-    { "path": "../access-entitlements" },
-    { "path": "../access-policy" },
-    { "path": "../access-approval" },
-    { "path": "../access-executor" },
-    { "path": "../access-audit" }
+    {
+      "path": "../types"
+    },
+    {
+      "path": "../observability"
+    },
+    {
+      "path": "../access-types"
+    },
+    {
+      "path": "../access-entitlements"
+    },
+    {
+      "path": "../access-policy"
+    },
+    {
+      "path": "../access-approval"
+    },
+    {
+      "path": "../access-executor"
+    },
+    {
+      "path": "../access-audit"
+    }
   ]
 }
