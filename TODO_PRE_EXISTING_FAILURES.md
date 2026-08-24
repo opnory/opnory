@@ -8,35 +8,39 @@
 
 ## Failing Tests (16 total test invocations = 15 unique test names)
 
-| Group | Unique Tests | Runs Each | Total Invocations |
-|-------|-------------|-----------|-------------------|
-| Access Request Service - Acceptance Tests (CASE 11, 13, 14) | 4 | 2 | 8 |
-| GitHubAccessExecutor - Live Revocation Test | 2 | 2 | 4 |
-| GitHubAccessExecutor - Live Test Configuration | 4 | 2 | 8 |
-| Knowledge Package | 5 | varies* | 5 |
-| **Total** | **15 unique** | — | **16** |
+| Group                                                       | Unique Tests  | Runs Each | Total Invocations |
+| ----------------------------------------------------------- | ------------- | --------- | ----------------- |
+| Access Request Service - Acceptance Tests (CASE 11, 13, 14) | 4             | 2         | 8                 |
+| GitHubAccessExecutor - Live Revocation Test                 | 2             | 2         | 4                 |
+| GitHubAccessExecutor - Live Test Configuration              | 4             | 2         | 8                 |
+| Knowledge Package                                           | 5             | varies*   | 5                 |
+| **Total**                                                   | **15 unique** | —         | **16**            |
 
 *Knowledge Package tests run once each (not doubled like the others)
 
 ### Detail
 
 **Access Request Service - Acceptance Tests (4 unique, 8 invocations)**
+
 - CASE 11 — Concurrent approval: `should handle concurrent approval requests with single fulfillment`
 - CASE 11 — Concurrent approval: `should handle concurrent approve and deny with only one transition`
 - CASE 13 — Conflicting decisions (approve/deny race): `should allow only one valid transition when approve and deny race`
 - CASE 14 — GitHub mutation succeeds but verification fails: `should keep request recoverable after reconciliation failure`
 
 **GitHubAccessExecutor - Live Revocation Test (2 unique, 4 invocations)**
+
 - `should grant access then revoke and verify absence`
 - `should be idempotent - second revoke returns success with zero extra DELETE`
 
 **GitHubAccessExecutor - Live Test Configuration (4 unique, 8 invocations)**
+
 - `should have required environment variables`
 - `should have valid App ID`
 - `should have valid Installation ID`
 - `should have TEST_USER_A defined`
 
 **Knowledge Package (5 unique, 5 invocations)**
+
 - `should upsert and retrieve documents`
 - `should return empty results for non-matching queries`
 - `should filter by relevance threshold`

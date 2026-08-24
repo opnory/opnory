@@ -1,12 +1,12 @@
 import { Pool, PoolClient } from "pg";
 import { getLogger } from "@opnory/observability";
 import { loadConfig } from "@opnory/config";
-import { 
-  AccessRequest, 
-  AccessRequestStatus, 
-  FulfilledAccessRequest, 
+import {
+  AccessRequest,
+  AccessRequestStatus,
+  FulfilledAccessRequest,
   EntitlementRef,
-  AccessExecutor
+  AccessExecutor,
 } from "@opnory/access-types";
 import { AuditEventStore, AuditEventType } from "@opnory/access-audit";
 import { randomUUID } from "crypto";
@@ -23,21 +23,21 @@ export interface SchedulerConfig {
   pollJitterMs: number;
   maxPollIntervalMs: number;
   minPollIntervalMs: number;
-  
+
   // Lease configuration
   leaseDurationMs: number;
   leaseRenewalMarginMs: number;
-  
+
   // Batch configuration
   batchSize: number;
   providerConcurrency: number;
-  
+
   // Retry configuration
   maxRetries: number;
   baseRetryDelayMs: number;
   maxRetryDelayMs: number;
   jitterFactor: number;
-  
+
   // Adaptive polling
   adaptivePolling: boolean;
 }
@@ -69,7 +69,7 @@ export interface SchedulerMetrics {
   expirationLagP99Ms: number;
   expirationLagMaxMs: number;
   oldestOverdueAgeMs: number;
-  
+
   // Processing metrics
   claimsThisPoll: number;
   claimsTotal: number;
@@ -77,13 +77,13 @@ export interface SchedulerMetrics {
   skippedExpirations: number;
   retryScheduled: number;
   terminalFailures: number;
-  
+
   // Polling metrics
   lastSuccessfulPoll: Date | null;
   lastPollDurationMs: number;
   consecutiveEmptyPolls: number;
   currentPollIntervalMs: number;
-  
+
   // Lease metrics
   activeLeases: number;
   expiredLeases: number;
@@ -120,7 +120,7 @@ export class ExpirationScheduler {
     executor: AccessExecutor,
     auditStore: AuditEventStore,
     pool: Pool,
-    config: Partial<SchedulerConfig> = {}
+    config: Partial<SchedulerConfig> = {},
   ) {
     this.pool = pool;
     this.executor = executor;
@@ -164,15 +164,18 @@ export class ExpirationScheduler {
       return;
     }
 
-    logger.info({ workerId: this.workerId, config: this.config }, "Starting expiration scheduler");
+    logger.info(
+      { workerId: this.workerId, config: this.config },
+      "Starting expiration scheduler",
+    );
     this.running = true;
-    
+
     // Run startup scan immediately
     await this.processDueExpirations();
-    
+
     // Schedule recurring polls with jitter
     this.scheduleNextPoll();
-    
+
     // Start lease renewal
     this.startLeaseRenewal();
   }
@@ -223,10 +226,10 @@ export class ExpirationScheduler {
     try {
       // 1. CLAIM: Short transaction to claim due expirations
       const claimedRequests = await this.claimDueExpirations(now);
-      
+
       this.metrics.claimsThisPoll = claimedRequests.length;
       this.metrics.claimsTotal += claimedRequests.length;
-      
+
       if (claimedRequests.length === 0) {
         this.handleEmptyPoll();
         return;
@@ -243,9 +246,11 @@ export class ExpirationScheduler {
 
       // Update expiration lag metrics
       await this.updateExpirationLagMetrics(now);
-
     } catch (err) {
-      logger.error({ err, workerId: this.workerId }, "Error processing expirations");
+      logger.error(
+        { err, workerId: this.workerId },
+        "Error processing expirations",
+      );
     } finally {
       this.metrics.lastPollDurationMs = Date.now() - pollStart;
       this.metrics.lastSuccessfulPoll = new Date();
@@ -257,15 +262,17 @@ export class ExpirationScheduler {
   // PHASE 1: CLAIM (Short transaction with FOR UPDATE SKIP LOCKED)
   // ============================================================================
 
-  private async claimDueExpirations(now: Date): Promise<Array<{
-    requestId: string;
-    accessExpiresAt: Date;
-    attemptCount: number;
-    maxRetries: number;
-    correlationId: string;
-  }>> {
+  private async claimDueExpirations(now: Date): Promise<
+    Array<{
+      requestId: string;
+      accessExpiresAt: Date;
+      attemptCount: number;
+      maxRetries: number;
+      correlationId: string;
+    }>
+  > {
     const client = await this.pool.connect();
-    
+
     try {
       await client.query("BEGIN");
 
@@ -290,11 +297,16 @@ export class ExpirationScheduler {
         LIMIT $2
       `;
 
-      const claimResult = await client.query(claimQuery, [now, this.config.batchSize]);
+      const claimResult = await client.query(claimQuery, [
+        now,
+        this.config.batchSize,
+      ]);
       const claimed = claimResult.rows;
 
       if (claimed.length > 0) {
-        const leaseUntil = new Date(now.getTime() + this.config.leaseDurationMs);
+        const leaseUntil = new Date(
+          now.getTime() + this.config.leaseDurationMs,
+        );
         const leaseAcquiredAt = now;
 
         // Acquire leases
@@ -314,38 +326,45 @@ export class ExpirationScheduler {
           this.workerId,
           leaseUntil,
           leaseAcquiredAt,
-          claimed.map(r => r.id)
+          claimed.map((r) => r.id),
         ]);
 
         // Record audit event for claim
         for (const request of claimed) {
-          await this.recordAudit("EXPIRATION_DUE", request.id, {
-            workerId: this.workerId,
-            leaseUntil: leaseUntil.toISOString(),
-            attemptCount: request.expiration_attempt_count,
-            maxRetries: request.expiration_max_retries,
-          }, request.correlation_id);
+          await this.recordAudit(
+            "EXPIRATION_DUE",
+            request.id,
+            {
+              workerId: this.workerId,
+              leaseUntil: leaseUntil.toISOString(),
+              attemptCount: request.expiration_attempt_count,
+              maxRetries: request.expiration_max_retries,
+            },
+            request.correlation_id,
+          );
         }
 
         await client.query("COMMIT");
-        
-        logger.debug({ 
-          workerId: this.workerId, 
-          claimed: claimed.length,
-          leaseUntil: leaseUntil.toISOString(),
-        }, "Claimed expirations");
+
+        logger.debug(
+          {
+            workerId: this.workerId,
+            claimed: claimed.length,
+            leaseUntil: leaseUntil.toISOString(),
+          },
+          "Claimed expirations",
+        );
       } else {
         await client.query("COMMIT");
       }
 
-      return claimed.map(r => ({
+      return claimed.map((r) => ({
         requestId: r.id,
         accessExpiresAt: new Date(r.access_expires_at),
         attemptCount: r.expiration_attempt_count,
         maxRetries: r.expiration_max_retries,
         correlationId: r.correlation_id,
       }));
-
     } catch (err) {
       await client.query("ROLLBACK");
       throw err;
@@ -359,10 +378,16 @@ export class ExpirationScheduler {
   // ============================================================================
 
   private async processBatch(
-    claimed: Array<{ requestId: string; accessExpiresAt: Date; attemptCount: number; maxRetries: number; correlationId: string }>
+    claimed: Array<{
+      requestId: string;
+      accessExpiresAt: Date;
+      attemptCount: number;
+      maxRetries: number;
+      correlationId: string;
+    }>,
   ): Promise<ExpirationResult[]> {
     const results: ExpirationResult[] = [];
-    
+
     // Process with controlled concurrency
     const concurrency = this.config.providerConcurrency;
     const queue = [...claimed];
@@ -370,11 +395,11 @@ export class ExpirationScheduler {
 
     const processNext = async (): Promise<void> => {
       if (queue.length === 0) return;
-      
+
       const item = queue.shift()!;
       const result = await this.processSingleExpiration(item);
       results.push(result);
-      
+
       if (queue.length > 0) {
         await processNext();
       }
@@ -400,22 +425,28 @@ export class ExpirationScheduler {
     const attemptCount = item.attemptCount;
     const maxRetries = item.maxRetries;
 
-    logger.info({
-      workerId: this.workerId,
-      requestId: item.requestId,
-      attemptCount,
-      maxRetries,
-    }, "Processing expiration");
+    logger.info(
+      {
+        workerId: this.workerId,
+        requestId: item.requestId,
+        attemptCount,
+        maxRetries,
+      },
+      "Processing expiration",
+    );
 
     try {
       // Fetch the full request
       const requestResult = await this.pool.query(
         "SELECT * FROM access_requests WHERE id = $1",
-        [item.requestId]
+        [item.requestId],
       );
 
       if (requestResult.rows.length === 0) {
-        logger.warn({ requestId: item.requestId }, "Request not found, skipping");
+        logger.warn(
+          { requestId: item.requestId },
+          "Request not found, skipping",
+        );
         return {
           requestId: item.requestId,
           status: "SKIPPED",
@@ -426,28 +457,41 @@ export class ExpirationScheduler {
       }
 
       const row = requestResult.rows[0];
-      
+
       // Check if access was extended (accessExpiresAt is now in the future)
       const now = new Date();
-      logger.debug({ 
-        requestId: item.requestId,
-        rowAccessExpiresAt: row.access_expires_at,
-        now: now.toISOString(),
-        isFuture: row.access_expires_at ? new Date(row.access_expires_at) > now : false
-      }, "Checking extension");
-      if (row.access_expires_at && new Date(row.access_expires_at) > now) {
-        logger.info({ 
-          requestId: item.requestId, 
-          originalExpiry: item.accessExpiresAt.toISOString(),
-          newExpiry: row.access_expires_at.toISOString(),
+      logger.debug(
+        {
+          requestId: item.requestId,
+          rowAccessExpiresAt: row.access_expires_at,
           now: now.toISOString(),
-        }, "Access extended, skipping expiration");
+          isFuture: row.access_expires_at
+            ? new Date(row.access_expires_at) > now
+            : false,
+        },
+        "Checking extension",
+      );
+      if (row.access_expires_at && new Date(row.access_expires_at) > now) {
+        logger.info(
+          {
+            requestId: item.requestId,
+            originalExpiry: item.accessExpiresAt.toISOString(),
+            newExpiry: row.access_expires_at.toISOString(),
+            now: now.toISOString(),
+          },
+          "Access extended, skipping expiration",
+        );
 
-        await this.recordAudit("EXPIRATION_SKIPPED", item.requestId, {
-          reason: "extended",
-          originalExpiry: item.accessExpiresAt.toISOString(),
-          newExpiry: row.access_expires_at.toISOString(),
-        }, row.correlation_id);
+        await this.recordAudit(
+          "EXPIRATION_SKIPPED",
+          item.requestId,
+          {
+            reason: "extended",
+            originalExpiry: item.accessExpiresAt.toISOString(),
+            newExpiry: row.access_expires_at.toISOString(),
+          },
+          row.correlation_id,
+        );
 
         return {
           requestId: item.requestId,
@@ -460,11 +504,19 @@ export class ExpirationScheduler {
 
       // Check if already revoked (manual revoke)
       if (row.status === "REVOKED") {
-        logger.info({ requestId: item.requestId }, "Already revoked, skipping expiration");
+        logger.info(
+          { requestId: item.requestId },
+          "Already revoked, skipping expiration",
+        );
 
-        await this.recordAudit("EXPIRATION_SKIPPED", item.requestId, {
-          reason: "already_revoked",
-        }, row.correlation_id);
+        await this.recordAudit(
+          "EXPIRATION_SKIPPED",
+          item.requestId,
+          {
+            reason: "already_revoked",
+          },
+          row.correlation_id,
+        );
 
         return {
           requestId: item.requestId,
@@ -513,7 +565,8 @@ export class ExpirationScheduler {
         governanceExternalRequestId: row.governance_external_request_id,
         governanceAuthority: row.governance_authority,
         governanceAssignmentId: row.governance_assignment_id,
-        governanceAssignmentExpiresAt: row.governance_assignment_expires_at?.toISOString(),
+        governanceAssignmentExpiresAt:
+          row.governance_assignment_expires_at?.toISOString(),
         // Reconciliation state fields
         governanceLastCheckedAt: row.governance_last_checked_at?.toISOString(),
         governanceNextCheckAt: row.governance_next_check_at?.toISOString(),
@@ -523,7 +576,8 @@ export class ExpirationScheduler {
         // Governance lease fields
         governanceLeaseOwner: row.governance_lease_owner,
         governanceLeaseUntil: row.governance_lease_until?.toISOString(),
-        governanceLeaseAcquiredAt: row.governance_lease_acquired_at?.toISOString(),
+        governanceLeaseAcquiredAt:
+          row.governance_lease_acquired_at?.toISOString(),
         governanceAttemptCount: row.governance_attempt_count ?? 0,
         governanceNextAttemptAt: row.governance_next_attempt_at?.toISOString(),
         governanceLastAttemptAt: row.governance_last_attempt_at?.toISOString(),
@@ -542,30 +596,40 @@ export class ExpirationScheduler {
       }
 
       // Determine if error is retryable
-      const errorInfo = this.classifyError(revokeResult.error || revokeResult.message);
-      
+      const errorInfo = this.classifyError(
+        revokeResult.error || revokeResult.message,
+      );
+
       if (errorInfo.isRetryable && attemptCount + 1 < maxRetries) {
         this.metrics.retryScheduled++;
         const delay = this.calculateBackoff(attemptCount + 1);
         const nextAttemptAt = new Date(Date.now() + delay);
 
-        logger.info({
-          requestId: item.requestId,
-          attemptCount: attemptCount + 1,
-          maxRetries,
-          delayMs: delay,
-          nextAttemptAt: nextAttemptAt.toISOString(),
-          errorCode: errorInfo.errorCode,
-        }, "Scheduling retry");
+        logger.info(
+          {
+            requestId: item.requestId,
+            attemptCount: attemptCount + 1,
+            maxRetries,
+            delayMs: delay,
+            nextAttemptAt: nextAttemptAt.toISOString(),
+            errorCode: errorInfo.errorCode,
+          },
+          "Scheduling retry",
+        );
 
-        await this.recordAudit("EXPIRATION_SKIPPED", item.requestId, {
-          reason: "retry_scheduled",
-          attemptCount: attemptCount + 1,
-          maxRetries,
-          nextAttemptAt: nextAttemptAt.toISOString(),
-          errorCode: errorInfo.errorCode,
-          errorMessage: errorInfo.errorMessage,
-        }, row.correlation_id);
+        await this.recordAudit(
+          "EXPIRATION_SKIPPED",
+          item.requestId,
+          {
+            reason: "retry_scheduled",
+            attemptCount: attemptCount + 1,
+            maxRetries,
+            nextAttemptAt: nextAttemptAt.toISOString(),
+            errorCode: errorInfo.errorCode,
+            errorMessage: errorInfo.errorMessage,
+          },
+          row.correlation_id,
+        );
 
         return {
           requestId: item.requestId,
@@ -579,22 +643,30 @@ export class ExpirationScheduler {
 
       // Terminal failure
       this.metrics.terminalFailures++;
-      logger.error({
-        requestId: item.requestId,
-        attemptCount: attemptCount + 1,
-        maxRetries,
-        errorCode: errorInfo.errorCode,
-        errorMessage: errorInfo.errorMessage,
-      }, "Expiration failed permanently");
+      logger.error(
+        {
+          requestId: item.requestId,
+          attemptCount: attemptCount + 1,
+          maxRetries,
+          errorCode: errorInfo.errorCode,
+          errorMessage: errorInfo.errorMessage,
+        },
+        "Expiration failed permanently",
+      );
 
-      await this.recordAudit("EXPIRATION_FAILED", item.requestId, {
-        attemptCount: attemptCount + 1,
-        attempt: attemptCount + 1,
-        maxRetries,
-        errorCode: errorInfo.errorCode,
-        errorMessage: errorInfo.errorMessage,
-        terminal: true,
-      }, row.correlation_id);
+      await this.recordAudit(
+        "EXPIRATION_FAILED",
+        item.requestId,
+        {
+          attemptCount: attemptCount + 1,
+          attempt: attemptCount + 1,
+          maxRetries,
+          errorCode: errorInfo.errorCode,
+          errorMessage: errorInfo.errorMessage,
+          terminal: true,
+        },
+        row.correlation_id,
+      );
 
       return {
         requestId: item.requestId,
@@ -603,24 +675,31 @@ export class ExpirationScheduler {
         errorCode: errorInfo.errorCode,
         errorMessage: errorInfo.errorMessage,
       };
-
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      logger.error({ err, requestId: item.requestId }, "Unexpected error processing expiration");
+      logger.error(
+        { err, requestId: item.requestId },
+        "Unexpected error processing expiration",
+      );
 
       // Treat unexpected errors as retryable if we have retries left
       if (attemptCount + 1 < maxRetries) {
         const delay = this.calculateBackoff(attemptCount + 1);
         const nextAttemptAt = new Date(Date.now() + delay);
 
-        await this.recordAudit("EXPIRATION_SKIPPED", item.requestId, {
-          reason: "retry_scheduled",
-          attemptCount: attemptCount + 1,
-          maxRetries,
-          nextAttemptAt: nextAttemptAt.toISOString(),
-          errorCode: "UNEXPECTED_ERROR",
-          errorMessage,
-        }, randomUUID());
+        await this.recordAudit(
+          "EXPIRATION_SKIPPED",
+          item.requestId,
+          {
+            reason: "retry_scheduled",
+            attemptCount: attemptCount + 1,
+            maxRetries,
+            nextAttemptAt: nextAttemptAt.toISOString(),
+            errorCode: "UNEXPECTED_ERROR",
+            errorMessage,
+          },
+          randomUUID(),
+        );
 
         return {
           requestId: item.requestId,
@@ -633,13 +712,18 @@ export class ExpirationScheduler {
       }
 
       this.metrics.terminalFailures++;
-      await this.recordAudit("EXPIRATION_FAILED", item.requestId, {
-        attemptCount: attemptCount + 1,
-        maxRetries,
-        errorCode: 0,
-        errorMessage,
-        terminal: true,
-      }, randomUUID());
+      await this.recordAudit(
+        "EXPIRATION_FAILED",
+        item.requestId,
+        {
+          attemptCount: attemptCount + 1,
+          maxRetries,
+          errorCode: 0,
+          errorMessage,
+          terminal: true,
+        },
+        randomUUID(),
+      );
 
       return {
         requestId: item.requestId,
@@ -675,7 +759,7 @@ export class ExpirationScheduler {
                 lease_until = NULL,
                 lease_acquired_at = NULL
               WHERE id = $1`,
-              [result.requestId, result.attemptCount]
+              [result.requestId, result.attemptCount],
             );
             await this.recordAudit("REVOCATION_SUCCEEDED", result.requestId, {
               workerId: this.workerId,
@@ -699,7 +783,14 @@ export class ExpirationScheduler {
                 lease_until = NULL,
                 lease_acquired_at = NULL
               WHERE id = $1`,
-              [result.requestId, result.attemptCount, result.nextAttemptAt, result.errorCode, result.errorCode, now]
+              [
+                result.requestId,
+                result.attemptCount,
+                result.nextAttemptAt,
+                result.errorCode,
+                result.errorCode,
+                now,
+              ],
             );
             break;
           }
@@ -719,7 +810,13 @@ export class ExpirationScheduler {
                 lease_until = NULL,
                 lease_acquired_at = NULL
               WHERE id = $1`,
-              [result.requestId, result.attemptCount, result.errorCode, result.errorCode, now]
+              [
+                result.requestId,
+                result.attemptCount,
+                result.errorCode,
+                result.errorCode,
+                now,
+              ],
             );
             break;
           }
@@ -734,7 +831,7 @@ export class ExpirationScheduler {
                 lease_until = NULL,
                 lease_acquired_at = NULL
               WHERE id = $1`,
-              [result.requestId]
+              [result.requestId],
             );
             break;
           }
@@ -760,7 +857,9 @@ export class ExpirationScheduler {
 
       try {
         const now = new Date();
-        const margin = new Date(now.getTime() + this.config.leaseRenewalMarginMs);
+        const margin = new Date(
+          now.getTime() + this.config.leaseRenewalMarginMs,
+        );
 
         // Renew leases that are about to expire and still owned by us
         const result = await this.pool.query(
@@ -775,26 +874,28 @@ export class ExpirationScheduler {
             now,
             this.workerId,
             margin,
-            now
-          ]
+            now,
+          ],
         );
 
         if (result.rowCount && result.rowCount > 0) {
           this.metrics.leaseRenewals += result.rowCount;
-          logger.debug({ 
-            workerId: this.workerId, 
-            renewed: result.rowCount 
-          }, "Renewed leases");
+          logger.debug(
+            {
+              workerId: this.workerId,
+              renewed: result.rowCount,
+            },
+            "Renewed leases",
+          );
         }
 
         // Count expired leases (for metrics)
         const expiredResult = await this.pool.query(
           `SELECT COUNT(*) as count FROM access_requests 
            WHERE lease_owner = $1 AND lease_until < $2`,
-          [this.workerId, now]
+          [this.workerId, now],
         );
         this.metrics.expiredLeases = parseInt(expiredResult.rows[0].count);
-
       } catch (err) {
         logger.error({ err, workerId: this.workerId }, "Error renewing leases");
       }
@@ -816,9 +917,12 @@ export class ExpirationScheduler {
           lease_until = NULL,
           lease_acquired_at = NULL
         WHERE lease_owner = $1`,
-        [this.workerId]
+        [this.workerId],
       );
-      logger.info({ workerId: this.workerId }, "Released all leases on shutdown");
+      logger.info(
+        { workerId: this.workerId },
+        "Released all leases on shutdown",
+      );
     } catch (err) {
       logger.error({ err, workerId: this.workerId }, "Error releasing leases");
     }
@@ -839,11 +943,13 @@ export class ExpirationScheduler {
            OR (status = 'RETRY' AND expiration_next_attempt_at IS NOT NULL AND expiration_next_attempt_at <= $1)
          ORDER BY due_time ASC
          LIMIT 1000`,
-        [now]
+        [now],
       );
 
       if (result.rows.length > 0) {
-        const lags = result.rows.map(r => now.getTime() - new Date(r.due_time).getTime());
+        const lags = result.rows.map(
+          (r) => now.getTime() - new Date(r.due_time).getTime(),
+        );
         lags.sort((a, b) => a - b);
 
         this.metrics.oldestOverdueAgeMs = lags[lags.length - 1];
@@ -865,18 +971,18 @@ export class ExpirationScheduler {
 
   private handleEmptyPoll(): void {
     this.metrics.consecutiveEmptyPolls++;
-    
+
     if (this.config.adaptivePolling) {
       // Adaptive backoff
       if (this.metrics.consecutiveEmptyPolls <= 2) {
         this.currentPollIntervalMs = Math.max(
           this.config.minPollIntervalMs,
-          this.currentPollIntervalMs / 2
+          this.currentPollIntervalMs / 2,
         );
       } else if (this.metrics.consecutiveEmptyPolls <= 5) {
         this.currentPollIntervalMs = Math.min(
           this.config.maxPollIntervalMs,
-          this.currentPollIntervalMs * 1.5
+          this.currentPollIntervalMs * 1.5,
         );
       } else {
         this.currentPollIntervalMs = this.config.maxPollIntervalMs;
@@ -888,7 +994,10 @@ export class ExpirationScheduler {
     if (!this.running) return;
 
     const jitter = (Math.random() - 0.5) * 2 * this.config.pollJitterMs;
-    const delay = Math.max(this.config.minPollIntervalMs, this.currentPollIntervalMs + jitter);
+    const delay = Math.max(
+      this.config.minPollIntervalMs,
+      this.currentPollIntervalMs + jitter,
+    );
 
     this.pollTimer = setTimeout(() => {
       if (this.running) {
@@ -901,35 +1010,52 @@ export class ExpirationScheduler {
   // Error Classification & Backoff
   // ============================================================================
 
-  private classifyError(errorMessage: string): { isRetryable: boolean; errorCode: number; errorMessage: string } {
+  private classifyError(errorMessage: string): {
+    isRetryable: boolean;
+    errorCode: number;
+    errorMessage: string;
+  } {
     // GitHub rate limit
-    if (errorMessage.includes("429") || errorMessage.toLowerCase().includes("rate limit")) {
+    if (
+      errorMessage.includes("429") ||
+      errorMessage.toLowerCase().includes("rate limit")
+    ) {
       return { isRetryable: true, errorCode: 429, errorMessage };
     }
 
     // GitHub server errors
-    if (errorMessage.includes("500") || 
-        errorMessage.includes("502") || 
-        errorMessage.includes("503") || 
-        errorMessage.includes("504")) {
+    if (
+      errorMessage.includes("500") ||
+      errorMessage.includes("502") ||
+      errorMessage.includes("503") ||
+      errorMessage.includes("504")
+    ) {
       const match = errorMessage.match(/(5\d{2})/);
-      return { isRetryable: true, errorCode: match ? parseInt(match[1]) : 500, errorMessage };
+      return {
+        isRetryable: true,
+        errorCode: match ? parseInt(match[1]) : 500,
+        errorMessage,
+      };
     }
 
     // Network errors
-    if (errorMessage.includes("ETIMEDOUT") ||
-        errorMessage.includes("ECONNRESET") ||
-        errorMessage.includes("ENOTFOUND") ||
-        errorMessage.includes("timeout") ||
-        errorMessage.includes("network")) {
+    if (
+      errorMessage.includes("ETIMEDOUT") ||
+      errorMessage.includes("ECONNRESET") ||
+      errorMessage.includes("ENOTFOUND") ||
+      errorMessage.includes("timeout") ||
+      errorMessage.includes("network")
+    ) {
       return { isRetryable: true, errorCode: 0, errorMessage };
     }
 
     // Authentication/authorization - typically NOT retryable
-    if (errorMessage.includes("401") || 
-        errorMessage.includes("403") || 
-        errorMessage.includes("authentication") ||
-        errorMessage.includes("authorization")) {
+    if (
+      errorMessage.includes("401") ||
+      errorMessage.includes("403") ||
+      errorMessage.includes("authentication") ||
+      errorMessage.includes("authorization")
+    ) {
       return { isRetryable: false, errorCode: 401, errorMessage };
     }
 
@@ -945,9 +1071,9 @@ export class ExpirationScheduler {
   private calculateBackoff(attempt: number): number {
     const delay = Math.min(
       this.config.baseRetryDelayMs * Math.pow(2, attempt - 1),
-      this.config.maxRetryDelayMs
+      this.config.maxRetryDelayMs,
     );
-    
+
     // Add jitter
     const jitter = delay * this.config.jitterFactor * (Math.random() * 2 - 1);
     return Math.floor(Math.max(0, delay + jitter));
@@ -961,7 +1087,7 @@ export class ExpirationScheduler {
     type: AuditEventType,
     requestId: string,
     metadata: Record<string, unknown>,
-    correlationId?: string
+    correlationId?: string,
   ): Promise<void> {
     try {
       await this.auditStore.append({
@@ -987,7 +1113,7 @@ export function createExpirationScheduler(
   executor: AccessExecutor,
   auditStore: AuditEventStore,
   pool: Pool,
-  config?: Partial<SchedulerConfig>
+  config?: Partial<SchedulerConfig>,
 ): ExpirationScheduler {
   return new ExpirationScheduler(executor, auditStore, pool, config);
 }

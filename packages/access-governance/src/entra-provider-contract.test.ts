@@ -1,8 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "bun:test";
-import { EntraGovernanceProvider, EntraConfig } from "@opnory/access-governance";
-import { 
-  GovernanceSubject, 
-  GovernedEntitlement, 
+import {
+  EntraGovernanceProvider,
+  EntraConfig,
+} from "@opnory/access-governance";
+import {
+  GovernanceSubject,
+  GovernedEntitlement,
   GovernedAccessRequest,
   GovernanceRequest,
   GovernanceRequestStatus,
@@ -66,7 +69,10 @@ describe("EntraGovernanceProvider Contract Tests", () => {
     it("should request token from Microsoft identity platform", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ access_token: "test-access-token", expires_in: 3600 }),
+        json: async () => ({
+          access_token: "test-access-token",
+          expires_in: 3600,
+        }),
       });
 
       const token = await (provider as any).getAccessToken();
@@ -76,7 +82,7 @@ describe("EntraGovernanceProvider Contract Tests", () => {
         expect.objectContaining({
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        })
+        }),
       );
     });
 
@@ -103,7 +109,7 @@ describe("EntraGovernanceProvider Contract Tests", () => {
         clientId: "test-client-id",
         clientSecret: "test-client-secret",
       });
-      
+
       mockFetch
         .mockResolvedValueOnce({
           ok: true,
@@ -135,7 +141,9 @@ describe("EntraGovernanceProvider Contract Tests", () => {
 
       // Verify the Graph API call
       const graphCall = mockFetch.mock.calls[1];
-      expect(graphCall[0]).toBe("https://graph.microsoft.com/v1.0/identityGovernance/entitlementManagement/assignmentRequests");
+      expect(graphCall[0]).toBe(
+        "https://graph.microsoft.com/v1.0/identityGovernance/entitlementManagement/assignmentRequests",
+      );
       expect(graphCall[1].method).toBe("POST");
       const body = JSON.parse(graphCall[1].body as string);
       expect(body.accessPackageId).toBe("access-package-789");
@@ -151,10 +159,20 @@ describe("EntraGovernanceProvider Contract Tests", () => {
         clientId: "test-client-id",
         clientSecret: "test-client-secret",
       });
-      
+
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "t", expires_in: 3600 }) })
-        .mockResolvedValueOnce({ ok: true, json: async () => ({ id: "req-1", requestStatus: "PendingApproval", createdDateTime: new Date().toISOString() }) });
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ access_token: "t", expires_in: 3600 }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            id: "req-1",
+            requestStatus: "PendingApproval",
+            createdDateTime: new Date().toISOString(),
+          }),
+        });
 
       await testProvider.submitRequest({
         requestId: randomUUID(),
@@ -180,20 +198,28 @@ describe("EntraGovernanceProvider Contract Tests", () => {
         clientId: "test-client-id",
         clientSecret: "test-client-secret",
       });
-      
+
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "t", expires_in: 3600 }) })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ access_token: "t", expires_in: 3600 }),
+        })
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({
             id: "assignment-request-123",
             requestStatus: "Delivered",
-            assignment: { id: "assignment-456", endDateTime: "2024-04-15T10:00:00Z" },
+            assignment: {
+              id: "assignment-456",
+              endDateTime: "2024-04-15T10:00:00Z",
+            },
             createdDateTime: "2024-01-15T10:00:00Z",
           }),
         });
 
-      const result = await testProvider.getRequestStatus("assignment-request-123");
+      const result = await testProvider.getRequestStatus(
+        "assignment-request-123",
+      );
 
       expect(result.externalRequestId).toBe("assignment-request-123");
       expect(result.status).toBe("APPROVED");
@@ -201,7 +227,9 @@ describe("EntraGovernanceProvider Contract Tests", () => {
       expect(result.assignmentExpiresAt).toBe("2024-04-15T10:00:00Z");
 
       const graphCall = mockFetch.mock.calls[1];
-      expect(graphCall[0]).toContain("assignmentRequests/assignment-request-123?$expand=assignment");
+      expect(graphCall[0]).toContain(
+        "assignmentRequests/assignment-request-123?$expand=assignment",
+      );
     });
 
     it("should return FAILED on API error", async () => {
@@ -210,10 +238,17 @@ describe("EntraGovernanceProvider Contract Tests", () => {
         clientId: "test-client-id",
         clientSecret: "test-client-secret",
       });
-      
+
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "t", expires_in: 3600 }) })
-        .mockResolvedValueOnce({ ok: false, status: 404, text: async () => "Not found" });
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ access_token: "t", expires_in: 3600 }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          text: async () => "Not found",
+        });
 
       const result = await testProvider.getRequestStatus("invalid-id");
 
@@ -240,12 +275,19 @@ describe("EntraGovernanceProvider Contract Tests", () => {
           clientId: "test-client-id",
           clientSecret: "test-client-secret",
         });
-        
+
         mockFetch
-          .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "t", expires_in: 3600 }) })
           .mockResolvedValueOnce({
             ok: true,
-            json: async () => ({ id: "req-1", requestStatus: entraStatus, createdDateTime: new Date().toISOString() }),
+            json: async () => ({ access_token: "t", expires_in: 3600 }),
+          })
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({
+              id: "req-1",
+              requestStatus: entraStatus,
+              createdDateTime: new Date().toISOString(),
+            }),
           });
 
         const result = await testProvider.getRequestStatus("req-1");
@@ -261,24 +303,32 @@ describe("EntraGovernanceProvider Contract Tests", () => {
         clientId: "test-client-id",
         clientSecret: "test-client-secret",
       });
-      
+
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "t", expires_in: 3600 }) })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ access_token: "t", expires_in: 3600 }),
+        })
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({
-            value: [{
-              id: "assignment-456",
-              accessPackageId: "access-package-789",
-              targetId: "entra-user-123",
-              schedule: { endDateTime: "2024-04-15T10:00:00Z" },
-              status: "Delivered",
-              assignmentType: "UserAdd",
-            }],
+            value: [
+              {
+                id: "assignment-456",
+                accessPackageId: "access-package-789",
+                targetId: "entra-user-123",
+                schedule: { endDateTime: "2024-04-15T10:00:00Z" },
+                status: "Delivered",
+                assignmentType: "UserAdd",
+              },
+            ],
           }),
         });
 
-      const result = await testProvider.getAssignment(testSubject, testEntitlement);
+      const result = await testProvider.getAssignment(
+        testSubject,
+        testEntitlement,
+      );
 
       expect(result).not.toBeNull();
       expect(result!.assignmentId).toBe("assignment-456");
@@ -286,7 +336,9 @@ describe("EntraGovernanceProvider Contract Tests", () => {
       expect(result!.expiresAt).toBe("2024-04-15T10:00:00Z");
 
       const graphCall = mockFetch.mock.calls[1];
-      expect(graphCall[0]).toContain("assignments?$filter=targetId eq 'entra-user-123' and accessPackageId eq 'access-package-789'");
+      expect(graphCall[0]).toContain(
+        "assignments?$filter=targetId eq 'entra-user-123' and accessPackageId eq 'access-package-789'",
+      );
     });
 
     it("should return null when no assignment found", async () => {
@@ -295,12 +347,18 @@ describe("EntraGovernanceProvider Contract Tests", () => {
         clientId: "test-client-id",
         clientSecret: "test-client-secret",
       });
-      
+
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "t", expires_in: 3600 }) })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ access_token: "t", expires_in: 3600 }),
+        })
         .mockResolvedValueOnce({ ok: true, json: async () => ({ value: [] }) });
 
-      const result = await testProvider.getAssignment(testSubject, testEntitlement);
+      const result = await testProvider.getAssignment(
+        testSubject,
+        testEntitlement,
+      );
       expect(result).toBeNull();
     });
   });
@@ -312,9 +370,12 @@ describe("EntraGovernanceProvider Contract Tests", () => {
         clientId: "test-client-id",
         clientSecret: "test-client-secret",
       });
-      
+
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "t", expires_in: 3600 }) })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ access_token: "t", expires_in: 3600 }),
+        })
         .mockResolvedValueOnce({ ok: true, status: 202 });
 
       const assignment: GovernanceAssignment = {
@@ -335,7 +396,9 @@ describe("EntraGovernanceProvider Contract Tests", () => {
       expect(result.message).toBe("Entra assignment revocation requested");
 
       const graphCall = mockFetch.mock.calls[1];
-      expect(graphCall[0]).toBe("https://graph.microsoft.com/v1.0/identityGovernance/entitlementManagement/assignmentRequests");
+      expect(graphCall[0]).toBe(
+        "https://graph.microsoft.com/v1.0/identityGovernance/entitlementManagement/assignmentRequests",
+      );
       expect(graphCall[1].method).toBe("POST");
       const body = JSON.parse(graphCall[1].body as string);
       expect(body.requestType).toBe("adminRemove");
@@ -348,10 +411,17 @@ describe("EntraGovernanceProvider Contract Tests", () => {
         clientId: "test-client-id",
         clientSecret: "test-client-secret",
       });
-      
+
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "t", expires_in: 3600 }) })
-        .mockResolvedValueOnce({ ok: false, status: 500, text: async () => "Internal error" });
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ access_token: "t", expires_in: 3600 }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          text: async () => "Internal error",
+        });
 
       const assignment: GovernanceAssignment = {
         assignmentId: "assignment-456",
@@ -376,13 +446,23 @@ describe("EntraGovernanceProvider Contract Tests", () => {
         clientId: "test-client-id",
         clientSecret: "test-client-secret",
       });
-      
+
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "t", expires_in: 3600 }) })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ access_token: "t", expires_in: 3600 }),
+        })
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({
-            value: [{ id: "entra-user-123", displayName: "Test User", mail: "test@example.com", userPrincipalName: "test@example.com" }],
+            value: [
+              {
+                id: "entra-user-123",
+                displayName: "Test User",
+                mail: "test@example.com",
+                userPrincipalName: "test@example.com",
+              },
+            ],
           }),
         });
 
@@ -403,9 +483,12 @@ describe("EntraGovernanceProvider Contract Tests", () => {
         clientId: "test-client-id",
         clientSecret: "test-client-secret",
       });
-      
+
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "t", expires_in: 3600 }) })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ access_token: "t", expires_in: 3600 }),
+        })
         .mockResolvedValueOnce({ ok: true, json: async () => ({ value: [] }) });
 
       const result = await testProvider.resolveSubject({
@@ -431,10 +514,20 @@ describe("EntraGovernanceProvider Contract Tests", () => {
 
     it("should throw when governance config missing or wrong provider", async () => {
       const badEntitlement = { ...testEntitlementRef, governance: undefined };
-      await expect(provider.resolveEntitlement(badEntitlement)).rejects.toThrow("missing or invalid entra governance config");
+      await expect(provider.resolveEntitlement(badEntitlement)).rejects.toThrow(
+        "missing or invalid entra governance config",
+      );
 
-      const wrongProvider = { ...testEntitlementRef, governance: { ...testEntitlementRef.governance!, provider: "okta" as const } };
-      await expect(provider.resolveEntitlement(wrongProvider)).rejects.toThrow("missing or invalid entra governance config");
+      const wrongProvider = {
+        ...testEntitlementRef,
+        governance: {
+          ...testEntitlementRef.governance!,
+          provider: "okta" as const,
+        },
+      };
+      await expect(provider.resolveEntitlement(wrongProvider)).rejects.toThrow(
+        "missing or invalid entra governance config",
+      );
     });
   });
 });

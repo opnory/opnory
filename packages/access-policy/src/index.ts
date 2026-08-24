@@ -1,5 +1,8 @@
 import { getLogger } from "@opnory/observability";
-import { EntitlementCatalog, canonicalEngineeringContributorEntitlement } from "@opnory/access-entitlements";
+import {
+  EntitlementCatalog,
+  canonicalEngineeringContributorEntitlement,
+} from "@opnory/access-entitlements";
 import {
   PolicyEvaluationResult,
   PolicyDecision,
@@ -30,11 +33,19 @@ export class PolicyEngine {
   private catalog: EntitlementCatalog;
 
   constructor(catalog?: EntitlementCatalog) {
-    this.catalog = catalog || new EntitlementCatalog([canonicalEngineeringContributorEntitlement]);
+    this.catalog =
+      catalog ||
+      new EntitlementCatalog([canonicalEngineeringContributorEntitlement]);
   }
 
   evaluate(context: PolicyContext): PolicyEvaluationResult {
-    logger.info({ requesterId: context.requesterId, entitlementId: context.entitlement.id }, "Evaluating access policy");
+    logger.info(
+      {
+        requesterId: context.requesterId,
+        entitlementId: context.entitlement.id,
+      },
+      "Evaluating access policy",
+    );
 
     // Verify entitlement exists in catalog
     const entitlement = this.catalog.getById(context.entitlement.id);
@@ -52,7 +63,10 @@ export class PolicyEngine {
     // This is deterministic - no LLM involved in the decision
     if (entitlement.approvalPolicy === "MANAGER") {
       // In a real implementation, we'd resolve the manager from an org chart/IdP
-      const requiredApprovers = this.resolveApprovers(context.requesterId, entitlement);
+      const requiredApprovers = this.resolveApprovers(
+        context.requesterId,
+        entitlement,
+      );
 
       return {
         decision: "APPROVAL_REQUIRED",
@@ -77,7 +91,10 @@ export class PolicyEngine {
     };
   }
 
-  private resolveApprovers(requesterId: string, entitlement: { id: string; approvalPolicy: string }): string[] {
+  private resolveApprovers(
+    requesterId: string,
+    entitlement: { id: string; approvalPolicy: string },
+  ): string[] {
     // In a real implementation, this would query an org chart or IdP
     // For now, return a placeholder - the approval service will validate
     // that the approver is not the requester
@@ -89,7 +106,9 @@ export class PolicyEngine {
 // Policy Evaluation Helpers
 // ============================================================================
 
-export function evaluateAccessPolicy(context: PolicyContext): PolicyEvaluationResult {
+export function evaluateAccessPolicy(
+  context: PolicyContext,
+): PolicyEvaluationResult {
   const engine = new PolicyEngine();
   return engine.evaluate(context);
 }

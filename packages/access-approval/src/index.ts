@@ -9,7 +9,12 @@ import {
   transitionOrThrow,
   toApprovedAccessRequest,
 } from "@opnory/access-types";
-import { AuditEventStore, InMemoryAuditEventStore, AuditEventType, recordAuditEvent } from "@opnory/access-audit";
+import {
+  AuditEventStore,
+  InMemoryAuditEventStore,
+  AuditEventType,
+  recordAuditEvent,
+} from "@opnory/access-audit";
 
 const logger = getLogger().child({ component: "access-approval" });
 
@@ -28,13 +33,18 @@ export class InMemoryApprovalStore {
     return this.requests.get(id);
   }
 
-  async update(request: AccessRequest, expectedVersion?: number): Promise<void> {
+  async update(
+    request: AccessRequest,
+    expectedVersion?: number,
+  ): Promise<void> {
     const existing = this.requests.get(request.id);
     if (!existing) {
       throw new Error(`Access request ${request.id} not found`);
     }
     if (expectedVersion !== undefined && existing.version !== expectedVersion) {
-      throw new Error(`Optimistic concurrency conflict: expected version ${expectedVersion}, found ${existing.version}`);
+      throw new Error(
+        `Optimistic concurrency conflict: expected version ${expectedVersion}, found ${existing.version}`,
+      );
     }
     this.requests.set(request.id, request);
   }
@@ -64,7 +74,7 @@ export class ApprovalService {
 
   async requestApproval(
     request: AccessRequest,
-    correlationId: string
+    correlationId: string,
   ): Promise<void> {
     // Record audit event
     await recordAuditEvent(this.auditStore, {
@@ -87,7 +97,7 @@ export class ApprovalService {
   async approve(
     requestId: string,
     decision: ApprovalDecision,
-    correlationId: string
+    correlationId: string,
   ): Promise<ApprovalResult> {
     const request = await this.store.getById(requestId);
     if (!request) {
@@ -97,7 +107,10 @@ export class ApprovalService {
     // Check if request has expired
     if (request.expiresAt && new Date(request.expiresAt) < new Date()) {
       // Transition to CANCELLED with optimistic concurrency
-      transitionOrThrow(request.status, "CANCELLED", { expectedVersion: request.version, actualVersion: request.version });
+      transitionOrThrow(request.status, "CANCELLED", {
+        expectedVersion: request.version,
+        actualVersion: request.version,
+      });
 
       const cancelledRequest: AccessRequest = {
         ...request,
@@ -142,7 +155,10 @@ export class ApprovalService {
     }
 
     // Check if request is governed by external authority - local approval cannot override
-    if (request.governanceAuthority && request.governanceAuthority !== "local") {
+    if (
+      request.governanceAuthority &&
+      request.governanceAuthority !== "local"
+    ) {
       await recordAuditEvent(this.auditStore, {
         eventId: uuidv4(),
         requestId,
@@ -178,7 +194,10 @@ export class ApprovalService {
             duplicate: true,
           },
         });
-        logger.info({ requestId, approver: decision.approverId, duplicate: true }, "Duplicate approval (idempotent)");
+        logger.info(
+          { requestId, approver: decision.approverId, duplicate: true },
+          "Duplicate approval (idempotent)",
+        );
         return { request, duplicate: true };
       } else {
         // Different approver trying to approve again - conflict
@@ -203,7 +222,10 @@ export class ApprovalService {
     if (request.status === "FAILED") {
       // Retry fulfillment from FAILED state - transition directly to FULFILLING
       if (decision.decision === "APPROVE") {
-        transitionOrThrow(request.status, "FULFILLING", { expectedVersion: request.version, actualVersion: request.version });
+        transitionOrThrow(request.status, "FULFILLING", {
+          expectedVersion: request.version,
+          actualVersion: request.version,
+        });
 
         const retryingRequest: AccessRequest = {
           ...request,
@@ -230,7 +252,10 @@ export class ApprovalService {
           },
         });
 
-        logger.info({ requestId, approver: decision.approverId }, "Retrying fulfillment from FAILED state");
+        logger.info(
+          { requestId, approver: decision.approverId },
+          "Retrying fulfillment from FAILED state",
+        );
         return { request: retryingRequest, duplicate: false };
       } else {
         // Cannot deny a failed request
@@ -272,7 +297,10 @@ export class ApprovalService {
 
     if (request.status === "FULFILLED") {
       // Already fulfilled - idempotent only for same decision type
-      if (request.approvedBy === decision.approverId && decision.decision === "APPROVE") {
+      if (
+        request.approvedBy === decision.approverId &&
+        decision.decision === "APPROVE"
+      ) {
         await recordAuditEvent(this.auditStore, {
           eventId: uuidv4(),
           requestId,
@@ -287,7 +315,15 @@ export class ApprovalService {
             fulfilled: true,
           },
         });
-        logger.info({ requestId, approver: decision.approverId, duplicate: true, fulfilled: true }, "Duplicate approval on fulfilled request (idempotent)");
+        logger.info(
+          {
+            requestId,
+            approver: decision.approverId,
+            duplicate: true,
+            fulfilled: true,
+          },
+          "Duplicate approval on fulfilled request (idempotent)",
+        );
         return { request, duplicate: true };
       } else {
         // Different decision type (DENY on FULFILLED) or different approver - conflict
@@ -310,7 +346,10 @@ export class ApprovalService {
 
     if (decision.decision === "APPROVE") {
       // Transition to APPROVED with optimistic concurrency
-      transitionOrThrow(request.status, "APPROVED", { expectedVersion: request.version, actualVersion: request.version });
+      transitionOrThrow(request.status, "APPROVED", {
+        expectedVersion: request.version,
+        actualVersion: request.version,
+      });
 
       const updatedRequest: AccessRequest = {
         ...request,
@@ -336,11 +375,17 @@ export class ApprovalService {
         },
       });
 
-      logger.info({ requestId, approver: decision.approverId }, "Access request approved");
+      logger.info(
+        { requestId, approver: decision.approverId },
+        "Access request approved",
+      );
       return { request: updatedRequest, duplicate: false };
     } else {
       // Transition to DENIED with optimistic concurrency
-      transitionOrThrow(request.status, "DENIED", { expectedVersion: request.version, actualVersion: request.version });
+      transitionOrThrow(request.status, "DENIED", {
+        expectedVersion: request.version,
+        actualVersion: request.version,
+      });
 
       const updatedRequest: AccessRequest = {
         ...request,
@@ -367,7 +412,10 @@ export class ApprovalService {
         },
       });
 
-      logger.info({ requestId, approver: decision.approverId }, "Access request denied");
+      logger.info(
+        { requestId, approver: decision.approverId },
+        "Access request denied",
+      );
       return { request: updatedRequest, duplicate: false };
     }
   }
@@ -375,7 +423,7 @@ export class ApprovalService {
   async deny(
     requestId: string,
     decision: ApprovalDecision,
-    correlationId: string
+    correlationId: string,
   ): Promise<ApprovalResult> {
     // Similar logic for deny, but with DENY decision
     const request = await this.store.getById(requestId);
@@ -386,7 +434,10 @@ export class ApprovalService {
     // Check if request has expired
     if (request.expiresAt && new Date(request.expiresAt) < new Date()) {
       // Transition to CANCELLED with optimistic concurrency
-      transitionOrThrow(request.status, "CANCELLED", { expectedVersion: request.version, actualVersion: request.version });
+      transitionOrThrow(request.status, "CANCELLED", {
+        expectedVersion: request.version,
+        actualVersion: request.version,
+      });
 
       const cancelledRequest: AccessRequest = {
         ...request,
@@ -447,7 +498,10 @@ export class ApprovalService {
             duplicate: true,
           },
         });
-        logger.info({ requestId, approver: decision.approverId, duplicate: true }, "Duplicate denial on already denied request (idempotent)");
+        logger.info(
+          { requestId, approver: decision.approverId, duplicate: true },
+          "Duplicate denial on already denied request (idempotent)",
+        );
         return { request, duplicate: true };
       } else {
         await recordAuditEvent(this.auditStore, {
@@ -467,7 +521,11 @@ export class ApprovalService {
       }
     }
 
-    if (request.status === "APPROVED" || request.status === "FULFILLING" || request.status === "FULFILLED") {
+    if (
+      request.status === "APPROVED" ||
+      request.status === "FULFILLING" ||
+      request.status === "FULFILLED"
+    ) {
       await recordAuditEvent(this.auditStore, {
         eventId: uuidv4(),
         requestId,
@@ -484,7 +542,10 @@ export class ApprovalService {
     }
 
     // Transition to DENIED with optimistic concurrency
-    transitionOrThrow(request.status, "DENIED", { expectedVersion: request.version, actualVersion: request.version });
+    transitionOrThrow(request.status, "DENIED", {
+      expectedVersion: request.version,
+      actualVersion: request.version,
+    });
 
     const updatedRequest: AccessRequest = {
       ...request,
@@ -511,11 +572,16 @@ export class ApprovalService {
       },
     });
 
-    logger.info({ requestId, approver: decision.approverId }, "Access request denied");
+    logger.info(
+      { requestId, approver: decision.approverId },
+      "Access request denied",
+    );
     return { request: updatedRequest, duplicate: false };
   }
 
-  async getApprovedRequest(requestId: string): Promise<ApprovedAccessRequest | null> {
+  async getApprovedRequest(
+    requestId: string,
+  ): Promise<ApprovedAccessRequest | null> {
     const request = await this.store.getById(requestId);
     if (!request || request.status !== "APPROVED") {
       return null;

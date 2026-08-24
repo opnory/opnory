@@ -1,6 +1,22 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "bun:test";
-import { ExpirationScheduler, createExpirationScheduler, SchedulerConfig, DEFAULT_SCHEDULER_CONFIG } from "./expiration-scheduler.js";
-import { AccessRequest, AccessRequestStatus, EntitlementRef } from "@opnory/access-types";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+} from "bun:test";
+import {
+  ExpirationScheduler,
+  createExpirationScheduler,
+  SchedulerConfig,
+  DEFAULT_SCHEDULER_CONFIG,
+} from "./expiration-scheduler.js";
+import {
+  AccessRequest,
+  AccessRequestStatus,
+  EntitlementRef,
+} from "@opnory/access-types";
 import { PgAuditEventStore } from "@opnory/access-store-pg";
 import { randomUUID as uuidv4 } from "crypto";
 import { Pool } from "pg";
@@ -63,7 +79,14 @@ interface RevokeCallRecord {
 const revokeCallLog: RevokeCallRecord[] = [];
 
 class ChaosMockExecutor {
-  calls: { method: string; requestId: string; attempt: number; statusCode: number; success: boolean; timestamp: Date }[] = [];
+  calls: {
+    method: string;
+    requestId: string;
+    attempt: number;
+    statusCode: number;
+    success: boolean;
+    timestamp: Date;
+  }[] = [];
 
   reset() {
     this.calls = [];
@@ -82,8 +105,14 @@ class ChaosMockExecutor {
     let statusCode = 200;
     let success = true;
 
-    if (INJECT_FAILURES && Math.random() < failureConfig.revocationFailureRate) {
-      statusCode = failureConfig.failureStatusCodes[Math.floor(Math.random() * failureConfig.failureStatusCodes.length)];
+    if (
+      INJECT_FAILURES &&
+      Math.random() < failureConfig.revocationFailureRate
+    ) {
+      statusCode =
+        failureConfig.failureStatusCodes[
+          Math.floor(Math.random() * failureConfig.failureStatusCodes.length)
+        ];
       success = false;
     }
 
@@ -114,7 +143,7 @@ class ChaosMockExecutor {
   }
 
   getCallCount(method: string) {
-    return this.calls.filter(c => c.method === method).length;
+    return this.calls.filter((c) => c.method === method).length;
   }
 }
 
@@ -124,7 +153,9 @@ let chaosExecutor = new ChaosMockExecutor();
 // Helper Functions
 // ============================================================================
 
-function createTestRequest(overrides: Partial<AccessRequest> = {}): AccessRequest {
+function createTestRequest(
+  overrides: Partial<AccessRequest> = {},
+): AccessRequest {
   const now = new Date();
   const base: AccessRequest = {
     id: uuidv4(),
@@ -146,7 +177,9 @@ function createTestRequest(overrides: Partial<AccessRequest> = {}): AccessReques
     createdAt: new Date(now.getTime() - 86400000).toISOString(),
     updatedAt: now.toISOString(),
     expiresAt: undefined,
-    accessExpiresAt: new Date(now.getTime() - Math.floor(Math.random() * 3600000)).toISOString(),
+    accessExpiresAt: new Date(
+      now.getTime() - Math.floor(Math.random() * 3600000),
+    ).toISOString(),
     approvedAt: new Date(now.getTime() - 43200000).toISOString(),
     approvedBy: "admin",
     deniedAt: undefined,
@@ -225,14 +258,20 @@ async function insertRequest(pool: Pool, request: AccessRequest) {
       request.leaseOwner || null,
       request.leaseUntil || null,
       request.leaseAcquiredAt || null,
-    ]
+    ],
   );
 }
 
-async function getRequestStatus(pool: Pool, id: string): Promise<AccessRequest | null> {
-  const result = await pool.query("SELECT * FROM access_requests WHERE id = $1", [id]);
+async function getRequestStatus(
+  pool: Pool,
+  id: string,
+): Promise<AccessRequest | null> {
+  const result = await pool.query(
+    "SELECT * FROM access_requests WHERE id = $1",
+    [id],
+  );
   if (result.rows.length === 0) return null;
-  
+
   const row = result.rows[0];
   return {
     id: row.id,
@@ -240,7 +279,12 @@ async function getRequestStatus(pool: Pool, id: string): Promise<AccessRequest |
     requesterId: row.requester_id,
     requesterEmail: row.requester_email,
     externalIdentities: row.external_identities,
-    entitlement: { id: row.entitlement_id, name: row.entitlement_name, system: row.entitlement_system, githubConfig: row.github_config },
+    entitlement: {
+      id: row.entitlement_id,
+      name: row.entitlement_name,
+      system: row.entitlement_system,
+      githubConfig: row.github_config,
+    },
     reason: row.reason,
     status: row.status,
     version: row.version,
@@ -273,7 +317,7 @@ async function getRequestStatus(pool: Pool, id: string): Promise<AccessRequest |
 async function getAuditEvents(pool: Pool, requestId: string) {
   const result = await pool.query(
     "SELECT * FROM audit_events WHERE request_id = $1 ORDER BY timestamp",
-    [requestId]
+    [requestId],
   );
   return result.rows;
 }
@@ -296,7 +340,12 @@ interface ClassificationResult {
   };
   terminalFailures: {
     count: number;
-    details: { requestId: string; attemptCount: number; lastError: string; terminalMetadata: boolean }[];
+    details: {
+      requestId: string;
+      attemptCount: number;
+      lastError: string;
+      terminalMetadata: boolean;
+    }[];
   };
   stuckUnclassified: {
     count: number;
@@ -310,7 +359,12 @@ interface ClassificationResult {
 async function classifyResults(pool: Pool): Promise<ClassificationResult> {
   const result: ClassificationResult = {
     totalSeeded: seededIds.length,
-    convergedImmediately: { revoked: 0, legitimatelyExtended: 0, manuallyRevoked: 0, otherTerminal: 0 },
+    convergedImmediately: {
+      revoked: 0,
+      legitimatelyExtended: 0,
+      manuallyRevoked: 0,
+      otherTerminal: 0,
+    },
     retryableAfterFailure: { count: 0, details: [] },
     terminalFailures: { count: 0, details: [] },
     stuckUnclassified: { count: 0, details: [] },
@@ -323,13 +377,26 @@ async function classifyResults(pool: Pool): Promise<ClassificationResult> {
     const req = await getRequestStatus(pool, id);
     if (!req) {
       result.stuckUnclassified.count++;
-      result.stuckUnclassified.details.push({ requestId: id, status: "MISSING", reason: "Request not found in database" });
+      result.stuckUnclassified.details.push({
+        requestId: id,
+        status: "MISSING",
+        reason: "Request not found in database",
+      });
       continue;
     }
 
     const audits = await getAuditEvents(pool, id);
-    const revokeAudits = audits.filter(a => a.type === "REVOCATION_SUCCEEDED" || a.type === "REVOCATION_FAILED" || a.type === "EXPIRATION_FAILED");
-    const skipAudits = audits.filter(a => a.type === "EXPIRATION_SKIPPED" && a.metadata?.reason === "retry_scheduled");
+    const revokeAudits = audits.filter(
+      (a) =>
+        a.type === "REVOCATION_SUCCEEDED" ||
+        a.type === "REVOCATION_FAILED" ||
+        a.type === "EXPIRATION_FAILED",
+    );
+    const skipAudits = audits.filter(
+      (a) =>
+        a.type === "EXPIRATION_SKIPPED" &&
+        a.metadata?.reason === "retry_scheduled",
+    );
 
     switch (req.status) {
       case "REVOKED":
@@ -351,25 +418,29 @@ async function classifyResults(pool: Pool): Promise<ClassificationResult> {
           result.convergedImmediately.legitimatelyExtended++;
         } else {
           result.stuckUnclassified.count++;
-          result.stuckUnclassified.details.push({ 
-            requestId: id, 
-            status: req.status, 
-            reason: "Still FULFILLED with expired access_expires_at - should have been processed" 
+          result.stuckUnclassified.details.push({
+            requestId: id,
+            status: req.status,
+            reason:
+              "Still FULFILLED with expired access_expires_at - should have been processed",
           });
         }
         break;
 
       case "REVOCATION_PENDING":
         result.staleRevocationPending++;
-        result.stuckUnclassified.details.push({ 
-          requestId: id, 
-          status: req.status, 
-          reason: "Stale REVOCATION_PENDING - should not persist" 
+        result.stuckUnclassified.details.push({
+          requestId: id,
+          status: req.status,
+          reason: "Stale REVOCATION_PENDING - should not persist",
         });
         break;
 
       case "RETRY":
-        if (req.expirationNextAttemptAt && new Date(req.expirationNextAttemptAt) > new Date()) {
+        if (
+          req.expirationNextAttemptAt &&
+          new Date(req.expirationNextAttemptAt) > new Date()
+        ) {
           result.retryableAfterFailure.count++;
           result.retryableAfterFailure.details.push({
             requestId: id,
@@ -378,17 +449,21 @@ async function classifyResults(pool: Pool): Promise<ClassificationResult> {
           });
         } else {
           result.stuckUnclassified.count++;
-          result.stuckUnclassified.details.push({ 
-            requestId: id, 
-            status: req.status, 
-            reason: "RETRY with no future next attempt" 
+          result.stuckUnclassified.details.push({
+            requestId: id,
+            status: req.status,
+            reason: "RETRY with no future next attempt",
           });
         }
         break;
 
       case "REVOCATION_FAILED":
-        const terminalAudits = audits.filter(a => a.type === "EXPIRATION_FAILED");
-        const hasTerminalMetadata = terminalAudits.some(a => a.metadata?.terminal === true);
+        const terminalAudits = audits.filter(
+          (a) => a.type === "EXPIRATION_FAILED",
+        );
+        const hasTerminalMetadata = terminalAudits.some(
+          (a) => a.metadata?.terminal === true,
+        );
         result.terminalFailures.count++;
         result.terminalFailures.details.push({
           requestId: id,
@@ -400,14 +475,16 @@ async function classifyResults(pool: Pool): Promise<ClassificationResult> {
 
       default:
         result.stuckUnclassified.count++;
-        result.stuckUnclassified.details.push({ 
-          requestId: id, 
-          status: req.status, 
-          reason: `Unexpected terminal status: ${req.status}` 
+        result.stuckUnclassified.details.push({
+          requestId: id,
+          status: req.status,
+          reason: `Unexpected terminal status: ${req.status}`,
         });
     }
 
-    const revokeSuccessAudits = audits.filter(a => a.type === "REVOCATION_SUCCEEDED");
+    const revokeSuccessAudits = audits.filter(
+      (a) => a.type === "REVOCATION_SUCCEEDED",
+    );
     if (revokeSuccessAudits.length > 1) {
       result.duplicateRevocations += revokeSuccessAudits.length - 1;
     }
@@ -416,7 +493,7 @@ async function classifyResults(pool: Pool): Promise<ClassificationResult> {
   const leaseCheck = await pool.query(
     `SELECT id, lease_owner, lease_until FROM access_requests 
      WHERE id = ANY($1) AND lease_owner IS NOT NULL AND lease_until > NOW() AND status NOT IN ('REVOKED', 'REVOCATION_FAILED')`,
-    [seededIds]
+    [seededIds],
   );
   result.leaseConflicts = leaseCheck.rows.length;
 
@@ -429,28 +506,50 @@ function printClassification(result: ClassificationResult, phase: string) {
   console.log(`═══════════════════════════════════════════`);
   console.log(`TOTAL SEEDED: ${result.totalSeeded}`);
   console.log(`\nConverged Immediately:`);
-  console.log(`  REVOKED:                    ${result.convergedImmediately.revoked}`);
-  console.log(`  Legitimately Extended:      ${result.convergedImmediately.legitimatelyExtended}`);
-  console.log(`  Manually Revoked:           ${result.convergedImmediately.manuallyRevoked}`);
-  console.log(`  Other Terminal:             ${result.convergedImmediately.otherTerminal}`);
+  console.log(
+    `  REVOKED:                    ${result.convergedImmediately.revoked}`,
+  );
+  console.log(
+    `  Legitimately Extended:      ${result.convergedImmediately.legitimatelyExtended}`,
+  );
+  console.log(
+    `  Manually Revoked:           ${result.convergedImmediately.manuallyRevoked}`,
+  );
+  console.log(
+    `  Other Terminal:             ${result.convergedImmediately.otherTerminal}`,
+  );
   console.log(`\nRetryable After Injected Failure:`);
-  console.log(`  Count:                      ${result.retryableAfterFailure.count}`);
+  console.log(
+    `  Count:                      ${result.retryableAfterFailure.count}`,
+  );
   console.log(`\nTerminal Failures:`);
   console.log(`  Count:                      ${result.terminalFailures.count}`);
-  console.log(`  (with terminal metadata: ${result.terminalFailures.details.filter(d => d.terminalMetadata).length})`);
+  console.log(
+    `  (with terminal metadata: ${result.terminalFailures.details.filter((d) => d.terminalMetadata).length})`,
+  );
   console.log(`\nStuck / Unclassified:`);
-  console.log(`  Count:                      ${result.stuckUnclassified.count}`);
+  console.log(
+    `  Count:                      ${result.stuckUnclassified.count}`,
+  );
   if (result.stuckUnclassified.count > 0) {
     for (const d of result.stuckUnclassified.details.slice(0, 10)) {
       console.log(`    - ${d.requestId}: ${d.status} (${d.reason})`);
     }
     if (result.stuckUnclassified.details.length > 10) {
-      console.log(`    ... and ${result.stuckUnclassified.details.length - 10} more`);
+      console.log(
+        `    ... and ${result.stuckUnclassified.details.length - 10} more`,
+      );
     }
   }
-  console.log(`\nDuplicate Revocations:      ${result.duplicateRevocations} (MUST BE 0)`);
-  console.log(`Lease Conflicts:            ${result.leaseConflicts} (MUST BE 0)`);
-  console.log(`Stale REVOCATION_PENDING:   ${result.staleRevocationPending} (MUST BE 0)`);
+  console.log(
+    `\nDuplicate Revocations:      ${result.duplicateRevocations} (MUST BE 0)`,
+  );
+  console.log(
+    `Lease Conflicts:            ${result.leaseConflicts} (MUST BE 0)`,
+  );
+  console.log(
+    `Stale REVOCATION_PENDING:   ${result.staleRevocationPending} (MUST BE 0)`,
+  );
   console.log(`═══════════════════════════════════════════\n`);
 
   return result;
@@ -468,10 +567,13 @@ describe.skip("10K Chaos / Recovery Validation", () => {
     }
     // Reset the global pool so it picks up the test DATABASE_URL
     resetPool();
-    
-    testPool = new Pool({ connectionString: process.env.DATABASE_URL, max: 30 });
+
+    testPool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: 30,
+    });
     await testPool.query("SELECT 1");
-    
+
     const config: SchedulerConfig = {
       ...DEFAULT_SCHEDULER_CONFIG,
       pollIntervalMs: POLL_INTERVAL_MS,
@@ -489,7 +591,12 @@ describe.skip("10K Chaos / Recovery Validation", () => {
       providerConcurrency: 10,
     };
 
-    testScheduler = createExpirationScheduler(chaosExecutor as any, new PgAuditEventStore(testPool), testPool, config);
+    testScheduler = createExpirationScheduler(
+      chaosExecutor as any,
+      new PgAuditEventStore(testPool),
+      testPool,
+      config,
+    );
   });
 
   afterAll(async () => {
@@ -498,9 +605,11 @@ describe.skip("10K Chaos / Recovery Validation", () => {
 
   it("Full 10K Chaos / Recovery Validation", async () => {
     // PHASE 1: Seed 10,000 expired FULFILLED requests
-    console.log(`\n[SEEDING] Inserting ${CHAOS_RECORD_COUNT} expired FULFILLED requests...`);
+    console.log(
+      `\n[SEEDING] Inserting ${CHAOS_RECORD_COUNT} expired FULFILLED requests...`,
+    );
     const startTime = Date.now();
-    
+
     const batchSize = 500;
     for (let i = 0; i < CHAOS_RECORD_COUNT; i += batchSize) {
       const batch = [];
@@ -509,86 +618,108 @@ describe.skip("10K Chaos / Recovery Validation", () => {
         seededIds.push(req.id);
         batch.push(req);
       }
-      
+
       await testPool.query("BEGIN");
       for (const req of batch) {
         await insertRequest(testPool, req);
       }
       await testPool.query("COMMIT");
-      
+
       if ((i + batchSize) % 2000 === 0 || i + batchSize >= CHAOS_RECORD_COUNT) {
-        console.log(`  Inserted ${Math.min(i + batchSize, CHAOS_RECORD_COUNT)} / ${CHAOS_RECORD_COUNT}`);
+        console.log(
+          `  Inserted ${Math.min(i + batchSize, CHAOS_RECORD_COUNT)} / ${CHAOS_RECORD_COUNT}`,
+        );
       }
     }
-    
+
     console.log(`[SEEDING] Complete in ${Date.now() - startTime}ms`);
     expect(seededIds.length).toBe(CHAOS_RECORD_COUNT);
 
     // PHASE 2: Run chaos workers with 10% failure injection
-    console.log(`\n[CHAOS] Starting ${WORKER_COUNT} workers with ${failureConfig.revocationFailureRate * 100}% failure injection...`);
+    console.log(
+      `\n[CHAOS] Starting ${WORKER_COUNT} workers with ${failureConfig.revocationFailureRate * 100}% failure injection...`,
+    );
     INJECT_FAILURES = true;
     chaosExecutor.reset();
-    
+
     // Run enough rounds to process all 10,000 (batchSize=100, so need ~100 rounds)
     // But we also need to account for retries, so run more
     for (let round = 1; round <= 150; round++) {
       console.log(`[CHAOS] Poll round ${round}...`);
       await testScheduler.runOnce();
-      await new Promise(r => setTimeout(r, 50));
-      
+      await new Promise((r) => setTimeout(r, 50));
+
       // Check if we're done
       const results = testScheduler.getMetrics();
       if (results.claimsThisPoll === 0) {
-        console.log(`[CHAOS] No more claims at round ${round}, checking for pending retries...`);
+        console.log(
+          `[CHAOS] No more claims at round ${round}, checking for pending retries...`,
+        );
         // Check if there are any RETRY status records that need more time
         const retryCheck = await testPool.query(
-          `SELECT COUNT(*) FROM access_requests WHERE reason = 'Chaos test expiration' AND status = 'RETRY' AND expiration_next_attempt_at <= NOW()`
+          `SELECT COUNT(*) FROM access_requests WHERE reason = 'Chaos test expiration' AND status = 'RETRY' AND expiration_next_attempt_at <= NOW()`,
         );
         const pendingRetries = parseInt(retryCheck.rows[0].count);
         if (pendingRetries === 0) {
           console.log(`[CHAOS] No more work to do, stopping at round ${round}`);
           break;
         }
-        console.log(`[CHAOS] ${pendingRetries} retries still pending, continuing...`);
+        console.log(
+          `[CHAOS] ${pendingRetries} retries still pending, continuing...`,
+        );
       }
     }
-    
+
     // Give time for async retries to complete
-    await new Promise(r => setTimeout(r, 5000));
-    
+    await new Promise((r) => setTimeout(r, 5000));
+
     const chaosClassification = await classifyResults(testPool);
-    printClassification(chaosClassification, "Phase 2 - Chaos Run (Failures Injected)");
+    printClassification(
+      chaosClassification,
+      "Phase 2 - Chaos Run (Failures Injected)",
+    );
 
     // PHASE 3: Disable failures and run recovery
-    console.log(`\n[RECOVERY] Disabling failure injection, running workers again...`);
+    console.log(
+      `\n[RECOVERY] Disabling failure injection, running workers again...`,
+    );
     INJECT_FAILURES = false;
     chaosExecutor.reset();
-    
+
     for (let round = 1; round <= 150; round++) {
       console.log(`[RECOVERY] Round ${round}...`);
       await testScheduler.runOnce();
-      
+
       const results = testScheduler.getMetrics();
-      console.log(`[RECOVERY] Round ${round}: claims=${results.claimsThisPoll || 0}`);
-      
+      console.log(
+        `[RECOVERY] Round ${round}: claims=${results.claimsThisPoll || 0}`,
+      );
+
       if (results.claimsThisPoll === 0) {
         // Check for pending retries
         const retryCheck = await testPool.query(
-          `SELECT COUNT(*) FROM access_requests WHERE reason = 'Chaos test expiration' AND status = 'RETRY' AND expiration_next_attempt_at <= NOW()`
+          `SELECT COUNT(*) FROM access_requests WHERE reason = 'Chaos test expiration' AND status = 'RETRY' AND expiration_next_attempt_at <= NOW()`,
         );
         const pendingRetries = parseInt(retryCheck.rows[0].count);
         if (pendingRetries === 0) {
-          console.log(`[RECOVERY] No more work to do, stopping at round ${round}`);
+          console.log(
+            `[RECOVERY] No more work to do, stopping at round ${round}`,
+          );
           break;
         }
-        console.log(`[RECOVERY] ${pendingRetries} retries still pending, continuing...`);
+        console.log(
+          `[RECOVERY] ${pendingRetries} retries still pending, continuing...`,
+        );
       }
-      
-      await new Promise(r => setTimeout(r, 100));
+
+      await new Promise((r) => setTimeout(r, 100));
     }
-    
+
     const recoveryClassification = await classifyResults(testPool);
-    printClassification(recoveryClassification, "Phase 3 - Recovery Run (Failures Disabled)");
+    printClassification(
+      recoveryClassification,
+      "Phase 3 - Recovery Run (Failures Disabled)",
+    );
 
     // PHASE 4: Final validation - all records classified, 0 stuck
     expect(recoveryClassification.totalSeeded).toBe(CHAOS_RECORD_COUNT);
@@ -596,23 +727,27 @@ describe.skip("10K Chaos / Recovery Validation", () => {
     expect(recoveryClassification.duplicateRevocations).toBe(0);
     expect(recoveryClassification.leaseConflicts).toBe(0);
     expect(recoveryClassification.staleRevocationPending).toBe(0);
-    
-    const convergedTotal = 
+
+    const convergedTotal =
       recoveryClassification.convergedImmediately.revoked +
       recoveryClassification.convergedImmediately.legitimatelyExtended +
       recoveryClassification.convergedImmediately.manuallyRevoked +
       recoveryClassification.convergedImmediately.otherTerminal +
       recoveryClassification.retryableAfterFailure.count +
       recoveryClassification.terminalFailures.count;
-    
+
     expect(convergedTotal).toBe(CHAOS_RECORD_COUNT);
-    
+
     for (const tf of recoveryClassification.terminalFailures.details) {
       expect(tf.terminalMetadata).toBe(true);
     }
-    
-    console.log(`\n✅ VALIDATION PASSED: ${convergedTotal} / ${CHAOS_RECORD_COUNT} records classified`);
-    console.log(`   0 unclassified, 0 duplicate revocations, 0 lease conflicts, 0 stale REVOCATION_PENDING`);
+
+    console.log(
+      `\n✅ VALIDATION PASSED: ${convergedTotal} / ${CHAOS_RECORD_COUNT} records classified`,
+    );
+    console.log(
+      `   0 unclassified, 0 duplicate revocations, 0 lease conflicts, 0 stale REVOCATION_PENDING`,
+    );
     console.log(`
 ═══════════════════════════════════════════
   FINAL 10K CHAOS/RECOVERY SUMMARY
@@ -627,7 +762,7 @@ CHAOS PHASE (failures injected):
   Stale leases:        ${chaosClassification.leaseConflicts}
 
 RECOVERY PHASE (failures disabled):
-  All retryable converged: ${recoveryClassification.retryableAfterFailure.count === 0 ? 'YES' : 'NO'} (${recoveryClassification.retryableAfterFailure.count} remaining)
+  All retryable converged: ${recoveryClassification.retryableAfterFailure.count === 0 ? "YES" : "NO"} (${recoveryClassification.retryableAfterFailure.count} remaining)
   Terminal classified:   ${recoveryClassification.terminalFailures.count}
   Unclassified:          ${recoveryClassification.stuckUnclassified.count}
   Permanently stuck:     ${recoveryClassification.stuckUnclassified.count}

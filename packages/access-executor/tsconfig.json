@@ -7,9 +7,7 @@
     "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo",
     "composite": true
   },
-  "include": [
-    "src/**/*"
-  ],
+  "include": ["src/**/*"],
   "exclude": [
     "node_modules",
     "dist",

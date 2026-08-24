@@ -64,10 +64,15 @@ export class EvidenceRecorder {
   constructor(
     public readonly provider: string,
     public readonly commitSha: string,
-    public readonly sandboxTenant: string
+    public readonly sandboxTenant: string,
   ) {}
 
-  record(step: string, description: string, status: EvidenceStatus, metadata: Record<string, unknown> = {}): void {
+  record(
+    step: string,
+    description: string,
+    status: EvidenceStatus,
+    metadata: Record<string, unknown> = {},
+  ): void {
     const sanitized = this.sanitizeMetadata(metadata);
     const startTime = this.stepStartTimes.get(step) || Date.now();
     this.steps.push({
@@ -79,7 +84,14 @@ export class EvidenceRecorder {
       metadata: sanitized,
     });
 
-    const icon = status === "PASS" ? "✅" : status === "FAIL" ? "❌" : status === "WAITING" ? "⏳" : "⏭️";
+    const icon =
+      status === "PASS"
+        ? "✅"
+        : status === "FAIL"
+          ? "❌"
+          : status === "WAITING"
+            ? "⏳"
+            : "⏭️";
     console.log(`  ${icon} ${step}: ${description}`);
   }
 
@@ -88,7 +100,13 @@ export class EvidenceRecorder {
     return new EvidenceStepHandle(this, step, description);
   }
 
-  incrementExternalMutation(type: "providerRequestCreates" | "providerRevokeMutations" | "githubPuts" | "githubDeletes"): void {
+  incrementExternalMutation(
+    type:
+      | "providerRequestCreates"
+      | "providerRevokeMutations"
+      | "githubPuts"
+      | "githubDeletes",
+  ): void {
     this.externalMutations[type]++;
   }
 
@@ -104,19 +122,30 @@ export class EvidenceRecorder {
     this.unclassifiedFailures++;
   }
 
-  private sanitizeMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+  private sanitizeMetadata(
+    metadata: Record<string, unknown>,
+  ): Record<string, unknown> {
     const sanitized: Record<string, unknown> = {};
     const sensitivePatterns = [
-      /\btoken\b/i, /\baccessToken\b/i, /\baccess_token\b/i,
-      /\bclientSecret\b/i, /\bclient_secret\b/i,
-      /\bprivateKey\b/i, /\bprivate_key\b/i,
-      /\bsecret\b/i, /\bpassword\b/i, /\bpasswd\b/i,
-      /\bauthorization\b/i, /\bAuthorization\b/i,
-      /\bjwt\b/i, /\bassertion\b/i, /\bclientAssertion\b/i,
+      /\btoken\b/i,
+      /\baccessToken\b/i,
+      /\baccess_token\b/i,
+      /\bclientSecret\b/i,
+      /\bclient_secret\b/i,
+      /\bprivateKey\b/i,
+      /\bprivate_key\b/i,
+      /\bsecret\b/i,
+      /\bpassword\b/i,
+      /\bpasswd\b/i,
+      /\bauthorization\b/i,
+      /\bAuthorization\b/i,
+      /\bjwt\b/i,
+      /\bassertion\b/i,
+      /\bclientAssertion\b/i,
     ];
 
     for (const [key, value] of Object.entries(metadata)) {
-      if (sensitivePatterns.some(p => p.test(key))) {
+      if (sensitivePatterns.some((p) => p.test(key))) {
         sanitized[key] = "[REDACTED]";
         this.credentialLeakage = true;
       } else {
@@ -127,7 +156,9 @@ export class EvidenceRecorder {
   }
 
   getSummary(): EvidenceSummary {
-    const overallStatus = this.steps.some(s => s.status === "FAIL") ? "FAIL" : "PASS";
+    const overallStatus = this.steps.some((s) => s.status === "FAIL")
+      ? "FAIL"
+      : "PASS";
     return {
       schemaVersion: 1,
       provider: this.provider,
@@ -171,7 +202,9 @@ export class EvidenceRecorder {
 
   private generateMarkdown(summary: EvidenceSummary): string {
     const lines: string[] = [];
-    lines.push(`# ${summary.provider.toUpperCase()} Live Governance Validation Report`);
+    lines.push(
+      `# ${summary.provider.toUpperCase()} Live Governance Validation Report`,
+    );
     lines.push("");
     lines.push(`**Commit SHA:** \`${summary.commitSha}\``);
     lines.push(`**Sandbox Tenant/Org:** ${summary.sandboxTenant}`);
@@ -185,7 +218,9 @@ export class EvidenceRecorder {
     lines.push("| Step | Description | Status | Duration |");
     lines.push("|------|-------------|--------|----------|");
     for (const step of summary.steps) {
-      lines.push(`| ${step.step} | ${step.description} | ${step.status} | ${step.durationMs}ms |`);
+      lines.push(
+        `| ${step.step} | ${step.description} | ${step.status} | ${step.durationMs}ms |`,
+      );
     }
     lines.push("");
 
@@ -193,20 +228,30 @@ export class EvidenceRecorder {
     lines.push("");
     lines.push("| Type | Count |");
     lines.push("|------|-------|");
-    lines.push(`| Provider Request Creates | ${summary.externalMutations.providerRequestCreates} |`);
-    lines.push(`| Provider Revoke Mutations | ${summary.externalMutations.providerRevokeMutations} |`);
+    lines.push(
+      `| Provider Request Creates | ${summary.externalMutations.providerRequestCreates} |`,
+    );
+    lines.push(
+      `| Provider Revoke Mutations | ${summary.externalMutations.providerRevokeMutations} |`,
+    );
     lines.push(`| GitHub PUTs | ${summary.externalMutations.githubPuts} |`);
-    lines.push(`| GitHub DELETEs | ${summary.externalMutations.githubDeletes} |`);
+    lines.push(
+      `| GitHub DELETEs | ${summary.externalMutations.githubDeletes} |`,
+    );
     lines.push("");
 
     lines.push("## Safety Checks");
     lines.push("");
     lines.push(`| Check | Result |`);
     lines.push(`|-------|--------|`);
-    lines.push(`| Unexpected State Transitions | ${summary.unexpectedStateTransitions} |`);
+    lines.push(
+      `| Unexpected State Transitions | ${summary.unexpectedStateTransitions} |`,
+    );
     lines.push(`| Duplicate Mutations | ${summary.duplicateMutations} |`);
     lines.push(`| Unclassified Failures | ${summary.unclassifiedFailures} |`);
-    lines.push(`| Credential Leakage Detected | ${summary.credentialLeakage ? "❌ YES" : "✅ NO"} |`);
+    lines.push(
+      `| Credential Leakage Detected | ${summary.credentialLeakage ? "❌ YES" : "✅ NO"} |`,
+    );
     lines.push("");
 
     return lines.join("\n");
@@ -219,7 +264,7 @@ export class EvidenceStepHandle {
   constructor(
     private recorder: EvidenceRecorder,
     private step: string,
-    private description: string
+    private description: string,
   ) {}
 
   end(status: EvidenceStatus, metadata: Record<string, unknown> = {}): void {
@@ -236,22 +281,32 @@ export class EvidenceStepHandle {
 export const EXPECTED_COMMIT_SHA = "b6b3539855f3d93563d2e7c6e530a683e9f2baf9";
 
 export function verifyCommitSha(): string {
-  const sha = execSync("git rev-parse HEAD", { cwd: PROJECT_ROOT, encoding: "utf-8" }).trim();
+  const sha = execSync("git rev-parse HEAD", {
+    cwd: PROJECT_ROOT,
+    encoding: "utf-8",
+  }).trim();
   if (sha !== EXPECTED_COMMIT_SHA) {
     console.warn(`⚠️  COMMIT SHA MISMATCH`);
     console.warn(`   Expected: ${EXPECTED_COMMIT_SHA}`);
     console.warn(`   Actual:   ${sha}`);
     if (process.env.OPNORY_ALLOW_UNPINNED_LIVE_TEST !== "true") {
-      throw new Error(`Commit SHA mismatch. Set OPNORY_ALLOW_UNPINNED_LIVE_TEST=true to override.`);
+      throw new Error(
+        `Commit SHA mismatch. Set OPNORY_ALLOW_UNPINNED_LIVE_TEST=true to override.`,
+      );
     }
   }
   return sha;
 }
 
 export function verifyCleanWorkingTree(): void {
-  const status = execSync("git status --porcelain", { cwd: PROJECT_ROOT, encoding: "utf-8" }).trim();
+  const status = execSync("git status --porcelain", {
+    cwd: PROJECT_ROOT,
+    encoding: "utf-8",
+  }).trim();
   if (status && process.env.OPNORY_ALLOW_DIRTY_LIVE_TEST !== "true") {
-    throw new Error(`Running live tests with dirty working tree. Set OPNORY_ALLOW_DIRTY_LIVE_TEST=true to override.`);
+    throw new Error(
+      `Running live tests with dirty working tree. Set OPNORY_ALLOW_DIRTY_LIVE_TEST=true to override.`,
+    );
   }
 }
 
@@ -260,19 +315,25 @@ export function verifyCleanWorkingTree(): void {
 // ============================================================================
 
 export function requireEnvVars(names: string[]): void {
-  const missing = names.filter(n => !process.env[n]);
+  const missing = names.filter((n) => !process.env[n]);
   if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(", ")}`);
+    throw new Error(
+      `Missing required environment variables: ${missing.join(", ")}`,
+    );
   }
 }
 
 export function requireSandboxConfirmation(provider: "entra" | "okta"): void {
   if (process.env.OPNORY_LIVE_GOVERNANCE_TESTS !== "true") {
-    throw new Error(`Sandbox confirmation required. Set OPNORY_LIVE_GOVERNANCE_TESTS=true and OPNORY_${provider.toUpperCase()}_SANDBOX_CONFIRM=true`);
+    throw new Error(
+      `Sandbox confirmation required. Set OPNORY_LIVE_GOVERNANCE_TESTS=true and OPNORY_${provider.toUpperCase()}_SANDBOX_CONFIRM=true`,
+    );
   }
   const confirmVar = `OPNORY_${provider.toUpperCase()}_SANDBOX_CONFIRM`;
   if (process.env[confirmVar] !== "true") {
-    throw new Error(`Sandbox confirmation required. Set OPNORY_LIVE_GOVERNANCE_TESTS=true and ${confirmVar}=true`);
+    throw new Error(
+      `Sandbox confirmation required. Set OPNORY_LIVE_GOVERNANCE_TESTS=true and ${confirmVar}=true`,
+    );
   }
 }
 
@@ -282,7 +343,7 @@ export function requireSandboxConfirmation(provider: "entra" | "okta"): void {
 
 export async function pollWithTimeout<T>(
   predicate: () => Promise<T | null>,
-  options: { intervalMs: number; timeoutMs: number; description: string }
+  options: { intervalMs: number; timeoutMs: number; description: string },
 ): Promise<T> {
   const start = Date.now();
   while (Date.now() - start < options.timeoutMs) {
@@ -292,11 +353,13 @@ export async function pollWithTimeout<T>(
     }
     await sleep(options.intervalMs);
   }
-  throw new Error(`Timeout waiting for ${options.description} after ${options.timeoutMs}ms`);
+  throw new Error(
+    `Timeout waiting for ${options.description} after ${options.timeoutMs}ms`,
+  );
 }
 
 export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function parseDuration(str: string): number {
@@ -305,10 +368,14 @@ export function parseDuration(str: string): number {
   const value = parseInt(match[1]);
   const unit = match[2];
   switch (unit) {
-    case "s": return value * 1000;
-    case "m": return value * 60 * 1000;
-    case "h": return value * 60 * 60 * 1000;
-    default: return 0;
+    case "s":
+      return value * 1000;
+    case "m":
+      return value * 60 * 1000;
+    case "h":
+      return value * 60 * 60 * 1000;
+    default:
+      return 0;
   }
 }
 

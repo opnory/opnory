@@ -12,10 +12,16 @@ import {
   GovernedEntitlement,
   GovernanceSubject,
 } from "@opnory/access-types";
-import { AuditEventStore, AuditEventType, recordAuditEvent } from "@opnory/access-audit";
+import {
+  AuditEventStore,
+  AuditEventType,
+  recordAuditEvent,
+} from "@opnory/access-audit";
 import { randomUUID } from "crypto";
 
-const logger = getLogger().child({ component: "governance-reconciliation-worker" });
+const logger = getLogger().child({
+  component: "governance-reconciliation-worker",
+});
 
 // ============================================================================
 // Configuration
@@ -27,40 +33,41 @@ export interface ReconciliationWorkerConfig {
   pollJitterMs: number;
   maxPollIntervalMs: number;
   minPollIntervalMs: number;
-  
+
   // Lease configuration
   leaseDurationMs: number;
   leaseRenewalMarginMs: number;
-  
+
   // Batch configuration
   batchSize: number;
   providerConcurrency: number;
-  
+
   // Retry configuration
   maxRetries: number;
   baseRetryDelayMs: number;
   maxRetryDelayMs: number;
   jitterFactor: number;
-  
+
   // Adaptive polling
   adaptivePolling: boolean;
 }
 
-export const DEFAULT_RECONCILIATION_WORKER_CONFIG: ReconciliationWorkerConfig = {
-  pollIntervalMs: 10000,
-  pollJitterMs: 3000,
-  maxPollIntervalMs: 60000,
-  minPollIntervalMs: 2000,
-  leaseDurationMs: 120000, // 2 minutes
-  leaseRenewalMarginMs: 20000, // Renew if less than 20s remaining
-  batchSize: 25,
-  providerConcurrency: 5,
-  maxRetries: 3,
-  baseRetryDelayMs: 10000,
-  maxRetryDelayMs: 600000,
-  jitterFactor: 0.2,
-  adaptivePolling: true,
-};
+export const DEFAULT_RECONCILIATION_WORKER_CONFIG: ReconciliationWorkerConfig =
+  {
+    pollIntervalMs: 10000,
+    pollJitterMs: 3000,
+    maxPollIntervalMs: 60000,
+    minPollIntervalMs: 2000,
+    leaseDurationMs: 120000, // 2 minutes
+    leaseRenewalMarginMs: 20000, // Renew if less than 20s remaining
+    batchSize: 25,
+    providerConcurrency: 5,
+    maxRetries: 3,
+    baseRetryDelayMs: 10000,
+    maxRetryDelayMs: 600000,
+    jitterFactor: 0.2,
+    adaptivePolling: true,
+  };
 
 // ============================================================================
 // Metrics
@@ -86,7 +93,13 @@ export interface ReconciliationWorkerMetrics {
 
 export interface ReconciliationResult {
   requestId: string;
-  status: "RECONCILED" | "DRIFT_DETECTED" | "DRIFT_CORRECTED" | "RETRY" | "RECONCILIATION_FAILED" | "SKIPPED";
+  status:
+    | "RECONCILED"
+    | "DRIFT_DETECTED"
+    | "DRIFT_CORRECTED"
+    | "RETRY"
+    | "RECONCILIATION_FAILED"
+    | "SKIPPED";
   attemptCount: number;
   errorCode?: number;
   errorMessage?: string;
@@ -120,7 +133,7 @@ export class GovernanceReconciliationWorker {
     reconciler: GovernanceReconciler,
     auditStore: AuditEventStore,
     pool: Pool,
-    config: Partial<ReconciliationWorkerConfig> = {}
+    config: Partial<ReconciliationWorkerConfig> = {},
   ) {
     this.pool = pool;
     this.reconciler = reconciler;
@@ -161,15 +174,18 @@ export class GovernanceReconciliationWorker {
       return;
     }
 
-    logger.info({ workerId: this.workerId, config: this.config }, "Starting governance reconciliation worker");
+    logger.info(
+      { workerId: this.workerId, config: this.config },
+      "Starting governance reconciliation worker",
+    );
     this.running = true;
-    
+
     // Run startup scan immediately
     await this.processDueReconciliations();
-    
+
     // Schedule recurring polls with jitter
     this.scheduleNextPoll();
-    
+
     // Start lease renewal
     this.startLeaseRenewal();
   }
@@ -179,7 +195,10 @@ export class GovernanceReconciliationWorker {
       return;
     }
 
-    logger.info({ workerId: this.workerId }, "Stopping governance reconciliation worker");
+    logger.info(
+      { workerId: this.workerId },
+      "Stopping governance reconciliation worker",
+    );
     this.running = false;
 
     if (this.pollTimer) {
@@ -220,10 +239,10 @@ export class GovernanceReconciliationWorker {
     try {
       // 1. CLAIM: Short transaction to claim due reconciliations
       const claimedRequests = await this.claimDueReconciliations(now);
-      
+
       this.metrics.claimsThisPoll = claimedRequests.length;
       this.metrics.claimsTotal += claimedRequests.length;
-      
+
       if (claimedRequests.length === 0) {
         this.handleEmptyPoll();
         return;
@@ -237,9 +256,11 @@ export class GovernanceReconciliationWorker {
 
       // 3. FINALIZE: Write final results
       await this.finalizeBatch(results);
-
     } catch (err) {
-      logger.error({ err, workerId: this.workerId }, "Error processing governance reconciliations");
+      logger.error(
+        { err, workerId: this.workerId },
+        "Error processing governance reconciliations",
+      );
     } finally {
       this.metrics.lastPollDurationMs = Date.now() - pollStart;
       this.metrics.lastSuccessfulPoll = new Date();
@@ -251,18 +272,20 @@ export class GovernanceReconciliationWorker {
   // PHASE 1: CLAIM (Short transaction with FOR UPDATE SKIP LOCKED)
   // ============================================================================
 
-  private async claimDueReconciliations(now: Date): Promise<Array<{
-    requestId: string;
-    governanceAuthority: string;
-    governanceExternalRequestId: string;
-    governanceAssignmentId: string | null;
-    governanceNextCheckAt: Date | null;
-    governanceNextAttemptAt: Date | null;
-    governanceAttemptCount: number;
-    governanceMaxRetries: number;
-    status: AccessRequestStatus;
-    correlationId: string;
-  }>> {
+  private async claimDueReconciliations(now: Date): Promise<
+    Array<{
+      requestId: string;
+      governanceAuthority: string;
+      governanceExternalRequestId: string;
+      governanceAssignmentId: string | null;
+      governanceNextCheckAt: Date | null;
+      governanceNextAttemptAt: Date | null;
+      governanceAttemptCount: number;
+      governanceMaxRetries: number;
+      status: AccessRequestStatus;
+      correlationId: string;
+    }>
+  > {
     const client = await this.pool.connect();
 
     try {
@@ -299,11 +322,16 @@ export class GovernanceReconciliationWorker {
         LIMIT $2
       `;
 
-      const claimResult = await client.query(claimQuery, [now, this.config.batchSize]);
+      const claimResult = await client.query(claimQuery, [
+        now,
+        this.config.batchSize,
+      ]);
       const claimed = claimResult.rows;
 
       if (claimed.length > 0) {
-        const leaseUntil = new Date(now.getTime() + this.config.leaseDurationMs);
+        const leaseUntil = new Date(
+          now.getTime() + this.config.leaseDurationMs,
+        );
         const leaseAcquiredAt = now;
 
         const leaseQuery = `
@@ -321,7 +349,7 @@ export class GovernanceReconciliationWorker {
           this.workerId,
           leaseUntil,
           leaseAcquiredAt,
-          claimed.map(r => r.id)
+          claimed.map((r) => r.id),
         ]);
 
         // Record audit event for claim
@@ -346,28 +374,34 @@ export class GovernanceReconciliationWorker {
 
         await client.query("COMMIT");
 
-        logger.debug({ 
-          workerId: this.workerId, 
-          claimed: claimed.length,
-          leaseUntil: leaseUntil.toISOString(),
-        }, "Claimed governance reconciliations");
+        logger.debug(
+          {
+            workerId: this.workerId,
+            claimed: claimed.length,
+            leaseUntil: leaseUntil.toISOString(),
+          },
+          "Claimed governance reconciliations",
+        );
       } else {
         await client.query("COMMIT");
       }
 
-      return claimed.map(r => ({
+      return claimed.map((r) => ({
         requestId: r.id,
         governanceAuthority: r.governance_authority,
         governanceExternalRequestId: r.governance_external_request_id,
         governanceAssignmentId: r.governance_assignment_id,
-        governanceNextCheckAt: r.governance_next_check_at ? new Date(r.governance_next_check_at) : null,
-        governanceNextAttemptAt: r.governance_next_attempt_at ? new Date(r.governance_next_attempt_at) : null,
+        governanceNextCheckAt: r.governance_next_check_at
+          ? new Date(r.governance_next_check_at)
+          : null,
+        governanceNextAttemptAt: r.governance_next_attempt_at
+          ? new Date(r.governance_next_attempt_at)
+          : null,
         governanceAttemptCount: r.governance_attempt_count ?? 0,
         governanceMaxRetries: r.governance_max_retries ?? 3,
         status: r.status as AccessRequestStatus,
         correlationId: r.correlation_id,
       }));
-
     } catch (err) {
       await client.query("ROLLBACK");
       throw err;
@@ -392,7 +426,7 @@ export class GovernanceReconciliationWorker {
       governanceMaxRetries: number;
       status: AccessRequestStatus;
       correlationId: string;
-    }>
+    }>,
   ): Promise<ReconciliationResult[]> {
     const results: ReconciliationResult[] = [];
 
@@ -403,11 +437,11 @@ export class GovernanceReconciliationWorker {
 
     const processNext = async (): Promise<void> => {
       if (queue.length === 0) return;
-      
+
       const item = queue.shift()!;
       const result = await this.processSingleReconciliation(item);
       results.push(result);
-      
+
       if (queue.length > 0) {
         await processNext();
       }
@@ -439,24 +473,30 @@ export class GovernanceReconciliationWorker {
     const maxRetries = item.governanceMaxRetries;
     const now = new Date();
 
-    logger.info({
-      workerId: this.workerId,
-      requestId: item.requestId,
-      governanceAuthority: item.governanceAuthority,
-      attemptCount,
-      maxRetries,
-      status: item.status,
-    }, "Processing governance reconciliation");
+    logger.info(
+      {
+        workerId: this.workerId,
+        requestId: item.requestId,
+        governanceAuthority: item.governanceAuthority,
+        attemptCount,
+        maxRetries,
+        status: item.status,
+      },
+      "Processing governance reconciliation",
+    );
 
     try {
       // Fetch the full request to validate it's still externally governed
       const requestResult = await this.pool.query(
         "SELECT * FROM access_requests WHERE id = $1",
-        [item.requestId]
+        [item.requestId],
       );
 
       if (requestResult.rows.length === 0) {
-        logger.warn({ requestId: item.requestId }, "Request not found, skipping");
+        logger.warn(
+          { requestId: item.requestId },
+          "Request not found, skipping",
+        );
         return {
           requestId: item.requestId,
           status: "SKIPPED",
@@ -470,10 +510,13 @@ export class GovernanceReconciliationWorker {
 
       // Re-validate: request must still be externally governed
       if (!row.governance_authority || row.governance_authority === "local") {
-        logger.info({ 
-          requestId: item.requestId, 
-          authority: row.governance_authority 
-        }, "Request no longer externally governed, skipping");
+        logger.info(
+          {
+            requestId: item.requestId,
+            authority: row.governance_authority,
+          },
+          "Request no longer externally governed, skipping",
+        );
         return {
           requestId: item.requestId,
           status: "SKIPPED",
@@ -484,12 +527,20 @@ export class GovernanceReconciliationWorker {
       }
 
       // Re-validate: status must still be eligible for reconciliation
-      const eligibleStatuses = ["AWAITING_AUTHORITY_DECISION", "FULFILLED", "RETRY", "RECONCILIATION_FAILED"];
+      const eligibleStatuses = [
+        "AWAITING_AUTHORITY_DECISION",
+        "FULFILLED",
+        "RETRY",
+        "RECONCILIATION_FAILED",
+      ];
       if (!eligibleStatuses.includes(row.status)) {
-        logger.info({ 
-          requestId: item.requestId, 
-          status: row.status 
-        }, "Request status no longer eligible for reconciliation, skipping");
+        logger.info(
+          {
+            requestId: item.requestId,
+            status: row.status,
+          },
+          "Request status no longer eligible for reconciliation, skipping",
+        );
         return {
           requestId: item.requestId,
           status: "SKIPPED",
@@ -502,7 +553,9 @@ export class GovernanceReconciliationWorker {
       // Get the provider
       const provider = this.getProvider(item.governanceAuthority);
       if (!provider) {
-        throw new Error(`No provider for authority: ${item.governanceAuthority}`);
+        throw new Error(
+          `No provider for authority: ${item.governanceAuthority}`,
+        );
       }
 
       // Route to appropriate reconciliation logic based on status
@@ -514,29 +567,31 @@ export class GovernanceReconciliationWorker {
         // RETRY or RECONCILIATION_FAILED
         return await this.reconcileRetry(item, provider, row);
       }
-
     } catch (err) {
       // Handle provider errors with retry logic
       const errorInfo = this.classifyError(err);
-      
+
       if (attemptCount + 1 < maxRetries && errorInfo.retryable) {
         this.metrics.retryScheduled++;
-        
+
         const backoffMs = Math.min(
           this.config.baseRetryDelayMs * Math.pow(2, attemptCount),
-          this.config.maxRetryDelayMs
+          this.config.maxRetryDelayMs,
         );
         const jitter = backoffMs * this.config.jitterFactor * Math.random();
         const nextAttemptAt = new Date(now.getTime() + backoffMs + jitter);
 
-        logger.warn({
-          requestId: item.requestId,
-          attemptCount: attemptCount + 1,
-          maxRetries,
-          nextAttemptAt: nextAttemptAt.toISOString(),
-          errorCode: errorInfo.errorCode,
-          errorMessage: errorInfo.errorMessage,
-        }, "Scheduling governance reconciliation retry");
+        logger.warn(
+          {
+            requestId: item.requestId,
+            attemptCount: attemptCount + 1,
+            maxRetries,
+            nextAttemptAt: nextAttemptAt.toISOString(),
+            errorCode: errorInfo.errorCode,
+            errorMessage: errorInfo.errorMessage,
+          },
+          "Scheduling governance reconciliation retry",
+        );
 
         await recordAuditEvent(this.auditStore, {
           eventId: randomUUID(),
@@ -568,13 +623,16 @@ export class GovernanceReconciliationWorker {
 
       // Terminal failure
       this.metrics.terminalFailures++;
-      logger.error({
-        requestId: item.requestId,
-        attemptCount: attemptCount + 1,
-        maxRetries,
-        errorCode: errorInfo.errorCode,
-        errorMessage: errorInfo.errorMessage,
-      }, "Governance reconciliation failed permanently");
+      logger.error(
+        {
+          requestId: item.requestId,
+          attemptCount: attemptCount + 1,
+          maxRetries,
+          errorCode: errorInfo.errorCode,
+          errorMessage: errorInfo.errorMessage,
+        },
+        "Governance reconciliation failed permanently",
+      );
 
       await recordAuditEvent(this.auditStore, {
         eventId: randomUUID(),
@@ -607,16 +665,19 @@ export class GovernanceReconciliationWorker {
   private async reconcilePendingRequest(
     item: any,
     provider: GovernanceProvider,
-    row: any
+    row: any,
   ): Promise<ReconciliationResult> {
     // Poll the external authority for decision
-    const status = await provider.getRequestStatus(item.governanceExternalRequestId);
-    
+    const status = await provider.getRequestStatus(
+      item.governanceExternalRequestId,
+    );
+
     const now = new Date();
-    
+
     if (status.status === "APPROVED") {
       // External authority approved - transition to APPROVED
-      await this.pool.query(`
+      await this.pool.query(
+        `
         UPDATE access_requests
         SET 
           status = 'APPROVED',
@@ -627,12 +688,9 @@ export class GovernanceReconciliationWorker {
           version = version + 1,
           updated_at = NOW()
         WHERE id = $1
-      `, [
-        item.requestId,
-        status.assignmentId,
-        status.assignmentExpiresAt,
-        now,
-      ]);
+      `,
+        [item.requestId, status.assignmentId, status.assignmentExpiresAt, now],
+      );
 
       await recordAuditEvent(this.auditStore, {
         eventId: randomUUID(),
@@ -662,7 +720,8 @@ export class GovernanceReconciliationWorker {
 
     if (status.status === "DENIED") {
       // External authority denied - transition to DENIED
-      await this.pool.query(`
+      await this.pool.query(
+        `
         UPDATE access_requests
         SET 
           status = 'DENIED',
@@ -674,7 +733,9 @@ export class GovernanceReconciliationWorker {
           version = version + 1,
           updated_at = NOW()
         WHERE id = $1
-      `, [item.requestId, now]);
+      `,
+        [item.requestId, now],
+      );
 
       await recordAuditEvent(this.auditStore, {
         eventId: randomUUID(),
@@ -703,8 +764,9 @@ export class GovernanceReconciliationWorker {
     if (status.status === "PENDING") {
       // Still pending - schedule next check
       const nextCheckAt = new Date(now.getTime() + this.config.pollIntervalMs);
-      
-      await this.pool.query(`
+
+      await this.pool.query(
+        `
         UPDATE access_requests
         SET 
           governance_last_checked_at = $2,
@@ -712,7 +774,9 @@ export class GovernanceReconciliationWorker {
           version = version + 1,
           updated_at = NOW()
         WHERE id = $1
-      `, [item.requestId, now, nextCheckAt]);
+      `,
+        [item.requestId, now, nextCheckAt],
+      );
 
       this.metrics.skippedReconciliations++;
       return {
@@ -733,7 +797,7 @@ export class GovernanceReconciliationWorker {
   private async reconcileAssignment(
     item: any,
     provider: GovernanceProvider,
-    row: any
+    row: any,
   ): Promise<ReconciliationResult> {
     // Check for assignment drift - call getAssignment on provider
     // We need to reconstruct subject and entitlement from the request
@@ -758,11 +822,14 @@ export class GovernanceReconciliationWorker {
 
     if (!assignment) {
       // Assignment not found externally - DRIFT DETECTED
-      logger.warn({
-        requestId: item.requestId,
-        governanceAuthority: item.governanceAuthority,
-        externalAssignmentId: item.governanceAssignmentId,
-      }, "External assignment not found - drift detected");
+      logger.warn(
+        {
+          requestId: item.requestId,
+          governanceAuthority: item.governanceAuthority,
+          externalAssignmentId: item.governanceAssignmentId,
+        },
+        "External assignment not found - drift detected",
+      );
 
       this.metrics.driftDetected++;
 
@@ -789,7 +856,8 @@ export class GovernanceReconciliationWorker {
 
       if (fulfillmentOwner === "opnory") {
         // Opnory owns fulfillment - transition to REVOCATION_PENDING
-        await this.pool.query(`
+        await this.pool.query(
+          `
           UPDATE access_requests
           SET 
             status = 'REVOCATION_PENDING',
@@ -798,7 +866,13 @@ export class GovernanceReconciliationWorker {
             version = version + 1,
             updated_at = NOW()
           WHERE id = $1
-        `, [item.requestId, now, new Date(now.getTime() + this.config.pollIntervalMs)]);
+        `,
+          [
+            item.requestId,
+            now,
+            new Date(now.getTime() + this.config.pollIntervalMs),
+          ],
+        );
 
         this.metrics.driftCorrected++;
 
@@ -832,9 +906,12 @@ export class GovernanceReconciliationWorker {
         };
       } else {
         // External authority owns fulfillment - just update check time
-        const nextCheckAt = new Date(now.getTime() + this.config.pollIntervalMs);
-        
-        await this.pool.query(`
+        const nextCheckAt = new Date(
+          now.getTime() + this.config.pollIntervalMs,
+        );
+
+        await this.pool.query(
+          `
           UPDATE access_requests
           SET 
             governance_last_checked_at = $2,
@@ -842,7 +919,9 @@ export class GovernanceReconciliationWorker {
             version = version + 1,
             updated_at = NOW()
           WHERE id = $1
-        `, [item.requestId, now, nextCheckAt]);
+        `,
+          [item.requestId, now, nextCheckAt],
+        );
 
         return {
           requestId: item.requestId,
@@ -860,11 +939,14 @@ export class GovernanceReconciliationWorker {
 
     if (assignment.status === "REVOKED") {
       // External assignment revoked - DRIFT DETECTED
-      logger.warn({
-        requestId: item.requestId,
-        governanceAuthority: item.governanceAuthority,
-        externalAssignmentId: item.governanceAssignmentId,
-      }, "External assignment revoked - drift detected");
+      logger.warn(
+        {
+          requestId: item.requestId,
+          governanceAuthority: item.governanceAuthority,
+          externalAssignmentId: item.governanceAssignmentId,
+        },
+        "External assignment revoked - drift detected",
+      );
 
       this.metrics.driftDetected++;
 
@@ -890,7 +972,8 @@ export class GovernanceReconciliationWorker {
       const fulfillmentOwner = governanceConfig?.fulfillmentOwner || "opnory";
 
       if (fulfillmentOwner === "opnory") {
-        await this.pool.query(`
+        await this.pool.query(
+          `
           UPDATE access_requests
           SET 
             status = 'REVOCATION_PENDING',
@@ -899,7 +982,13 @@ export class GovernanceReconciliationWorker {
             version = version + 1,
             updated_at = NOW()
           WHERE id = $1
-        `, [item.requestId, now, new Date(now.getTime() + this.config.pollIntervalMs)]);
+        `,
+          [
+            item.requestId,
+            now,
+            new Date(now.getTime() + this.config.pollIntervalMs),
+          ],
+        );
 
         this.metrics.driftCorrected++;
 
@@ -932,9 +1021,12 @@ export class GovernanceReconciliationWorker {
           },
         };
       } else {
-        const nextCheckAt = new Date(now.getTime() + this.config.pollIntervalMs);
-        
-        await this.pool.query(`
+        const nextCheckAt = new Date(
+          now.getTime() + this.config.pollIntervalMs,
+        );
+
+        await this.pool.query(
+          `
           UPDATE access_requests
           SET 
             governance_last_checked_at = $2,
@@ -942,7 +1034,9 @@ export class GovernanceReconciliationWorker {
             version = version + 1,
             updated_at = NOW()
           WHERE id = $1
-        `, [item.requestId, now, nextCheckAt]);
+        `,
+          [item.requestId, now, nextCheckAt],
+        );
 
         return {
           requestId: item.requestId,
@@ -960,8 +1054,9 @@ export class GovernanceReconciliationWorker {
 
     // Assignment still ACTIVE - just update check time
     const nextCheckAt = new Date(now.getTime() + this.config.pollIntervalMs);
-    
-    await this.pool.query(`
+
+    await this.pool.query(
+      `
       UPDATE access_requests
       SET 
         governance_last_checked_at = $2,
@@ -971,7 +1066,15 @@ export class GovernanceReconciliationWorker {
         version = version + 1,
         updated_at = NOW()
       WHERE id = $1
-    `, [item.requestId, now, nextCheckAt, assignment.assignmentId, assignment.expiresAt]);
+    `,
+      [
+        item.requestId,
+        now,
+        nextCheckAt,
+        assignment.assignmentId,
+        assignment.expiresAt,
+      ],
+    );
 
     this.metrics.successfulReconciliations++;
     return {
@@ -984,7 +1087,7 @@ export class GovernanceReconciliationWorker {
   private async reconcileRetry(
     item: any,
     provider: GovernanceProvider,
-    row: any
+    row: any,
   ): Promise<ReconciliationResult> {
     // Retry the reconciliation based on the original status
     if (row.status === "FULFILLED" || row.governance_assignment_id) {
@@ -1000,14 +1103,20 @@ export class GovernanceReconciliationWorker {
     return (this.reconciler as any).getProvider?.(authority) || null;
   }
 
-  private classifyError(err: any): { retryable: boolean; errorCode: number; errorMessage: string } {
+  private classifyError(err: any): {
+    retryable: boolean;
+    errorCode: number;
+    errorMessage: string;
+  } {
     const errorMessage = err instanceof Error ? err.message : String(err);
-    
+
     // Network/timeout errors are retryable
-    if (errorMessage.includes("timeout") || 
-        errorMessage.includes("ECONNREFUSED") || 
-        errorMessage.includes("ETIMEDOUT") ||
-        errorMessage.includes("network")) {
+    if (
+      errorMessage.includes("timeout") ||
+      errorMessage.includes("ECONNREFUSED") ||
+      errorMessage.includes("ETIMEDOUT") ||
+      errorMessage.includes("network")
+    ) {
       return { retryable: true, errorCode: 503, errorMessage };
     }
 
@@ -1017,12 +1126,20 @@ export class GovernanceReconciliationWorker {
     }
 
     // Server errors are retryable
-    if (errorMessage.includes("500") || errorMessage.includes("502") || errorMessage.includes("503")) {
+    if (
+      errorMessage.includes("500") ||
+      errorMessage.includes("502") ||
+      errorMessage.includes("503")
+    ) {
       return { retryable: true, errorCode: 500, errorMessage };
     }
 
     // Authentication/authorization errors are NOT retryable
-    if (errorMessage.includes("401") || errorMessage.includes("403") || errorMessage.includes("unauthorized")) {
+    if (
+      errorMessage.includes("401") ||
+      errorMessage.includes("403") ||
+      errorMessage.includes("unauthorized")
+    ) {
       return { retryable: false, errorCode: 401, errorMessage };
     }
 
@@ -1042,10 +1159,11 @@ export class GovernanceReconciliationWorker {
   private async finalizeBatch(results: ReconciliationResult[]): Promise<void> {
     // For RECONCILED/DRIFT_DETECTED/DRIFT_CORRECTED, the state was already updated in processSingleReconciliation
     // For RETRY/RECONCILIATION_FAILED, update retry metadata
-    
+
     for (const result of results) {
       if (result.status === "RETRY") {
-        await this.pool.query(`
+        await this.pool.query(
+          `
           UPDATE access_requests
           SET 
             status = 'RETRY',
@@ -1060,16 +1178,19 @@ export class GovernanceReconciliationWorker {
             version = version + 1,
             updated_at = NOW()
           WHERE id = $1
-        `, [
-          result.requestId,
-          result.attemptCount,
-          result.nextAttemptAt,
-          new Date(),
-          result.errorMessage,
-          result.errorCode,
-        ]);
+        `,
+          [
+            result.requestId,
+            result.attemptCount,
+            result.nextAttemptAt,
+            new Date(),
+            result.errorMessage,
+            result.errorCode,
+          ],
+        );
       } else if (result.status === "RECONCILIATION_FAILED") {
-        await this.pool.query(`
+        await this.pool.query(
+          `
           UPDATE access_requests
           SET 
             status = 'RECONCILIATION_FAILED',
@@ -1084,16 +1205,23 @@ export class GovernanceReconciliationWorker {
             version = version + 1,
             updated_at = NOW()
           WHERE id = $1
-        `, [
-          result.requestId,
-          result.attemptCount,
-          new Date(),
-          result.errorMessage,
-          result.errorCode,
-        ]);
-      } else if (result.status === "RECONCILED" || result.status === "DRIFT_DETECTED" || result.status === "DRIFT_CORRECTED") {
+        `,
+          [
+            result.requestId,
+            result.attemptCount,
+            new Date(),
+            result.errorMessage,
+            result.errorCode,
+          ],
+        );
+      } else if (
+        result.status === "RECONCILED" ||
+        result.status === "DRIFT_DETECTED" ||
+        result.status === "DRIFT_CORRECTED"
+      ) {
         // Release lease
-        await this.pool.query(`
+        await this.pool.query(
+          `
           UPDATE access_requests
           SET 
             governance_lease_owner = NULL,
@@ -1102,7 +1230,9 @@ export class GovernanceReconciliationWorker {
             version = version + 1,
             updated_at = NOW()
           WHERE id = $1
-        `, [result.requestId]);
+        `,
+          [result.requestId],
+        );
       }
     }
   }
@@ -1112,15 +1242,19 @@ export class GovernanceReconciliationWorker {
   // ============================================================================
 
   private startLeaseRenewal(): void {
-    const renewalInterval = this.config.leaseDurationMs - this.config.leaseRenewalMarginMs;
-    
+    const renewalInterval =
+      this.config.leaseDurationMs - this.config.leaseRenewalMarginMs;
+
     this.leaseRenewalTimer = setInterval(async () => {
       if (!this.running) return;
-      
+
       try {
         await this.renewLeases();
       } catch (err) {
-        logger.error({ err, workerId: this.workerId }, "Error renewing governance leases");
+        logger.error(
+          { err, workerId: this.workerId },
+          "Error renewing governance leases",
+        );
       }
     }, renewalInterval);
   }
@@ -1129,7 +1263,8 @@ export class GovernanceReconciliationWorker {
     const now = new Date();
     const leaseUntil = new Date(now.getTime() + this.config.leaseDurationMs);
 
-    const result = await this.pool.query(`
+    const result = await this.pool.query(
+      `
       UPDATE access_requests
       SET 
         governance_lease_until = $1,
@@ -1137,22 +1272,28 @@ export class GovernanceReconciliationWorker {
         version = version + 1,
         updated_at = NOW()
       WHERE governance_lease_owner = $3
-    `, [leaseUntil, now, this.workerId]);
+    `,
+      [leaseUntil, now, this.workerId],
+    );
 
     if (result.rowCount && result.rowCount > 0) {
       this.metrics.leaseRenewals += result.rowCount;
-      logger.debug({ 
-        workerId: this.workerId, 
-        renewed: result.rowCount,
-        leaseUntil: leaseUntil.toISOString(),
-      }, "Renewed governance leases");
+      logger.debug(
+        {
+          workerId: this.workerId,
+          renewed: result.rowCount,
+          leaseUntil: leaseUntil.toISOString(),
+        },
+        "Renewed governance leases",
+      );
     }
   }
 
   private async releaseAllLeases(): Promise<void> {
     const now = new Date();
-    
-    await this.pool.query(`
+
+    await this.pool.query(
+      `
       UPDATE access_requests
       SET 
         governance_lease_owner = NULL,
@@ -1161,7 +1302,9 @@ export class GovernanceReconciliationWorker {
         version = version + 1,
         updated_at = NOW()
       WHERE governance_lease_owner = $1
-    `, [this.workerId]);
+    `,
+      [this.workerId],
+    );
 
     logger.info({ workerId: this.workerId }, "Released all governance leases");
   }
@@ -1172,14 +1315,14 @@ export class GovernanceReconciliationWorker {
 
   private handleEmptyPoll(): void {
     this.metrics.consecutiveEmptyPolls++;
-    
+
     if (this.config.adaptivePolling && this.consecutiveEmptyPolls > 3) {
       this.currentPollIntervalMs = Math.min(
         this.currentPollIntervalMs * 1.5,
-        this.config.maxPollIntervalMs
+        this.config.maxPollIntervalMs,
       );
     }
-    
+
     this.scheduleNextPoll();
   }
 
@@ -1187,14 +1330,14 @@ export class GovernanceReconciliationWorker {
     if (!this.running) return;
 
     let nextInterval = this.currentPollIntervalMs;
-    
+
     if (this.config.pollJitterMs > 0) {
       const jitter = Math.random() * this.config.pollJitterMs;
       nextInterval += jitter;
     }
 
     this.metrics.currentPollIntervalMs = nextInterval;
-    
+
     this.pollTimer = setTimeout(() => {
       if (this.running) {
         this.processDueReconciliations();

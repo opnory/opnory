@@ -37,14 +37,16 @@ function isManagerOf(managerId: string, employeeId: string): boolean {
 // ============================================================================
 
 const SLACK_TO_OPNORY: Record<string, { userId: string; email: string }> = {
-  "U1111111111": { userId: "employee-a", email: "employee-a@opnory.com" },
-  "U2222222222": { userId: "manager-a", email: "manager-a@opnory.com" },
-  "U3333333333": { userId: "employee-b", email: "employee-b@opnory.com" },
-  "U4444444444": { userId: "manager-b", email: "manager-b@opnory.com" },
-  "U5555555555": { userId: "employee-c", email: "employee-c@opnory.com" },
+  U1111111111: { userId: "employee-a", email: "employee-a@opnory.com" },
+  U2222222222: { userId: "manager-a", email: "manager-a@opnory.com" },
+  U3333333333: { userId: "employee-b", email: "employee-b@opnory.com" },
+  U4444444444: { userId: "manager-b", email: "manager-b@opnory.com" },
+  U5555555555: { userId: "employee-c", email: "employee-c@opnory.com" },
 };
 
-function resolveOpnoryIdentity(slackUserId: string): { userId: string; email: string } | undefined {
+function resolveOpnoryIdentity(
+  slackUserId: string,
+): { userId: string; email: string } | undefined {
   return SLACK_TO_OPNORY[slackUserId];
 }
 
@@ -55,7 +57,9 @@ function resolveOpnoryIdentity(slackUserId: string): { userId: string; email: st
 const APPROVE_ACTION = "access_approve";
 const DENY_ACTION = "access_deny";
 
-function parseActionPayload(actionValue: string): { requestId: string; decision: "APPROVE" | "DENY" } | null {
+function parseActionPayload(
+  actionValue: string,
+): { requestId: string; decision: "APPROVE" | "DENY" } | null {
   try {
     const parsed = JSON.parse(actionValue);
     return { requestId: parsed.r, decision: parsed.d };
@@ -64,7 +68,10 @@ function parseActionPayload(actionValue: string): { requestId: string; decision:
   }
 }
 
-function createActionValue(requestId: string, decision: "APPROVE" | "DENY"): string {
+function createActionValue(
+  requestId: string,
+  decision: "APPROVE" | "DENY",
+): string {
   return JSON.stringify({ r: requestId, d: decision });
 }
 
@@ -163,13 +170,19 @@ function buildApprovalMessage(request: AccessRequest): any[] {
   ];
 }
 
-function buildApprovalResultMessage(request: AccessRequest, approverEmail: string, approved: boolean): any[] {
+function buildApprovalResultMessage(
+  request: AccessRequest,
+  approverEmail: string,
+  approved: boolean,
+): any[] {
   return [
     {
       type: "header",
       text: {
         type: "plain_text",
-        text: approved ? "✅ Access Request Approved" : "❌ Access Request Denied",
+        text: approved
+          ? "✅ Access Request Approved"
+          : "❌ Access Request Denied",
         emoji: true,
       },
     },
@@ -205,7 +218,10 @@ function buildApprovalResultMessage(request: AccessRequest, approverEmail: strin
   ];
 }
 
-function buildUnauthorizedApprovalMessage(requestId: string, reason: string): any[] {
+function buildUnauthorizedApprovalMessage(
+  requestId: string,
+  reason: string,
+): any[] {
   return [
     {
       type: "header",
@@ -260,7 +276,7 @@ function buildErrorMessage(error: string): any[] {
 
 export async function startSlackApp(): Promise<App> {
   const config = loadConfig();
-  
+
   // Use ExpressReceiver for web server
   const receiver = new ExpressReceiver({
     signingSecret: config.slack.signingSecret,
@@ -277,7 +293,10 @@ export async function startSlackApp(): Promise<App> {
   });
 
   // Store for request-to-channel mapping (in production, use Redis/DB)
-  const requestChannelMap = new Map<string, { channelId: string; threadTs: string }>();
+  const requestChannelMap = new Map<
+    string,
+    { channelId: string; threadTs: string }
+  >();
 
   // ============================================================================
   // Slash Command: /access-request
@@ -299,7 +318,7 @@ export async function startSlackApp(): Promise<App> {
     const match = text.match(/"([^"]+)"\s*"([^"]+)"/);
     if (!match) {
       await respond({
-        text: "Usage: `/access-request \"Entitlement Name\" \"Reason for access\"`",
+        text: 'Usage: `/access-request "Entitlement Name" "Reason for access"`',
         response_type: "ephemeral",
       });
       return;
@@ -331,7 +350,7 @@ export async function startSlackApp(): Promise<App> {
       }
 
       const managerSlackId = Object.entries(SLACK_TO_OPNORY).find(
-        ([, v]) => v.userId === managerId
+        ([, v]) => v.userId === managerId,
       )?.[0];
 
       if (!managerSlackId) {
@@ -370,9 +389,15 @@ export async function startSlackApp(): Promise<App> {
         response_type: "ephemeral",
       });
 
-      logger.info({ requestId: request.id, requester: slackIdentity.userId }, "Access request created via Slack");
+      logger.info(
+        { requestId: request.id, requester: slackIdentity.userId },
+        "Access request created via Slack",
+      );
     } catch (error) {
-      logger.error({ error, userId: slackIdentity.userId }, "Error creating access request");
+      logger.error(
+        { error, userId: slackIdentity.userId },
+        "Error creating access request",
+      );
       await respond({
         text: `❌ Error: ${error instanceof Error ? error.message : "Unknown error"}`,
         response_type: "ephemeral",
@@ -390,7 +415,9 @@ export async function startSlackApp(): Promise<App> {
     if (!slackIdentity) {
       await respond({
         replace_original: true,
-        blocks: buildErrorMessage("Your Slack identity is not mapped to an Opnory user."),
+        blocks: buildErrorMessage(
+          "Your Slack identity is not mapped to an Opnory user.",
+        ),
       });
       return;
     }
@@ -430,10 +457,16 @@ export async function startSlackApp(): Promise<App> {
     if (!requiredManagerId || requiredManagerId !== slackIdentity.userId) {
       await respond({
         replace_original: true,
-        blocks: buildUnauthorizedApprovalMessage(requestId, "You are not the assigned manager for this request."),
+        blocks: buildUnauthorizedApprovalMessage(
+          requestId,
+          "You are not the assigned manager for this request.",
+        ),
       });
       // Audit the unauthorized attempt
-      await accessService.auditUnauthorizedApprovalAttempt(requestId, slackIdentity.userId);
+      await accessService.auditUnauthorizedApprovalAttempt(
+        requestId,
+        slackIdentity.userId,
+      );
       return;
     }
 
@@ -447,17 +480,25 @@ export async function startSlackApp(): Promise<App> {
         timestamp: new Date().toISOString(),
       };
 
-      const updatedRequest = await accessService.decideAccessRequest(requestId, approvalDecision, correlationId);
+      const updatedRequest = await accessService.decideAccessRequest(
+        requestId,
+        approvalDecision,
+        correlationId,
+      );
 
       // Update the message to show result
       await respond({
         replace_original: true,
-        blocks: buildApprovalResultMessage(updatedRequest, slackIdentity.email, true),
+        blocks: buildApprovalResultMessage(
+          updatedRequest,
+          slackIdentity.email,
+          true,
+        ),
       });
 
       // Notify requester
       const requesterSlackId = Object.entries(SLACK_TO_OPNORY).find(
-        ([, v]) => v.userId === request.requesterId
+        ([, v]) => v.userId === request.requesterId,
       )?.[0];
       if (requesterSlackId) {
         try {
@@ -470,12 +511,20 @@ export async function startSlackApp(): Promise<App> {
         }
       }
 
-      logger.info({ requestId, approver: slackIdentity.userId }, "Access request approved via Slack");
+      logger.info(
+        { requestId, approver: slackIdentity.userId },
+        "Access request approved via Slack",
+      );
     } catch (error) {
-      logger.error({ error, requestId, approver: slackIdentity.userId }, "Error approving request");
+      logger.error(
+        { error, requestId, approver: slackIdentity.userId },
+        "Error approving request",
+      );
       await respond({
         replace_original: true,
-        blocks: buildErrorMessage(`Error: ${error instanceof Error ? error.message : "Unknown error"}`),
+        blocks: buildErrorMessage(
+          `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        ),
       });
     }
   });
@@ -487,7 +536,9 @@ export async function startSlackApp(): Promise<App> {
     if (!slackIdentity) {
       await respond({
         replace_original: true,
-        blocks: buildErrorMessage("Your Slack identity is not mapped to an Opnory user."),
+        blocks: buildErrorMessage(
+          "Your Slack identity is not mapped to an Opnory user.",
+        ),
       });
       return;
     }
@@ -527,10 +578,16 @@ export async function startSlackApp(): Promise<App> {
     if (!requiredManagerId || requiredManagerId !== slackIdentity.userId) {
       await respond({
         replace_original: true,
-        blocks: buildUnauthorizedApprovalMessage(requestId, "You are not the assigned manager for this request."),
+        blocks: buildUnauthorizedApprovalMessage(
+          requestId,
+          "You are not the assigned manager for this request.",
+        ),
       });
       // Audit the unauthorized attempt
-      await accessService.auditUnauthorizedApprovalAttempt(requestId, slackIdentity.userId);
+      await accessService.auditUnauthorizedApprovalAttempt(
+        requestId,
+        slackIdentity.userId,
+      );
       return;
     }
 
@@ -544,17 +601,25 @@ export async function startSlackApp(): Promise<App> {
         timestamp: new Date().toISOString(),
       };
 
-      const updatedRequest = await accessService.decideAccessRequest(requestId, approvalDecision, correlationId);
+      const updatedRequest = await accessService.decideAccessRequest(
+        requestId,
+        approvalDecision,
+        correlationId,
+      );
 
       // Update the message to show result
       await respond({
         replace_original: true,
-        blocks: buildApprovalResultMessage(updatedRequest, slackIdentity.email, false),
+        blocks: buildApprovalResultMessage(
+          updatedRequest,
+          slackIdentity.email,
+          false,
+        ),
       });
 
       // Notify requester
       const requesterSlackId = Object.entries(SLACK_TO_OPNORY).find(
-        ([, v]) => v.userId === request.requesterId
+        ([, v]) => v.userId === request.requesterId,
       )?.[0];
       if (requesterSlackId) {
         try {
@@ -567,12 +632,20 @@ export async function startSlackApp(): Promise<App> {
         }
       }
 
-      logger.info({ requestId, approver: slackIdentity.userId }, "Access request denied via Slack");
+      logger.info(
+        { requestId, approver: slackIdentity.userId },
+        "Access request denied via Slack",
+      );
     } catch (error) {
-      logger.error({ error, requestId, approver: slackIdentity.userId }, "Error denying request");
+      logger.error(
+        { error, requestId, approver: slackIdentity.userId },
+        "Error denying request",
+      );
       await respond({
         replace_original: true,
-        blocks: buildErrorMessage(`Error: ${error instanceof Error ? error.message : "Unknown error"}`),
+        blocks: buildErrorMessage(
+          `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        ),
       });
     }
   });
@@ -593,7 +666,9 @@ export async function startSlackApp(): Promise<App> {
     }
 
     const accessService = getAccessService();
-    const requests = await accessService.getRequestsByRequester(slackIdentity.userId);
+    const requests = await accessService.getRequestsByRequester(
+      slackIdentity.userId,
+    );
 
     if (requests.length === 0) {
       await respond({
@@ -613,7 +688,10 @@ export async function startSlackApp(): Promise<App> {
 
     await respond({
       blocks: [
-        { type: "header", text: { type: "plain_text", text: "📋 Your Access Requests" } },
+        {
+          type: "header",
+          text: { type: "plain_text", text: "📋 Your Access Requests" },
+        },
         ...blocks,
       ],
       response_type: "ephemeral",

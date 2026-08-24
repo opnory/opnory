@@ -28,8 +28,16 @@ import {
   GovernanceReconcilerConfig,
   ReconciliationAuditEventType,
 } from "@opnory/access-types";
-import { InMemoryApprovalStore, ApprovalService } from "@opnory/access-approval";
-import { AuditEventStore, InMemoryAuditEventStore, recordAuditEvent, AuditEventType } from "@opnory/access-audit";
+import {
+  InMemoryApprovalStore,
+  ApprovalService,
+} from "@opnory/access-approval";
+import {
+  AuditEventStore,
+  InMemoryAuditEventStore,
+  recordAuditEvent,
+  AuditEventType,
+} from "@opnory/access-audit";
 
 const logger = getLogger().child({ component: "access-governance" });
 
@@ -44,10 +52,16 @@ export class LocalGovernanceProvider implements GovernanceProvider {
   public auditStore: AuditEventStore;
   public approvalService: ApprovalService;
 
-  constructor(approvalStore?: InMemoryApprovalStore, auditStore?: AuditEventStore) {
+  constructor(
+    approvalStore?: InMemoryApprovalStore,
+    auditStore?: AuditEventStore,
+  ) {
     this.approvalStore = approvalStore || new InMemoryApprovalStore();
     this.auditStore = auditStore || new InMemoryAuditEventStore();
-    this.approvalService = new ApprovalService(this.approvalStore, this.auditStore);
+    this.approvalService = new ApprovalService(
+      this.approvalStore,
+      this.auditStore,
+    );
   }
 
   async resolveSubject(identity: {
@@ -65,7 +79,9 @@ export class LocalGovernanceProvider implements GovernanceProvider {
     });
   }
 
-  async resolveEntitlement(entitlement: EntitlementRef): Promise<GovernedEntitlement> {
+  async resolveEntitlement(
+    entitlement: EntitlementRef,
+  ): Promise<GovernedEntitlement> {
     // Local governance maps directly to the entitlement
     return GovernedEntitlementSchema.parse({
       entitlementId: entitlement.id,
@@ -76,7 +92,9 @@ export class LocalGovernanceProvider implements GovernanceProvider {
     });
   }
 
-  async submitRequest(request: GovernedAccessRequest): Promise<GovernanceRequest> {
+  async submitRequest(
+    request: GovernedAccessRequest,
+  ): Promise<GovernanceRequest> {
     // For local governance, we create a PENDING request in our store
     // and return a governance request representing it
     const governanceRequest: GovernanceRequest = {
@@ -107,7 +125,9 @@ export class LocalGovernanceProvider implements GovernanceProvider {
     return GovernanceRequestSchema.parse(governanceRequest);
   }
 
-  async getRequestStatus(externalRequestId: string): Promise<GovernanceRequestStatus> {
+  async getRequestStatus(
+    externalRequestId: string,
+  ): Promise<GovernanceRequestStatus> {
     // For local governance, we'd look up the Opnory request by the external ID
     // This is a simplified implementation
     return GovernanceRequestStatusSchema.parse({
@@ -119,14 +139,16 @@ export class LocalGovernanceProvider implements GovernanceProvider {
 
   async getAssignment(
     subject: GovernanceSubject,
-    entitlement: GovernedEntitlement
+    entitlement: GovernedEntitlement,
   ): Promise<GovernanceAssignment | null> {
     // For local governance, check if there's a FULFILLED request for this subject+entitlement
     // This would require a query - returning null for now
     return null;
   }
 
-  async revokeAssignment(assignment: GovernanceAssignment): Promise<GovernanceRevocationResult> {
+  async revokeAssignment(
+    assignment: GovernanceAssignment,
+  ): Promise<GovernanceRevocationResult> {
     // For local governance, revocation is handled by the expiration scheduler
     return GovernanceRevocationResultSchema.parse({
       success: true,
@@ -177,21 +199,29 @@ export class EntraGovernanceProvider implements GovernanceProvider {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: params,
-      }
+      },
     );
 
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`Entra token request failed: ${response.status} ${error}`);
+      throw new Error(
+        `Entra token request failed: ${response.status} ${error}`,
+      );
     }
 
-    const data = await response.json() as { access_token: string; expires_in: number };
+    const data = (await response.json()) as {
+      access_token: string;
+      expires_in: number;
+    };
     this.accessToken = data.access_token;
     this.tokenExpiresAt = now + data.expires_in * 1000;
     return this.accessToken;
   }
 
-  private async graphRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  private async graphRequest<T>(
+    path: string,
+    options: RequestInit = {},
+  ): Promise<T> {
     const token = await this.getAccessToken();
     const response = await fetch(`https://graph.microsoft.com/v1.0${path}`, {
       ...options,
@@ -204,7 +234,9 @@ export class EntraGovernanceProvider implements GovernanceProvider {
 
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`Entra Graph request failed: ${response.status} ${error}`);
+      throw new Error(
+        `Entra Graph request failed: ${response.status} ${error}`,
+      );
     }
 
     if (response.status === 204 || response.status === 202) {
@@ -221,8 +253,15 @@ export class EntraGovernanceProvider implements GovernanceProvider {
   }): Promise<GovernanceSubject> {
     // Try to find user in Entra by email
     try {
-      const users = await this.graphRequest<{ value: Array<{ id: string; displayName: string; mail: string; userPrincipalName: string }> }>(
-        `/users?$filter=mail eq '${identity.requesterEmail}' or userPrincipalName eq '${identity.requesterEmail}'`
+      const users = await this.graphRequest<{
+        value: Array<{
+          id: string;
+          displayName: string;
+          mail: string;
+          userPrincipalName: string;
+        }>;
+      }>(
+        `/users?$filter=mail eq '${identity.requesterEmail}' or userPrincipalName eq '${identity.requesterEmail}'`,
       );
 
       if (users.value.length > 0) {
@@ -236,7 +275,10 @@ export class EntraGovernanceProvider implements GovernanceProvider {
         });
       }
     } catch (error) {
-      logger.warn({ error, email: identity.requesterEmail }, "Failed to resolve user in Entra, falling back to manual");
+      logger.warn(
+        { error, email: identity.requesterEmail },
+        "Failed to resolve user in Entra, falling back to manual",
+      );
     }
 
     // Fallback: use requester info as manual subject
@@ -249,11 +291,15 @@ export class EntraGovernanceProvider implements GovernanceProvider {
     });
   }
 
-  async resolveEntitlement(entitlement: EntitlementRef): Promise<GovernedEntitlement> {
+  async resolveEntitlement(
+    entitlement: EntitlementRef,
+  ): Promise<GovernedEntitlement> {
     // For Entra, the externalId should be an Access Package ID from governance config
     const governanceConfig = entitlement.governance;
     if (!governanceConfig || governanceConfig.provider !== "entra") {
-      throw new Error(`Entitlement ${entitlement.id} missing or invalid entra governance config`);
+      throw new Error(
+        `Entitlement ${entitlement.id} missing or invalid entra governance config`,
+      );
     }
 
     const accessPackageId = governanceConfig.accessPackageId;
@@ -267,7 +313,9 @@ export class EntraGovernanceProvider implements GovernanceProvider {
     });
   }
 
-  async submitRequest(request: GovernedAccessRequest): Promise<GovernanceRequest> {
+  async submitRequest(
+    request: GovernedAccessRequest,
+  ): Promise<GovernanceRequest> {
     // Submit access package assignment request to Entra
     // Using Microsoft Graph v1.0 entitlement management: assignmentRequests
     // https://learn.microsoft.com/en-us/graph/api/entitlementmanagement-assignmentrequests-post
@@ -275,22 +323,28 @@ export class EntraGovernanceProvider implements GovernanceProvider {
       accessPackageId: request.entitlement.externalId,
       subjectId: request.subject.id,
       assignmentType: "UserAdd",
-      schedule: request.requestedDuration ? {
-        type: "Once",
-        startDateTime: new Date().toISOString(),
-        endDateTime: new Date(Date.now() + this.parseDuration(request.requestedDuration)).toISOString(),
-      } : undefined,
+      schedule: request.requestedDuration
+        ? {
+            type: "Once",
+            startDateTime: new Date().toISOString(),
+            endDateTime: new Date(
+              Date.now() + this.parseDuration(request.requestedDuration),
+            ).toISOString(),
+          }
+        : undefined,
       justification: request.justification,
     };
 
     try {
-      const result = await this.graphRequest<{ id: string; status: string; requestStatus: string; createdDateTime: string }>(
-        "/identityGovernance/entitlementManagement/assignmentRequests",
-        {
-          method: "POST",
-          body: JSON.stringify(assignmentRequest),
-        }
-      );
+      const result = await this.graphRequest<{
+        id: string;
+        status: string;
+        requestStatus: string;
+        createdDateTime: string;
+      }>("/identityGovernance/entitlementManagement/assignmentRequests", {
+        method: "POST",
+        body: JSON.stringify(assignmentRequest),
+      });
 
       const governanceRequest: GovernanceRequest = {
         externalRequestId: result.id,
@@ -306,21 +360,28 @@ export class EntraGovernanceProvider implements GovernanceProvider {
 
       return GovernanceRequestSchema.parse(governanceRequest);
     } catch (error) {
-      logger.error({ error, request }, "Failed to submit Entra access package request");
+      logger.error(
+        { error, request },
+        "Failed to submit Entra access package request",
+      );
       throw new Error(`Entra request submission failed: ${error}`);
     }
   }
 
-  async getRequestStatus(externalRequestId: string): Promise<GovernanceRequestStatus> {
+  async getRequestStatus(
+    externalRequestId: string,
+  ): Promise<GovernanceRequestStatus> {
     try {
       // GET /identityGovernance/entitlementManagement/assignmentRequests/{id}
       // Expand assignment to get assignment details for reconciliation
-      const result = await this.graphRequest<{ 
-        id: string; 
-        requestStatus: string; 
+      const result = await this.graphRequest<{
+        id: string;
+        requestStatus: string;
         assignment?: { id: string; endDateTime?: string };
         createdDateTime: string;
-      }>(`/identityGovernance/entitlementManagement/assignmentRequests/${externalRequestId}?$expand=assignment`);
+      }>(
+        `/identityGovernance/entitlementManagement/assignmentRequests/${externalRequestId}?$expand=assignment`,
+      );
 
       const status = this.mapEntraStatus(result.requestStatus);
       const assignmentId = result.assignment?.id;
@@ -335,7 +396,10 @@ export class EntraGovernanceProvider implements GovernanceProvider {
         rawResponse: result,
       });
     } catch (error) {
-      logger.warn({ error, externalRequestId }, "Failed to get Entra request status");
+      logger.warn(
+        { error, externalRequestId },
+        "Failed to get Entra request status",
+      );
       return GovernanceRequestStatusSchema.parse({
         externalRequestId,
         status: "FAILED",
@@ -346,20 +410,22 @@ export class EntraGovernanceProvider implements GovernanceProvider {
 
   async getAssignment(
     subject: GovernanceSubject,
-    entitlement: GovernedEntitlement
+    entitlement: GovernedEntitlement,
   ): Promise<GovernanceAssignment | null> {
     try {
       // GET /identityGovernance/entitlementManagement/assignments
       // Filter by target (subject) and access package (entitlement)
-      const assignments = await this.graphRequest<{ value: Array<{ 
-        id: string; 
-        accessPackageId: string; 
-        targetId: string; 
-        schedule?: { endDateTime?: string };
-        status: string;
-        assignmentType: string;
-      }> }>(
-        `/identityGovernance/entitlementManagement/assignments?$filter=targetId eq '${subject.id}' and accessPackageId eq '${entitlement.externalId}'`
+      const assignments = await this.graphRequest<{
+        value: Array<{
+          id: string;
+          accessPackageId: string;
+          targetId: string;
+          schedule?: { endDateTime?: string };
+          status: string;
+          assignmentType: string;
+        }>;
+      }>(
+        `/identityGovernance/entitlementManagement/assignments?$filter=targetId eq '${subject.id}' and accessPackageId eq '${entitlement.externalId}'`,
       );
 
       if (assignments.value.length > 0) {
@@ -378,12 +444,21 @@ export class EntraGovernanceProvider implements GovernanceProvider {
 
       return null;
     } catch (error) {
-      logger.warn({ error, subjectId: subject.id, entitlementId: entitlement.entitlementId }, "Failed to get Entra assignment");
+      logger.warn(
+        {
+          error,
+          subjectId: subject.id,
+          entitlementId: entitlement.entitlementId,
+        },
+        "Failed to get Entra assignment",
+      );
       return null;
     }
   }
 
-  async revokeAssignment(assignment: GovernanceAssignment): Promise<GovernanceRevocationResult> {
+  async revokeAssignment(
+    assignment: GovernanceAssignment,
+  ): Promise<GovernanceRevocationResult> {
     try {
       // POST /identityGovernance/entitlementManagement/assignmentRequests
       // Microsoft's entitlement-management model removes access by creating an
@@ -397,7 +472,7 @@ export class EntraGovernanceProvider implements GovernanceProvider {
             requestType: "adminRemove",
             assignment: { id: assignment.assignmentId },
           }),
-        }
+        },
       );
 
       return GovernanceRevocationResultSchema.parse({
@@ -409,7 +484,10 @@ export class EntraGovernanceProvider implements GovernanceProvider {
         authoritativeMutationPerformed: true,
       });
     } catch (error) {
-      logger.error({ error, assignmentId: assignment.assignmentId }, "Failed to revoke Entra assignment");
+      logger.error(
+        { error, assignmentId: assignment.assignmentId },
+        "Failed to revoke Entra assignment",
+      );
       return GovernanceRevocationResultSchema.parse({
         success: false,
         message: "Entra revocation failed",
@@ -438,7 +516,9 @@ export class EntraGovernanceProvider implements GovernanceProvider {
     }
   }
 
-  private mapEntraAssignmentStatus(entraStatus: string): GovernanceAssignmentStatus {
+  private mapEntraAssignmentStatus(
+    entraStatus: string,
+  ): GovernanceAssignmentStatus {
     switch (entraStatus) {
       case "Delivered":
         return "ACTIVE";
@@ -470,7 +550,7 @@ export interface OktaConfig {
   clientId: string;
   // For private_key_jwt authentication (required for Client Credentials with Okta scopes)
   privateKey: string; // PEM format
-  keyId: string;      // Key ID registered in Okta
+  keyId: string; // Key ID registered in Okta
   // For OIG (Okta Identity Governance)
   requestConditionId?: string;
   // Scopes for OIG Access Requests v2 + Principal Access revocation
@@ -509,17 +589,19 @@ export class OktaGovernanceProvider implements GovernanceProvider {
       return token;
     }
 
-    const scopes = this.config.scopes?.join(" ") || 
+    const scopes =
+      this.config.scopes?.join(" ") ||
       "okta.accessRequests.request.read okta.accessRequests.request.manage okta.accessRequests.condition.read okta.governance.entitlements.manage";
 
     // private_key_jwt authentication for Client Credentials flow
     // Generate JWT assertion signed with private key
     const assertion = await this.generateJwtAssertion(scopes);
-    
+
     const params = new URLSearchParams({
       grant_type: "client_credentials",
       scope: scopes,
-      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      client_assertion_type:
+        "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
       client_assertion: assertion,
     });
 
@@ -534,7 +616,10 @@ export class OktaGovernanceProvider implements GovernanceProvider {
       throw new Error(`Okta token request failed: ${response.status} ${error}`);
     }
 
-    const data = await response.json() as { access_token: string; expires_in: number };
+    const data = (await response.json()) as {
+      access_token: string;
+      expires_in: number;
+    };
     this.accessToken = data.access_token;
     this.tokenExpiresAt = now + data.expires_in * 1000;
     return this.accessToken;
@@ -542,10 +627,10 @@ export class OktaGovernanceProvider implements GovernanceProvider {
 
   private async generateJwtAssertion(scopes: string): Promise<string> {
     const { SignJWT } = await import("jose");
-    
+
     // Parse PEM private key
-    const privateKey = await import("jose").then(({ importPKCS8 }) => 
-      importPKCS8(this.config.privateKey, "RS256")
+    const privateKey = await import("jose").then(({ importPKCS8 }) =>
+      importPKCS8(this.config.privateKey, "RS256"),
     );
 
     const now = Math.floor(Date.now() / 1000);
@@ -572,7 +657,10 @@ export class OktaGovernanceProvider implements GovernanceProvider {
     this.tokenExpiresAt = 0;
   }
 
-  private async oktaRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  private async oktaRequest<T>(
+    path: string,
+    options: RequestInit = {},
+  ): Promise<T> {
     const token = await this.getAccessToken();
     const response = await fetch(`${this.config.orgUrl}${path}`, {
       ...options,
@@ -603,22 +691,36 @@ export class OktaGovernanceProvider implements GovernanceProvider {
   }): Promise<GovernanceSubject> {
     // Try to find user in Okta by email
     try {
-      const users = await this.oktaRequest<Array<{ id: string; profile: { login: string; email: string; firstName: string; lastName: string } }>>(
-        `/api/v1/users?filter=profile.email eq "${identity.requesterEmail}"&limit=1`
+      const users = await this.oktaRequest<
+        Array<{
+          id: string;
+          profile: {
+            login: string;
+            email: string;
+            firstName: string;
+            lastName: string;
+          };
+        }>
+      >(
+        `/api/v1/users?filter=profile.email eq "${identity.requesterEmail}"&limit=1`,
       );
 
       if (users.length > 0) {
         const user = users[0];
         return GovernanceSubjectSchema.parse({
           id: user.id,
-          displayName: `${user.profile.firstName} ${user.profile.lastName}`.trim(),
+          displayName:
+            `${user.profile.firstName} ${user.profile.lastName}`.trim(),
           email: user.profile.email,
           source: "okta",
           raw: { login: user.profile.login },
         });
       }
     } catch (error) {
-      logger.warn({ error, email: identity.requesterEmail }, "Failed to resolve user in Okta, falling back to manual");
+      logger.warn(
+        { error, email: identity.requesterEmail },
+        "Failed to resolve user in Okta, falling back to manual",
+      );
     }
 
     // Fallback: use requester info as manual subject
@@ -631,10 +733,14 @@ export class OktaGovernanceProvider implements GovernanceProvider {
     });
   }
 
-  async resolveEntitlement(entitlement: EntitlementRef): Promise<GovernedEntitlement> {
+  async resolveEntitlement(
+    entitlement: EntitlementRef,
+  ): Promise<GovernedEntitlement> {
     const governanceConfig = entitlement.governance;
     if (!governanceConfig || governanceConfig.provider !== "okta") {
-      throw new Error(`Entitlement ${entitlement.id} missing or invalid okta governance config`);
+      throw new Error(
+        `Entitlement ${entitlement.id} missing or invalid okta governance config`,
+      );
     }
 
     // For OIG, the entitlement maps to a request condition
@@ -644,11 +750,18 @@ export class OktaGovernanceProvider implements GovernanceProvider {
       authority: "okta",
       externalId: governanceConfig.groupId, // OIG request condition ID or group ID
       externalName: entitlement.name,
-      metadata: { system: entitlement.system, groupId: governanceConfig.groupId, appId: governanceConfig.appId, requestConditionId: this.config.requestConditionId },
+      metadata: {
+        system: entitlement.system,
+        groupId: governanceConfig.groupId,
+        appId: governanceConfig.appId,
+        requestConditionId: this.config.requestConditionId,
+      },
     });
   }
 
-  async submitRequest(request: GovernedAccessRequest): Promise<GovernanceRequest> {
+  async submitRequest(
+    request: GovernedAccessRequest,
+  ): Promise<GovernanceRequest> {
     // Submit an Access Request via Okta Identity Governance v2 API
     // POST /governance/api/v2/requests
     // https://developer.okta.com/docs/api/openapi/okta-management/management/tag/AccessRequests/
@@ -660,20 +773,17 @@ export class OktaGovernanceProvider implements GovernanceProvider {
     };
 
     try {
-      const result = await this.oktaRequest<{ 
-        id: string; 
-        status: string; 
+      const result = await this.oktaRequest<{
+        id: string;
+        status: string;
         state: string;
         created: string;
         target: { id: string; type: string };
         requestCondition: { id: string };
-      }>(
-        "/governance/api/v2/requests",
-        {
-          method: "POST",
-          body: JSON.stringify(accessRequest),
-        }
-      );
+      }>("/governance/api/v2/requests", {
+        method: "POST",
+        body: JSON.stringify(accessRequest),
+      });
 
       const governanceRequest: GovernanceRequest = {
         externalRequestId: result.id,
@@ -696,19 +806,19 @@ export class OktaGovernanceProvider implements GovernanceProvider {
     }
   }
 
-  async getRequestStatus(externalRequestId: string): Promise<GovernanceRequestStatus> {
+  async getRequestStatus(
+    externalRequestId: string,
+  ): Promise<GovernanceRequestStatus> {
     try {
       // GET /governance/api/v2/requests/{id}
-      const result = await this.oktaRequest<{ 
-        id: string; 
-        status: string; 
+      const result = await this.oktaRequest<{
+        id: string;
+        status: string;
         state: string;
         created: string;
         target?: { id: string; type: string; endDate?: string };
         resolved?: string;
-      }>(
-        `/governance/api/v2/requests/${externalRequestId}`
-      );
+      }>(`/governance/api/v2/requests/${externalRequestId}`);
 
       const status = this.mapOktaRequestStatus(result.status, result.state);
       const assignmentId = result.target?.id;
@@ -723,7 +833,10 @@ export class OktaGovernanceProvider implements GovernanceProvider {
         rawResponse: result,
       });
     } catch (error) {
-      logger.warn({ error, externalRequestId }, "Failed to get Okta request status");
+      logger.warn(
+        { error, externalRequestId },
+        "Failed to get Okta request status",
+      );
       return GovernanceRequestStatusSchema.parse({
         externalRequestId,
         status: "FAILED",
@@ -734,18 +847,20 @@ export class OktaGovernanceProvider implements GovernanceProvider {
 
   async getAssignment(
     subject: GovernanceSubject,
-    entitlement: GovernedEntitlement
+    entitlement: GovernedEntitlement,
   ): Promise<GovernanceAssignment | null> {
     try {
       // For OIG, check active requests that resulted in assignments
       // We can also check group memberships if the request condition targets a group
       // GET /api/v1/users/{userId}/groups
-      const groups = await this.oktaRequest<Array<{ id: string; profile: { name: string } }>>(
-        `/api/v1/users/${subject.id}/groups`
-      );
+      const groups = await this.oktaRequest<
+        Array<{ id: string; profile: { name: string } }>
+      >(`/api/v1/users/${subject.id}/groups`);
 
       const targetGroupId = entitlement.metadata?.groupId as string | undefined;
-      const isMember = targetGroupId ? groups.some(g => g.id === targetGroupId) : false;
+      const isMember = targetGroupId
+        ? groups.some((g) => g.id === targetGroupId)
+        : false;
 
       if (isMember) {
         return GovernanceAssignmentSchema.parse({
@@ -755,8 +870,8 @@ export class OktaGovernanceProvider implements GovernanceProvider {
           authority: "okta",
           grantedAt: new Date().toISOString(),
           status: "ACTIVE",
-          raw: { 
-            groupId: targetGroupId, 
+          raw: {
+            groupId: targetGroupId,
             appId: entitlement.metadata?.appId,
             // Include ORNs for potential revocation if this is an authoritative Principal Access grant
             // principalOrn: "okta:principal:...", // Would be populated from Principal Access API
@@ -768,21 +883,24 @@ export class OktaGovernanceProvider implements GovernanceProvider {
       // Also check if there's an active OIG request for this user/condition
       // This requires listing requests and filtering
       try {
-        const requests = await this.oktaRequest<Array<{ 
-          id: string; 
-          status: string; 
-          state: string;
-          subjectId: string;
-          requestConditionId: string;
-          target?: { id: string; type: string; endDate?: string };
-        }>>(
-          `/governance/api/v2/requests?subjectId=${subject.id}&requestConditionId=${this.config.requestConditionId}`
+        const requests = await this.oktaRequest<
+          Array<{
+            id: string;
+            status: string;
+            state: string;
+            subjectId: string;
+            requestConditionId: string;
+            target?: { id: string; type: string; endDate?: string };
+          }>
+        >(
+          `/governance/api/v2/requests?subjectId=${subject.id}&requestConditionId=${this.config.requestConditionId}`,
         );
 
-        const activeRequest = requests.find(r => 
-          r.requestConditionId === this.config.requestConditionId &&
-          (r.state === "RESOLVED" || r.state === "ACTIVE") &&
-          r.target
+        const activeRequest = requests.find(
+          (r) =>
+            r.requestConditionId === this.config.requestConditionId &&
+            (r.state === "RESOLVED" || r.state === "ACTIVE") &&
+            r.target,
         );
 
         if (activeRequest && activeRequest.target) {
@@ -794,7 +912,10 @@ export class OktaGovernanceProvider implements GovernanceProvider {
             grantedAt: new Date().toISOString(),
             expiresAt: activeRequest.target.endDate,
             status: "ACTIVE",
-            raw: { requestId: activeRequest.id, requestConditionId: this.config.requestConditionId },
+            raw: {
+              requestId: activeRequest.id,
+              requestConditionId: this.config.requestConditionId,
+            },
           });
         }
       } catch {
@@ -803,48 +924,58 @@ export class OktaGovernanceProvider implements GovernanceProvider {
 
       return null;
     } catch (error) {
-      logger.warn({ error, subjectId: subject.id, entitlementId: entitlement.entitlementId }, "Failed to get Okta assignment");
+      logger.warn(
+        {
+          error,
+          subjectId: subject.id,
+          entitlementId: entitlement.entitlementId,
+        },
+        "Failed to get Okta assignment",
+      );
       return null;
     }
   }
 
-  async revokeAssignment(assignment: GovernanceAssignment): Promise<GovernanceRevocationResult> {
+  async revokeAssignment(
+    assignment: GovernanceAssignment,
+  ): Promise<GovernanceRevocationResult> {
     try {
       // Okta OIG: governance authority only observes authoritative revocation/expiration
       // If durationOwner = okta → Opnory observes Okta's revocation via request status
       // If fulfillmentOwner = opnory → downstream group/app mutation belongs to executor
       // If fulfillmentOwner = okta → Opnory triggers authoritative principal access revocation
-      
+
       // Check if this is an authoritative grant (Principal Access) that Okta can revoke
       // The assignment raw should contain principalOrn and resourceOrn for revocation
       const principalOrn = assignment.raw?.principalOrn;
       const resourceOrn = assignment.raw?.resourceOrn;
-      
+
       if (principalOrn && resourceOrn) {
         // Use Okta's documented Principal Access v2 revocation endpoint (Beta)
         // POST /governance/api/v2/revoke-principal-access
         // Body: { principalOrn, actor: "ADMIN", revokeOrns: [resourceOrn] }
         // Requires: okta.governance.entitlements.manage scope + APP_ADMIN role
         try {
-          await this.oktaRequest(
-            `/governance/api/v2/revoke-principal-access`,
-            { 
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                principalOrn,
-                actor: "ADMIN",
-                revokeOrns: [resourceOrn],
-              }),
-            }
-          );
+          await this.oktaRequest(`/governance/api/v2/revoke-principal-access`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              principalOrn,
+              actor: "ADMIN",
+              revokeOrns: [resourceOrn],
+            }),
+          });
         } catch (error) {
           // If revoke-principal-access fails (e.g., Beta endpoint not available),
           // fall back to observe-only mode rather than failing hard
-          logger.warn({ error, principalOrn, resourceOrn }, "Okta revoke-principal-access failed (Beta endpoint may not be available); falling back to observe-only");
+          logger.warn(
+            { error, principalOrn, resourceOrn },
+            "Okta revoke-principal-access failed (Beta endpoint may not be available); falling back to observe-only",
+          );
           return GovernanceRevocationResultSchema.parse({
             success: true,
-            message: "Okta governance revocation observed (revoke-principal-access unavailable; manual remediation may be required)",
+            message:
+              "Okta governance revocation observed (revoke-principal-access unavailable; manual remediation may be required)",
             authority: "okta",
             assignmentId: assignment.assignmentId,
             metadata: { fallback: true, error: String(error) },
@@ -859,20 +990,25 @@ export class OktaGovernanceProvider implements GovernanceProvider {
         // (DELETE /governance/api/v2/requests/{id} is not a documented public operation)
         // Reconciliation will detect removal via getAssignment() returning null or REVOKED status
       }
-      
+
       // Do NOT mutate group membership here - that's fulfillment, not governance
       // The fulfillment executor handles downstream mutations based on governance state
 
       return GovernanceRevocationResultSchema.parse({
         success: true,
-        message: principalOrn ? "Okta principal access revoked" : "Okta governance revocation observed (no authoritative grant to revoke)",
+        message: principalOrn
+          ? "Okta principal access revoked"
+          : "Okta governance revocation observed (no authoritative grant to revoke)",
         authority: "okta",
         assignmentId: assignment.assignmentId,
         status: principalOrn ? "REVOKED" : "OBSERVE_ONLY",
         authoritativeMutationPerformed: !!principalOrn,
       });
     } catch (error) {
-      logger.error({ error, assignmentId: assignment.assignmentId }, "Failed to revoke Okta assignment");
+      logger.error(
+        { error, assignmentId: assignment.assignmentId },
+        "Failed to revoke Okta assignment",
+      );
       return GovernanceRevocationResultSchema.parse({
         success: false,
         message: "Okta revocation failed",
@@ -883,7 +1019,10 @@ export class OktaGovernanceProvider implements GovernanceProvider {
     }
   }
 
-  private mapOktaRequestStatus(status: string, state: string): GovernanceDecisionStatus {
+  private mapOktaRequestStatus(
+    status: string,
+    state: string,
+  ): GovernanceDecisionStatus {
     // Okta OIG request states: PENDING, ACTIVE, RESOLVED, REJECTED, EXPIRED, CANCELLED
     // Okta OIG request statuses: APPROVED, DENIED, PENDING_APPROVAL, etc.
     switch (state) {
@@ -910,7 +1049,7 @@ export interface GovernanceProviderFactoryConfig {
 
 export function createGovernanceProvider(
   authority: GovernanceAuthority,
-  config: GovernanceProviderFactoryConfig = {}
+  config: GovernanceProviderFactoryConfig = {},
 ): GovernanceProvider {
   switch (authority) {
     case "local":
@@ -942,7 +1081,7 @@ export class GovernanceService {
     private localProvider: LocalGovernanceProvider,
     private entraProvider?: GovernanceProvider,
     private oktaProvider?: GovernanceProvider,
-    auditStore?: AuditEventStore
+    auditStore?: AuditEventStore,
   ) {
     this.providers.set("local", localProvider);
     if (entraProvider) {
@@ -965,7 +1104,7 @@ export class GovernanceService {
   async submitGovernedRequest(
     request: AccessRequest,
     entitlement: EntitlementRef,
-    correlationId: string
+    correlationId: string,
   ): Promise<GovernanceRequest> {
     const authority = entitlement.governance?.provider || "local";
     const provider = this.getProvider(authority);
@@ -980,13 +1119,15 @@ export class GovernanceService {
     const governedEntitlement = await provider.resolveEntitlement(entitlement);
 
     // Submit to external authority
-    const governedRequest: GovernedAccessRequest = GovernedAccessRequestSchema.parse({
-      requestId: request.id,
-      subject,
-      entitlement: governedEntitlement,
-      justification: request.reason,
-      requestedDuration: request.metadata?.requestedDuration as string | undefined,
-    });
+    const governedRequest: GovernedAccessRequest =
+      GovernedAccessRequestSchema.parse({
+        requestId: request.id,
+        subject,
+        entitlement: governedEntitlement,
+        justification: request.reason,
+        requestedDuration: request.metadata?.requestedDuration as
+          string | undefined,
+      });
 
     const governanceRequest = await provider.submitRequest(governedRequest);
 
@@ -1016,7 +1157,9 @@ export class GovernanceService {
     return governanceRequest;
   }
 
-  async checkGovernanceStatus(request: AccessRequest): Promise<GovernanceRequestStatus> {
+  async checkGovernanceStatus(
+    request: AccessRequest,
+  ): Promise<GovernanceRequestStatus> {
     if (!request.governanceExternalRequestId || !request.governanceAuthority) {
       throw new Error("Request not submitted to governance provider");
     }
@@ -1031,7 +1174,9 @@ export class GovernanceService {
     }
 
     const provider = this.getProvider(request.governanceAuthority);
-    const status = await provider.getRequestStatus(request.governanceExternalRequestId);
+    const status = await provider.getRequestStatus(
+      request.governanceExternalRequestId,
+    );
 
     // Update request based on governance status
     let newStatus = request.status;
@@ -1082,7 +1227,7 @@ export class GovernanceReconcilerImpl implements GovernanceReconciler {
     private governanceService: GovernanceService,
     config: Partial<GovernanceReconcilerConfig> = {},
     auditStore?: AuditEventStore,
-    approvalStore?: InMemoryApprovalStore
+    approvalStore?: InMemoryApprovalStore,
   ) {
     this.config = {
       provider: config.provider || "local",
@@ -1096,7 +1241,7 @@ export class GovernanceReconcilerImpl implements GovernanceReconciler {
 
   private async recordReconciliationAudit(
     type: ReconciliationAuditEventType,
-    metadata: Record<string, unknown>
+    metadata: Record<string, unknown>,
   ): Promise<void> {
     await recordAuditEvent(this.auditStore, {
       eventId: crypto.randomUUID(),
@@ -1115,7 +1260,7 @@ export class GovernanceReconcilerImpl implements GovernanceReconciler {
       (r) =>
         r.governanceExternalRequestId &&
         r.governanceAuthority &&
-        r.status === "AWAITING_AUTHORITY_DECISION"
+        r.status === "AWAITING_AUTHORITY_DECISION",
     );
   }
 
@@ -1125,7 +1270,7 @@ export class GovernanceReconcilerImpl implements GovernanceReconciler {
       (r) =>
         r.governanceAssignmentId &&
         r.governanceAuthority &&
-        r.status === "FULFILLED"
+        r.status === "FULFILLED",
     );
   }
 
@@ -1135,7 +1280,7 @@ export class GovernanceReconcilerImpl implements GovernanceReconciler {
       (r) =>
         r.governanceAssignmentId &&
         r.governanceAuthority &&
-        r.status === "REVOCATION_PENDING"
+        r.status === "REVOCATION_PENDING",
     );
   }
 
@@ -1161,10 +1306,11 @@ export class GovernanceReconcilerImpl implements GovernanceReconciler {
         // Update reconciliation state
         request.governanceLastCheckedAt = new Date().toISOString();
         request.governanceNextCheckAt = new Date(
-          Date.now() + this.config.retryBackoffMs
+          Date.now() + this.config.retryBackoffMs,
         ).toISOString();
 
-        const status = await this.governanceService.checkGovernanceStatus(request);
+        const status =
+          await this.governanceService.checkGovernanceStatus(request);
 
         // Update request based on governance status
         let newStatus = request.status;
@@ -1176,7 +1322,8 @@ export class GovernanceReconcilerImpl implements GovernanceReconciler {
               newStatus = "APPROVED";
               needsUpdate = true;
               request.governanceAssignmentId = status.assignmentId;
-              request.governanceAssignmentExpiresAt = status.assignmentExpiresAt;
+              request.governanceAssignmentExpiresAt =
+                status.assignmentExpiresAt;
               request.governanceRetryCount = 0;
               request.governanceLastError = undefined;
               request.governanceLastErrorCode = undefined;
@@ -1202,7 +1349,8 @@ export class GovernanceReconcilerImpl implements GovernanceReconciler {
             break;
           case "FAILED":
             // Could not determine status - increment retry
-            request.governanceRetryCount = (request.governanceRetryCount || 0) + 1;
+            request.governanceRetryCount =
+              (request.governanceRetryCount || 0) + 1;
             request.governanceLastError = "Provider returned FAILED status";
             needsUpdate = true;
             break;
@@ -1236,7 +1384,8 @@ export class GovernanceReconcilerImpl implements GovernanceReconciler {
         request.governanceLastError = errorMessage;
         request.governanceLastErrorCode = errorCode;
         request.governanceNextCheckAt = new Date(
-          Date.now() + this.config.retryBackoffMs * request.governanceRetryCount
+          Date.now() +
+            this.config.retryBackoffMs * request.governanceRetryCount,
         ).toISOString();
 
         await this.approvalStore.update(request);
@@ -1249,16 +1398,19 @@ export class GovernanceReconcilerImpl implements GovernanceReconciler {
 
         logger.warn(
           { requestId: request.id, error: errorMessage },
-          "Reconciliation failed for request"
+          "Reconciliation failed for request",
         );
       }
     }
 
-    await this.recordReconciliationAudit("GOVERNANCE_RECONCILIATION_SUCCEEDED", {
-      provider: this.config.provider,
-      operation: "reconcilePendingRequests",
-      ...result,
-    });
+    await this.recordReconciliationAudit(
+      "GOVERNANCE_RECONCILIATION_SUCCEEDED",
+      {
+        provider: this.config.provider,
+        operation: "reconcilePendingRequests",
+        ...result,
+      },
+    );
 
     return result;
   }
@@ -1282,15 +1434,32 @@ export class GovernanceReconcilerImpl implements GovernanceReconciler {
       result.requestsChecked++;
 
       try {
-        if (!request.governanceExternalRequestId || !request.governanceAuthority) {
+        if (
+          !request.governanceExternalRequestId ||
+          !request.governanceAuthority
+        ) {
           continue;
         }
 
-        const provider = this.governanceService["getProvider"](request.governanceAuthority);
+        const provider = this.governanceService["getProvider"](
+          request.governanceAuthority,
+        );
         const assignment = await provider.getAssignment(
           // We need to reconstruct subject and entitlement from request
-          { id: request.requesterId, displayName: undefined, email: request.requesterEmail, source: "manual", raw: {} },
-          { entitlementId: request.entitlement.id, authority: request.governanceAuthority!, externalId: request.governanceAssignmentId!, externalName: request.entitlement.name, metadata: {} }
+          {
+            id: request.requesterId,
+            displayName: undefined,
+            email: request.requesterEmail,
+            source: "manual",
+            raw: {},
+          },
+          {
+            entitlementId: request.entitlement.id,
+            authority: request.governanceAuthority!,
+            externalId: request.governanceAssignmentId!,
+            externalName: request.entitlement.name,
+            metadata: {},
+          },
         );
 
         // Check for drift: Opnory says FULFILLED but external says REVOKED/EXPIRED
@@ -1398,16 +1567,19 @@ export class GovernanceReconcilerImpl implements GovernanceReconciler {
 
         logger.warn(
           { requestId: request.id, error: errorMessage },
-          "Assignment reconciliation failed"
+          "Assignment reconciliation failed",
         );
       }
     }
 
-    await this.recordReconciliationAudit("GOVERNANCE_RECONCILIATION_SUCCEEDED", {
-      provider: this.config.provider,
-      operation: "reconcileAssignments",
-      ...result,
-    });
+    await this.recordReconciliationAudit(
+      "GOVERNANCE_RECONCILIATION_SUCCEEDED",
+      {
+        provider: this.config.provider,
+        operation: "reconcileAssignments",
+        ...result,
+      },
+    );
 
     return result;
   }
@@ -1435,11 +1607,25 @@ export class GovernanceReconcilerImpl implements GovernanceReconciler {
           continue;
         }
 
-        const provider = this.governanceService["getProvider"](request.governanceAuthority);
+        const provider = this.governanceService["getProvider"](
+          request.governanceAuthority,
+        );
         const revocationResult = await provider.revokeAssignment({
           assignmentId: request.governanceAssignmentId,
-          subject: { id: request.requesterId, displayName: undefined, email: request.requesterEmail, source: "manual", raw: {} },
-          entitlement: { entitlementId: request.entitlement.id, authority: request.governanceAuthority!, externalId: request.governanceAssignmentId!, externalName: request.entitlement.name, metadata: {} },
+          subject: {
+            id: request.requesterId,
+            displayName: undefined,
+            email: request.requesterEmail,
+            source: "manual",
+            raw: {},
+          },
+          entitlement: {
+            entitlementId: request.entitlement.id,
+            authority: request.governanceAuthority!,
+            externalId: request.governanceAssignmentId!,
+            externalName: request.entitlement.name,
+            metadata: {},
+          },
           authority: request.governanceAuthority!,
           grantedAt: new Date().toISOString(),
           status: "ACTIVE",
@@ -1471,16 +1657,19 @@ export class GovernanceReconcilerImpl implements GovernanceReconciler {
 
         logger.warn(
           { requestId: request.id, error: errorMessage },
-          "Revocation reconciliation failed"
+          "Revocation reconciliation failed",
         );
       }
     }
 
-    await this.recordReconciliationAudit("GOVERNANCE_RECONCILIATION_SUCCEEDED", {
-      provider: this.config.provider,
-      operation: "reconcileRevocations",
-      ...result,
-    });
+    await this.recordReconciliationAudit(
+      "GOVERNANCE_RECONCILIATION_SUCCEEDED",
+      {
+        provider: this.config.provider,
+        operation: "reconcileRevocations",
+        ...result,
+      },
+    );
 
     return result;
   }

@@ -14,7 +14,10 @@ import {
   ApprovalService,
   InMemoryApprovalStore,
 } from "@opnory/access-approval";
-import { FakeGitHubAccessExecutor, InMemoryIdempotencyStore } from "@opnory/access-executor";
+import {
+  FakeGitHubAccessExecutor,
+  InMemoryIdempotencyStore,
+} from "@opnory/access-executor";
 import {
   AuditEventStore,
   InMemoryAuditEventStore,
@@ -39,7 +42,10 @@ const logger = getLogger().child({ component: "access-service" });
 // Per-request locks to serialize concurrent decisions on the same request
 const requestLocks = new Map<string, Promise<unknown>>();
 
-async function withRequestLock<T>(requestId: string, fn: () => Promise<T>): Promise<T> {
+async function withRequestLock<T>(
+  requestId: string,
+  fn: () => Promise<T>,
+): Promise<T> {
   // Wait for any in-flight operation on this request to complete
   const existingLock = requestLocks.get(requestId);
   if (existingLock) {
@@ -87,12 +93,20 @@ export class AccessRequestService {
   private idempotencyStore: InMemoryIdempotencyStore;
 
   constructor(config: AccessServiceConfig = {}) {
-    this.catalog = config.catalog || new EntitlementCatalog([canonicalEngineeringContributorEntitlement]);
+    this.catalog =
+      config.catalog ||
+      new EntitlementCatalog([canonicalEngineeringContributorEntitlement]);
     this.policyEngine = new PolicyEngine(this.catalog);
     this.auditStore = config.auditStore || new InMemoryAuditEventStore();
-    this.approvalService = new ApprovalService(config.approvalStore, this.auditStore);
-    this.idempotencyStore = config.idempotencyStore || new InMemoryIdempotencyStore();
-    this.executor = config.executor || new FakeGitHubAccessExecutor(this.idempotencyStore, this.auditStore);
+    this.approvalService = new ApprovalService(
+      config.approvalStore,
+      this.auditStore,
+    );
+    this.idempotencyStore =
+      config.idempotencyStore || new InMemoryIdempotencyStore();
+    this.executor =
+      config.executor ||
+      new FakeGitHubAccessExecutor(this.idempotencyStore, this.auditStore);
   }
 
   // ============================================================================
@@ -120,11 +134,15 @@ export class AccessRequestService {
     }
     if (!entitlement) {
       // Try partial match
-      const matches = this.catalog.findByPartialMatch(params.entitlementIdOrName);
+      const matches = this.catalog.findByPartialMatch(
+        params.entitlementIdOrName,
+      );
       if (matches.length === 1) {
         entitlement = matches[0];
       } else if (matches.length > 1) {
-        throw new Error(`Ambiguous entitlement: "${params.entitlementIdOrName}" matches ${matches.length} entitlements`);
+        throw new Error(
+          `Ambiguous entitlement: "${params.entitlementIdOrName}" matches ${matches.length} entitlements`,
+        );
       }
     }
 
@@ -197,13 +215,17 @@ export class AccessRequestService {
 
     // For this slice, we only support APPROVAL_REQUIRED
     if (policyResult.decision !== "APPROVAL_REQUIRED") {
-      throw new Error(`Policy decision not supported in this slice: ${policyResult.decision}`);
+      throw new Error(
+        `Policy decision not supported in this slice: ${policyResult.decision}`,
+      );
     }
 
     const idempotencyKey = `${requestId}:${entitlement.id}:${params.requesterId}`;
 
     // Set expiration to 7 days from now for approval window
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const expiresAt = new Date(
+      Date.now() + 7 * 24 * 60 * 60 * 1000,
+    ).toISOString();
 
     const request: AccessRequest = {
       id: requestId,
@@ -267,7 +289,10 @@ export class AccessRequestService {
       },
     });
 
-    logger.info({ requestId, entitlementId: entitlement.id }, "Access request created");
+    logger.info(
+      { requestId, entitlementId: entitlement.id },
+      "Access request created",
+    );
     return request;
   }
 
@@ -278,18 +303,27 @@ export class AccessRequestService {
   async decideAccessRequest(
     requestId: string,
     decision: ApprovalDecision,
-    correlationId: string
+    correlationId: string,
   ): Promise<AccessRequest> {
     return withRequestLock(requestId, async () => {
       // This will audit APPROVED/DENIED and validate self-approval
-      const result = await this.approvalService.approve(requestId, decision, correlationId);
+      const result = await this.approvalService.approve(
+        requestId,
+        decision,
+        correlationId,
+      );
       const updatedRequest = result.request;
 
       // If approved or retrying from FAILED, start fulfillment and wait for completion
-      if (updatedRequest.status === "APPROVED" || updatedRequest.status === "FULFILLING") {
+      if (
+        updatedRequest.status === "APPROVED" ||
+        updatedRequest.status === "FULFILLING"
+      ) {
         await this.fulfillRequest(updatedRequest, correlationId);
         // Return the final state after fulfillment
-        return this.approvalService["store"].getById(requestId) as Promise<AccessRequest>;
+        return this.approvalService["store"].getById(
+          requestId,
+        ) as Promise<AccessRequest>;
       }
 
       return updatedRequest;
@@ -302,10 +336,12 @@ export class AccessRequestService {
 
   private async fulfillRequest(
     approvedRequest: AccessRequest,
-    correlationId: string
+    correlationId: string,
   ): Promise<void> {
     // Transition to FULFILLING with optimistic concurrency
-    const currentRequest = await this.approvalService["store"].getById(approvedRequest.id);
+    const currentRequest = await this.approvalService["store"].getById(
+      approvedRequest.id,
+    );
     if (!currentRequest) {
       throw new Error(`Request ${approvedRequest.id} not found`);
     }
@@ -315,7 +351,9 @@ export class AccessRequestService {
     // If already in FULFILLING (from retry), proceed directly to execution
     if (currentRequest.status !== "FULFILLING") {
       if (!canTransition(currentRequest.status, "FULFILLING")) {
-        throw new Error(`Cannot fulfill request in status: ${currentRequest.status}`);
+        throw new Error(
+          `Cannot fulfill request in status: ${currentRequest.status}`,
+        );
       }
 
       fulfillingRequest = {
@@ -325,21 +363,28 @@ export class AccessRequestService {
         version: currentRequest.version + 1,
       };
 
-      await this.approvalService["store"].update(fulfillingRequest, currentRequest.version);
+      await this.approvalService["store"].update(
+        fulfillingRequest,
+        currentRequest.version,
+      );
     }
 
     // Convert to ApprovedAccessRequest for executor (type-safe)
     // Use toRetryFulfillmentRequest if already FULFILLING (from retry), otherwise toApprovedAccessRequest
-        const executorRequest = currentRequest.status === "FULFILLING"
-          ? toRetryFulfillmentRequest(currentRequest)
-          : toApprovedAccessRequest(approvedRequest);
+    const executorRequest =
+      currentRequest.status === "FULFILLING"
+        ? toRetryFulfillmentRequest(currentRequest)
+        : toApprovedAccessRequest(approvedRequest);
 
     // Execute via executor (defense in depth: executor verifies approval)
     const result = await this.executor.grant(executorRequest);
 
     if (result.success) {
       // Transition to FULFILLED
-      const baseRequest = currentRequest.status === "FULFILLING" ? currentRequest : fulfillingRequest!;
+      const baseRequest =
+        currentRequest.status === "FULFILLING"
+          ? currentRequest
+          : fulfillingRequest!;
       const fulfilledRequest: AccessRequest = {
         ...baseRequest,
         status: "FULFILLED",
@@ -351,11 +396,20 @@ export class AccessRequestService {
         },
       };
 
-      await this.approvalService["store"].update(fulfilledRequest, baseRequest.version);
-      logger.info({ requestId: approvedRequest.id }, "Access request fulfilled");
+      await this.approvalService["store"].update(
+        fulfilledRequest,
+        baseRequest.version,
+      );
+      logger.info(
+        { requestId: approvedRequest.id },
+        "Access request fulfilled",
+      );
     } else {
       // Transition to FAILED
-      const baseRequest = currentRequest.status === "FULFILLING" ? currentRequest : fulfillingRequest!;
+      const baseRequest =
+        currentRequest.status === "FULFILLING"
+          ? currentRequest
+          : fulfillingRequest!;
       const failedRequest: AccessRequest = {
         ...baseRequest,
         status: "FAILED",
@@ -363,8 +417,14 @@ export class AccessRequestService {
         updatedAt: new Date().toISOString(),
       };
 
-      await this.approvalService["store"].update(failedRequest, baseRequest.version);
-      logger.error({ requestId: approvedRequest.id, error: result.error }, "Access request fulfillment failed");
+      await this.approvalService["store"].update(
+        failedRequest,
+        baseRequest.version,
+      );
+      logger.error(
+        { requestId: approvedRequest.id, error: result.error },
+        "Access request fulfillment failed",
+      );
     }
   }
 
@@ -378,18 +438,25 @@ export class AccessRequestService {
 
   async getRequestsByRequester(requesterId: string): Promise<AccessRequest[]> {
     const allRequests = await this.approvalService["store"].getAll();
-    return allRequests.filter((r: AccessRequest) => r.requesterId === requesterId);
+    return allRequests.filter(
+      (r: AccessRequest) => r.requesterId === requesterId,
+    );
   }
 
-  async getAuditTrail(requestId: string): Promise<import("@opnory/access-audit").AuditEvent[]> {
+  async getAuditTrail(
+    requestId: string,
+  ): Promise<import("@opnory/access-audit").AuditEvent[]> {
     return this.auditStore.getByRequestId(requestId);
   }
 
   // Audit unauthorized approval attempt
-  async auditUnauthorizedApprovalAttempt(requestId: string, actorId: string): Promise<void> {
+  async auditUnauthorizedApprovalAttempt(
+    requestId: string,
+    actorId: string,
+  ): Promise<void> {
     const request = await this.getRequestById(requestId);
     const correlationId = uuidv4();
-    
+
     await recordAuditEvent(this.auditStore, {
       eventId: uuidv4(),
       requestId,
@@ -399,7 +466,8 @@ export class AccessRequestService {
       type: "UNAUTHORIZED_APPROVAL_ATTEMPT",
       metadata: {
         reason: "Actor is not the assigned approver for this request",
-        requiredApprover: (request?.metadata?.requiredApprovers as string[])?.[0] || "unknown",
+        requiredApprover:
+          (request?.metadata?.requiredApprovers as string[])?.[0] || "unknown",
       },
     });
   }
@@ -416,7 +484,9 @@ export class AccessRequestService {
 
 let defaultService: AccessRequestService | null = null;
 
-export function getAccessService(config?: AccessServiceConfig): AccessRequestService {
+export function getAccessService(
+  config?: AccessServiceConfig,
+): AccessRequestService {
   if (!defaultService) {
     defaultService = new AccessRequestService(config);
   }

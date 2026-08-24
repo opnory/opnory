@@ -1,5 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "bun:test";
-import { EvidenceRecorder, verifyCleanWorkingTree, verifyCommitSha, requireSandboxConfirmation, requireEnvVars, pollWithTimeout, sleep, newCorrelationId, newIdempotencyKey, getEnv, getEnvOptional } from "./common.js";
+import {
+  EvidenceRecorder,
+  verifyCleanWorkingTree,
+  verifyCommitSha,
+  requireSandboxConfirmation,
+  requireEnvVars,
+  pollWithTimeout,
+  sleep,
+  newCorrelationId,
+  newIdempotencyKey,
+  getEnv,
+  getEnvOptional,
+} from "./common.js";
 import { execSync } from "child_process";
 import { join } from "path";
 import { fileURLToPath } from "url";
@@ -14,13 +26,17 @@ describe("Live Governance Common", () => {
     let recorder: EvidenceRecorder;
 
     beforeEach(() => {
-      recorder = new EvidenceRecorder("test-provider", "test-sha", "test-tenant");
+      recorder = new EvidenceRecorder(
+        "test-provider",
+        "test-sha",
+        "test-tenant",
+      );
     });
 
     it("should record steps with PASS/FAIL status", () => {
       const step = recorder.startStep("T1", "Test step");
       step.end("PASS", { externalId: "value" });
-      
+
       const summary = recorder.getSummary();
       expect(summary.steps).toHaveLength(1);
       expect(summary.steps[0].step).toBe("T1");
@@ -31,10 +47,10 @@ describe("Live Governance Common", () => {
     it("should track overall FAIL status when any step fails", () => {
       const step1 = recorder.startStep("T1", "Pass step");
       step1.end("PASS");
-      
+
       const step2 = recorder.startStep("T2", "Fail step");
       step2.end("FAIL", { error: "something went wrong" });
-      
+
       const summary = recorder.getSummary();
       expect(summary.overallStatus).toBe("FAIL");
     });
@@ -42,10 +58,10 @@ describe("Live Governance Common", () => {
     it("should track overall PASS status when all steps pass", () => {
       const step1 = recorder.startStep("T1", "Pass step");
       step1.end("PASS");
-      
+
       const step2 = recorder.startStep("T2", "Another pass step");
       step2.end("PASS");
-      
+
       const summary = recorder.getSummary();
       expect(summary.overallStatus).toBe("PASS");
     });
@@ -54,7 +70,7 @@ describe("Live Governance Common", () => {
       recorder.incrementExternalMutation("providerRequestCreates");
       recorder.incrementExternalMutation("providerRevokeMutations");
       recorder.incrementExternalMutation("providerRequestCreates");
-      
+
       const summary = recorder.getSummary();
       expect(summary.externalMutations.providerRequestCreates).toBe(2);
       expect(summary.externalMutations.providerRevokeMutations).toBe(1);
@@ -63,7 +79,7 @@ describe("Live Governance Common", () => {
     it("should track duplicate mutations", () => {
       recorder.incrementDuplicateMutation();
       recorder.incrementDuplicateMutation();
-      
+
       const summary = recorder.getSummary();
       expect(summary.duplicateMutations).toBe(2);
     });
@@ -71,28 +87,31 @@ describe("Live Governance Common", () => {
     it("should track credential leakage", () => {
       const step = recorder.startStep("T1", "Test step");
       step.end("PASS", { token: "secret-value" }); // This should trigger redaction
-      
+
       const summary = recorder.getSummary();
       expect(summary.credentialLeakage).toBe(true);
     });
 
     it("should not mark credential leakage for safe keys", () => {
       const step = recorder.startStep("T1", "Test step");
-      step.end("PASS", { externalRequestId: "req-123", correlationId: "corr-456" });
-      
+      step.end("PASS", {
+        externalRequestId: "req-123",
+        correlationId: "corr-456",
+      });
+
       const summary = recorder.getSummary();
       expect(summary.credentialLeakage).toBe(false);
     });
 
     it("should redact sensitive keys in metadata", () => {
       const step = recorder.startStep("T1", "Test step");
-      step.end("PASS", { 
+      step.end("PASS", {
         externalRequestId: "req-123",
         accessToken: "secret-token",
         clientSecret: "secret-client",
         privateKey: "secret-key",
       });
-      
+
       const summary = recorder.getSummary();
       const stepMeta = summary.steps[0].metadata;
       expect(stepMeta.externalRequestId).toBe("req-123");
@@ -104,10 +123,10 @@ describe("Live Governance Common", () => {
     it("should write artifacts to .live-results directory", () => {
       const step = recorder.startStep("T1", "Test step");
       step.end("PASS", { externalRequestId: "req-123" });
-      
+
       // This will create files in .live-results
       recorder.writeArtifacts();
-      
+
       // Verify files exist (we can't easily test this without filesystem mocks)
       // but we can at least verify the method runs without error
       expect(true).toBe(true);
@@ -120,7 +139,10 @@ describe("Live Governance Common", () => {
       const sha = verifyCommitSha();
       expect(sha).toMatch(/^[a-f0-9]{40}$/);
       // Also verify it matches the current git HEAD
-      const actualHead = execSync("git rev-parse HEAD", { cwd: PROJECT_ROOT, encoding: "utf-8" }).trim();
+      const actualHead = execSync("git rev-parse HEAD", {
+        cwd: PROJECT_ROOT,
+        encoding: "utf-8",
+      }).trim();
       expect(sha).toBe(actualHead);
     });
 
@@ -131,7 +153,10 @@ describe("Live Governance Common", () => {
       const sha = verifyCommitSha();
       expect(sha).toMatch(/^[a-f0-9]{40}$/);
       // Also verify it matches the current git HEAD
-      const actualHead = execSync("git rev-parse HEAD", { cwd: PROJECT_ROOT, encoding: "utf-8" }).trim();
+      const actualHead = execSync("git rev-parse HEAD", {
+        cwd: PROJECT_ROOT,
+        encoding: "utf-8",
+      }).trim();
       expect(sha).toBe(actualHead);
     });
   });
@@ -149,27 +174,31 @@ describe("Live Governance Common", () => {
     it("should throw when OPNORY_LIVE_GOVERNANCE_TESTS is not set", () => {
       const original = process.env.OPNORY_LIVE_GOVERNANCE_TESTS;
       delete process.env.OPNORY_LIVE_GOVERNANCE_TESTS;
-      
-      expect(() => requireSandboxConfirmation("entra")).toThrow("Sandbox confirmation required");
-      
+
+      expect(() => requireSandboxConfirmation("entra")).toThrow(
+        "Sandbox confirmation required",
+      );
+
       if (original) process.env.OPNORY_LIVE_GOVERNANCE_TESTS = original;
     });
 
     it("should throw when provider-specific confirmation is not set", () => {
       process.env.OPNORY_LIVE_GOVERNANCE_TESTS = "true";
       delete process.env.OPNORY_ENTRA_SANDBOX_CONFIRM;
-      
-      expect(() => requireSandboxConfirmation("entra")).toThrow("Sandbox confirmation required");
-      
+
+      expect(() => requireSandboxConfirmation("entra")).toThrow(
+        "Sandbox confirmation required",
+      );
+
       delete process.env.OPNORY_LIVE_GOVERNANCE_TESTS;
     });
 
     it("should pass when both flags are set", () => {
       process.env.OPNORY_LIVE_GOVERNANCE_TESTS = "true";
       process.env.OPNORY_ENTRA_SANDBOX_CONFIRM = "true";
-      
+
       expect(() => requireSandboxConfirmation("entra")).not.toThrow();
-      
+
       delete process.env.OPNORY_LIVE_GOVERNANCE_TESTS;
       delete process.env.OPNORY_ENTRA_SANDBOX_CONFIRM;
     });
@@ -179,9 +208,9 @@ describe("Live Governance Common", () => {
     it("should pass when all vars are set", () => {
       process.env.TEST_VAR_1 = "value1";
       process.env.TEST_VAR_2 = "value2";
-      
+
       expect(() => requireEnvVars(["TEST_VAR_1", "TEST_VAR_2"])).not.toThrow();
-      
+
       delete process.env.TEST_VAR_1;
       delete process.env.TEST_VAR_2;
     });
@@ -189,9 +218,11 @@ describe("Live Governance Common", () => {
     it("should throw when a var is missing", () => {
       process.env.TEST_VAR_1 = "value1";
       delete process.env.TEST_VAR_2;
-      
-      expect(() => requireEnvVars(["TEST_VAR_1", "TEST_VAR_2"])).toThrow("Missing required environment variables: TEST_VAR_2");
-      
+
+      expect(() => requireEnvVars(["TEST_VAR_1", "TEST_VAR_2"])).toThrow(
+        "Missing required environment variables: TEST_VAR_2",
+      );
+
       delete process.env.TEST_VAR_1;
     });
   });
@@ -205,19 +236,20 @@ describe("Live Governance Common", () => {
           if (attempts >= 2) return "success";
           return null;
         },
-        { intervalMs: 10, timeoutMs: 1000, description: "test" }
+        { intervalMs: 10, timeoutMs: 1000, description: "test" },
       );
-      
+
       expect(result).toBe("success");
       expect(attempts).toBe(2);
     });
 
     it("should reject on timeout", async () => {
       await expect(
-        pollWithTimeout(
-          async () => null,
-          { intervalMs: 10, timeoutMs: 50, description: "test" }
-        )
+        pollWithTimeout(async () => null, {
+          intervalMs: 10,
+          timeoutMs: 50,
+          description: "test",
+        }),
       ).rejects.toThrow("Timeout waiting for test");
     });
   });
@@ -234,7 +266,9 @@ describe("Live Governance Common", () => {
   describe("newCorrelationId", () => {
     it("should generate UUID v4", () => {
       const id = newCorrelationId();
-      expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+      expect(id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      );
     });
 
     it("should generate unique IDs", () => {
@@ -260,7 +294,9 @@ describe("Live Governance Common", () => {
 
     it("should throw for missing required env var", () => {
       delete process.env.TEST_MISSING;
-      expect(() => getEnv("TEST_MISSING")).toThrow("Required environment variable TEST_MISSING not set");
+      expect(() => getEnv("TEST_MISSING")).toThrow(
+        "Required environment variable TEST_MISSING not set",
+      );
     });
 
     it("should return optional env var or undefined", () => {

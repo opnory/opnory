@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { GitHubAccessExecutor, InMemoryIdempotencyStore, GitHubExecutorConfig } from "./index.js";
+import {
+  GitHubAccessExecutor,
+  InMemoryIdempotencyStore,
+  GitHubExecutorConfig,
+} from "./index.js";
 import { InMemoryAuditEventStore } from "@opnory/access-audit";
 import { ApprovedAccessRequest } from "@opnory/access-types";
 
@@ -24,70 +28,78 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
   const baseConfig: GitHubExecutorConfig = {
     appId: "12345",
     installationId: "67890",
-    privateKey: "-----BEGIN RSA PRIVATE KEY-----\nMOCK_KEY\n-----END RSA PRIVATE KEY-----",
+    privateKey:
+      "-----BEGIN RSA PRIVATE KEY-----\nMOCK_KEY\n-----END RSA PRIVATE KEY-----",
     allowedOrganizations: ["opnory-sandbox"],
     allowedTeams: ["opnory-engineering-contributors"],
   };
 
-  const baseRequest = (overrides: Partial<ApprovedAccessRequest> = {}): ApprovedAccessRequest => ({
-      id: "123e4567-e89b-12d3-a456-426614174000",
-      correlationId: "123e4567-e89b-12d3-a456-426614174001",
-      requesterId: "user-789",
-      requesterEmail: "user@example.com",
-      entitlement: {
-        id: "123e4567-e89b-12d3-a456-426614174002",
-        name: "GitHub Engineering Contributor",
-        system: "github",
-        githubConfig: {
-          organization: "opnory-sandbox",
-          teamSlug: "opnory-engineering-contributors",
-          teamRole: "member",
-        },
-        metadata: {},
+  const baseRequest = (
+    overrides: Partial<ApprovedAccessRequest> = {},
+  ): ApprovedAccessRequest => ({
+    id: "123e4567-e89b-12d3-a456-426614174000",
+    correlationId: "123e4567-e89b-12d3-a456-426614174001",
+    requesterId: "user-789",
+    requesterEmail: "user@example.com",
+    entitlement: {
+      id: "123e4567-e89b-12d3-a456-426614174002",
+      name: "GitHub Engineering Contributor",
+      system: "github",
+      githubConfig: {
+        organization: "opnory-sandbox",
+        teamSlug: "opnory-engineering-contributors",
+        teamRole: "member",
       },
-      reason: "Need access to engineering repos",
-      status: "APPROVED",
-      version: 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      approvedAt: new Date().toISOString(),
-      approvedBy: "manager@example.com",
-      idempotencyKey: "123e4567-e89b-12d3-a456-426614174000:***:user-789",
       metadata: {},
-      externalIdentities: {
-        github: {
-          login: "testuser",
-          verified: true,
-          verifiedAt: new Date().toISOString(),
-          source: "admin",
-        },
+    },
+    reason: "Need access to engineering repos",
+    status: "APPROVED",
+    version: 1,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    approvedAt: new Date().toISOString(),
+    approvedBy: "manager@example.com",
+    idempotencyKey: "123e4567-e89b-12d3-a456-426614174000:***:user-789",
+    metadata: {},
+    externalIdentities: {
+      github: {
+        login: "testuser",
+        verified: true,
+        verifiedAt: new Date().toISOString(),
+        source: "admin",
       },
-      // Expiration retry fields (from AccessRequestSchema)
-      expirationAttemptCount: 0,
-      expirationMaxRetries: 3,
-      // Governance reconciliation fields
-      governanceRetryCount: 0,
-      governanceLeaseOwner: undefined,
-      governanceLeaseUntil: undefined,
-      governanceLeaseAcquiredAt: undefined,
-      governanceAttemptCount: 0,
-      governanceNextAttemptAt: undefined,
-      governanceLastAttemptAt: undefined,
-      ...overrides,
-    });
+    },
+    // Expiration retry fields (from AccessRequestSchema)
+    expirationAttemptCount: 0,
+    expirationMaxRetries: 3,
+    // Governance reconciliation fields
+    governanceRetryCount: 0,
+    governanceLeaseOwner: undefined,
+    governanceLeaseUntil: undefined,
+    governanceLeaseAcquiredAt: undefined,
+    governanceAttemptCount: 0,
+    governanceNextAttemptAt: undefined,
+    governanceLastAttemptAt: undefined,
+    ...overrides,
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
     idempotencyStore = new InMemoryIdempotencyStore();
     auditStore = new InMemoryAuditEventStore();
-    
+
     // Create mock Octokit
     const mockOctokit = {
       request: mockOctokitRequest,
     };
-    
+
     // Create executor with mocked Octokit
-    executor = new GitHubAccessExecutor(baseConfig, idempotencyStore, auditStore, mockOctokit as any);
+    executor = new GitHubAccessExecutor(
+      baseConfig,
+      idempotencyStore,
+      auditStore,
+      mockOctokit as any,
+    );
   });
 
   afterEach(() => {
@@ -97,33 +109,46 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
   describe("Pre-flight checks", () => {
     it("should verify installation resolves to correct org", async () => {
       mockOctokitRequest
-        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight installation check
+        .mockResolvedValueOnce({
+          data: { account: { login: "opnory-sandbox" } },
+        }) // preflight installation check
         .mockRejectedValueOnce({ status: 404 }) // getTeamMembership - not found
-        .mockResolvedValueOnce({ // putTeamMembership
-          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        .mockResolvedValueOnce({
+          // putTeamMembership
+          data: {
+            state: "active",
+            role: "member",
+            user: { login: "testuser", id: 123 },
+          },
         })
-        .mockResolvedValueOnce({ // reconciliation GET
-          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        .mockResolvedValueOnce({
+          // reconciliation GET
+          data: {
+            state: "active",
+            role: "member",
+            user: { login: "testuser", id: 123 },
+          },
         });
 
       const request = baseRequest();
       const result = await executor.grant(request);
-      
+
       expect(result.success).toBe(true);
       // Should have made installation verification call
       expect(mockOctokitRequest).toHaveBeenCalledWith(
         "GET /app/installations/{installation_id}",
-        expect.objectContaining({ installation_id: 67890 })
+        expect.objectContaining({ installation_id: 67890 }),
       );
     });
 
     it("should fail if installation belongs to different org", async () => {
-      mockOctokitRequest
-        .mockResolvedValueOnce({ data: { account: { login: "wrong-org" } } }); // preflight
+      mockOctokitRequest.mockResolvedValueOnce({
+        data: { account: { login: "wrong-org" } },
+      }); // preflight
 
       const request = baseRequest();
       const result = await executor.grant(request);
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toContain("belongs to wrong-org");
     });
@@ -139,9 +164,9 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
           },
         },
       });
-      
+
       const result = await executor.grant(request);
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toContain("not in the allowlist");
       // Should not make any API calls - allowlist check happens first
@@ -159,9 +184,9 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
           },
         },
       });
-      
+
       const result = await executor.grant(request);
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toContain("not in the allowlist");
     });
@@ -170,9 +195,9 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
       const request = baseRequest({
         externalIdentities: {},
       });
-      
+
       const result = await executor.grant(request);
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toContain("missing github identity");
     });
@@ -187,9 +212,9 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
           },
         },
       });
-      
+
       const result = await executor.grant(request);
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toContain("not verified");
     });
@@ -204,9 +229,9 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
           },
         },
       });
-      
+
       const result = await executor.grant(request);
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toContain("missing login");
     });
@@ -215,8 +240,11 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
   describe("Existing active/member → no PUT → idempotent success", () => {
     it("should return idempotent success when already member with correct role", async () => {
       mockOctokitRequest
-        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
-        .mockResolvedValueOnce({ // getTeamMembership - already member
+        .mockResolvedValueOnce({
+          data: { account: { login: "opnory-sandbox" } },
+        }) // preflight
+        .mockResolvedValueOnce({
+          // getTeamMembership - already member
           data: {
             state: "active",
             role: "member",
@@ -226,31 +254,44 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
 
       const request = baseRequest();
       const result = await executor.grant(request);
-      
+
       expect(result.success).toBe(true);
       expect(result.message).toContain("Already member");
       // Should NOT call PUT
-      const putCalls = mockOctokitRequest.mock.calls.filter(
-        (call) => call[0]?.startsWith("PUT")
+      const putCalls = mockOctokitRequest.mock.calls.filter((call) =>
+        call[0]?.startsWith("PUT"),
       );
       expect(putCalls.length).toBe(0);
     });
 
     it("should handle role mismatch - existing maintainer but requested member", async () => {
       mockOctokitRequest
-        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
-        .mockResolvedValueOnce({ // getTeamMembership - maintainer
+        .mockResolvedValueOnce({
+          data: { account: { login: "opnory-sandbox" } },
+        }) // preflight
+        .mockResolvedValueOnce({
+          // getTeamMembership - maintainer
           data: {
             state: "active",
             role: "maintainer",
             user: { login: "testuser", id: 123 },
           },
         })
-        .mockResolvedValueOnce({ // PUT to downgrade
-          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        .mockResolvedValueOnce({
+          // PUT to downgrade
+          data: {
+            state: "active",
+            role: "member",
+            user: { login: "testuser", id: 123 },
+          },
         })
-        .mockResolvedValueOnce({ // reconciliation GET
-          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        .mockResolvedValueOnce({
+          // reconciliation GET
+          data: {
+            state: "active",
+            role: "member",
+            user: { login: "testuser", id: 123 },
+          },
         });
 
       const request = baseRequest({
@@ -263,9 +304,9 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
           },
         },
       });
-      
+
       const result = await executor.grant(request);
-      
+
       // Current behavior: PUT to update role, then reconciliation succeeds
       expect(result.success).toBe(true);
     });
@@ -274,23 +315,35 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
   describe("404 membership → PUT → GET active → success", () => {
     it("should add member when not found", async () => {
       mockOctokitRequest
-        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
+        .mockResolvedValueOnce({
+          data: { account: { login: "opnory-sandbox" } },
+        }) // preflight
         .mockResolvedValueOnce({ status: 404 }) // getTeamMembership - not found
-        .mockResolvedValueOnce({ // putTeamMembership
-          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        .mockResolvedValueOnce({
+          // putTeamMembership
+          data: {
+            state: "active",
+            role: "member",
+            user: { login: "testuser", id: 123 },
+          },
         })
-        .mockResolvedValueOnce({ // reconciliation GET
-          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        .mockResolvedValueOnce({
+          // reconciliation GET
+          data: {
+            state: "active",
+            role: "member",
+            user: { login: "testuser", id: 123 },
+          },
         });
 
       const request = baseRequest();
       const result = await executor.grant(request);
-      
+
       expect(result.success).toBe(true);
       expect(result.message).toContain("Successfully granted");
       // Verify PUT was called
-      const putCalls = mockOctokitRequest.mock.calls.filter(
-        (call) => call[0]?.startsWith("PUT")
+      const putCalls = mockOctokitRequest.mock.calls.filter((call) =>
+        call[0]?.startsWith("PUT"),
       );
       expect(putCalls.length).toBe(1);
     });
@@ -299,18 +352,30 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
   describe("PUT/GET returns pending → AWAITING_EXTERNAL_ACCEPTANCE", () => {
     it("should return AWAITING_EXTERNAL_ACCEPTANCE when membership pending after PUT", async () => {
       mockOctokitRequest
-        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
+        .mockResolvedValueOnce({
+          data: { account: { login: "opnory-sandbox" } },
+        }) // preflight
         .mockResolvedValueOnce({ status: 404 }) // getTeamMembership - not found
-        .mockResolvedValueOnce({ // putTeamMembership
-          data: { state: "pending", role: "member", user: { login: "testuser", id: 123 } },
+        .mockResolvedValueOnce({
+          // putTeamMembership
+          data: {
+            state: "pending",
+            role: "member",
+            user: { login: "testuser", id: 123 },
+          },
         })
-        .mockResolvedValueOnce({ // reconciliation GET
-          data: { state: "pending", role: "member", user: { login: "testuser", id: 123 } },
+        .mockResolvedValueOnce({
+          // reconciliation GET
+          data: {
+            state: "pending",
+            role: "member",
+            user: { login: "testuser", id: 123 },
+          },
         });
 
       const request = baseRequest();
       const result = await executor.grant(request);
-      
+
       expect(result.success).toBe(true);
       expect(result.status).toBe("AWAITING_EXTERNAL_ACCEPTANCE");
       expect(result.message).toContain("awaiting user acceptance");
@@ -320,13 +385,19 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
   describe("403 team-sync → EXTERNAL_AUTHORITY_MANAGED", () => {
     it("should detect team-sync error and return EXTERNAL_AUTHORITY_MANAGED", async () => {
       mockOctokitRequest
-        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
+        .mockResolvedValueOnce({
+          data: { account: { login: "opnory-sandbox" } },
+        }) // preflight
         .mockResolvedValueOnce({ status: 404 }) // getTeamMembership - not found
-        .mockRejectedValueOnce(new Error("Team is managed by an external identity provider (team_sync)"));
+        .mockRejectedValueOnce(
+          new Error(
+            "Team is managed by an external identity provider (team_sync)",
+          ),
+        );
 
       const request = baseRequest();
       const result = await executor.grant(request);
-      
+
       expect(result.success).toBe(false);
       expect(result.reason).toBe("EXTERNAL_AUTHORITY_MANAGED");
       expect(result.authority).toBe("github-team-sync");
@@ -335,13 +406,17 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
 
     it("should NOT classify generic 403 as team-sync", async () => {
       mockOctokitRequest
-        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
+        .mockResolvedValueOnce({
+          data: { account: { login: "opnory-sandbox" } },
+        }) // preflight
         .mockResolvedValueOnce({ status: 404 }) // getTeamMembership - not found
-        .mockRejectedValueOnce(new Error("Forbidden: insufficient permissions"));
+        .mockRejectedValueOnce(
+          new Error("Forbidden: insufficient permissions"),
+        );
 
       const request = baseRequest();
       const result = await executor.grant(request);
-      
+
       expect(result.success).toBe(false);
       expect(result.reason).toBeUndefined(); // Should NOT be EXTERNAL_AUTHORITY_MANAGED
       expect(result.authority).toBeUndefined();
@@ -351,12 +426,14 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
   describe("404 team → FAILED with safe diagnostics", () => {
     it("should return FAILED when team not found", async () => {
       mockOctokitRequest
-        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
+        .mockResolvedValueOnce({
+          data: { account: { login: "opnory-sandbox" } },
+        }) // preflight
         .mockRejectedValueOnce(new Error("Not Found"));
 
       const request = baseRequest();
       const result = await executor.grant(request);
-      
+
       expect(result.success).toBe(false);
       // Should include safe diagnostic metadata in audit
       // (verified via audit store in integration test)
@@ -367,27 +444,41 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
     it("should return idempotent success on duplicate request", async () => {
       // First call - full flow
       mockOctokitRequest
-        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
+        .mockResolvedValueOnce({
+          data: { account: { login: "opnory-sandbox" } },
+        }) // preflight
         .mockRejectedValueOnce({ status: 404 }) // getTeamMembership
-        .mockResolvedValueOnce({ // putTeamMembership
-          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        .mockResolvedValueOnce({
+          // putTeamMembership
+          data: {
+            state: "active",
+            role: "member",
+            user: { login: "testuser", id: 123 },
+          },
         })
-        .mockResolvedValueOnce({ // reconciliation GET
-          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        .mockResolvedValueOnce({
+          // reconciliation GET
+          data: {
+            state: "active",
+            role: "member",
+            user: { login: "testuser", id: 123 },
+          },
         });
 
       const request = baseRequest();
       const result1 = await executor.grant(request); // First call
-      
+
       expect(result1.success).toBe(true);
-      
+
       // Second call - should hit idempotency check BEFORE any API calls
       // Reset mocks - idempotency should prevent ALL API calls
       vi.clearAllMocks();
-      mockOctokitRequest.mockResolvedValue({ data: { account: { login: "opnory-sandbox" } } });
-      
+      mockOctokitRequest.mockResolvedValue({
+        data: { account: { login: "opnory-sandbox" } },
+      });
+
       const result2 = await executor.grant(request); // Second call
-      
+
       expect(result2.success).toBe(true);
       expect(result2.message).toContain("idempotent");
       // Should not make ANY API calls due to idempotency check
@@ -398,13 +489,25 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
   describe("Reconciliation role mismatch", () => {
     it("should FAIL with RECONCILIATION_MISMATCH if reconciled role doesn't match requested", async () => {
       mockOctokitRequest
-        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
+        .mockResolvedValueOnce({
+          data: { account: { login: "opnory-sandbox" } },
+        }) // preflight
         .mockResolvedValueOnce({ status: 404 }) // getTeamMembership
-        .mockResolvedValueOnce({ // putTeamMembership
-          data: { state: "active", role: "maintainer", user: { login: "testuser", id: 123 } },
+        .mockResolvedValueOnce({
+          // putTeamMembership
+          data: {
+            state: "active",
+            role: "maintainer",
+            user: { login: "testuser", id: 123 },
+          },
         })
-        .mockResolvedValueOnce({ // reconciliation GET - role mismatch!
-          data: { state: "active", role: "maintainer", user: { login: "testuser", id: 123 } },
+        .mockResolvedValueOnce({
+          // reconciliation GET - role mismatch!
+          data: {
+            state: "active",
+            role: "maintainer",
+            user: { login: "testuser", id: 123 },
+          },
         });
 
       const request = baseRequest({
@@ -417,9 +520,9 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
           },
         },
       });
-      
+
       const result = await executor.grant(request);
-      
+
       // Should FAIL with RECONCILIATION_MISMATCH
       expect(result.success).toBe(false);
       expect(result.status).toBe("FAILED");
@@ -434,9 +537,16 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
     it("should DELETE and reconcile absence for active member", async () => {
       // Mock for preflight, GET (active), DELETE, GET (404)
       mockOctokitRequest
-        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
-        .mockResolvedValueOnce({ // getTeamMembership - active member
-          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        .mockResolvedValueOnce({
+          data: { account: { login: "opnory-sandbox" } },
+        }) // preflight
+        .mockResolvedValueOnce({
+          // getTeamMembership - active member
+          data: {
+            state: "active",
+            role: "member",
+            user: { login: "testuser", id: 123 },
+          },
         })
         .mockResolvedValueOnce({}) // DELETE
         .mockRejectedValueOnce({ status: 404 }); // reconciliation GET - 404 (absent)
@@ -446,7 +556,8 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
         ...baseRequest(),
         status: "FULFILLED",
         fulfilledAt: new Date().toISOString(),
-        externalId: "github-team-membership-testuser-opnory-sandbox-opnory-engineering-contributors",
+        externalId:
+          "github-team-membership-testuser-opnory-sandbox-opnory-engineering-contributors",
       });
 
       const result = await executor.revoke(fulfilledRequest);
@@ -454,8 +565,8 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
       expect(result.success).toBe(true);
       expect(result.message).toContain("revoked");
       // Should have called DELETE exactly once
-      const deleteCalls = mockOctokitRequest.mock.calls.filter(
-        (call) => call[0]?.startsWith("DELETE")
+      const deleteCalls = mockOctokitRequest.mock.calls.filter((call) =>
+        call[0]?.startsWith("DELETE"),
       );
       expect(deleteCalls.length).toBe(1);
     });
@@ -464,7 +575,9 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
   describe("Revocation - CASE 16: Already absent", () => {
     it("should return idempotent REVOKED when membership already absent", async () => {
       mockOctokitRequest
-        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
+        .mockResolvedValueOnce({
+          data: { account: { login: "opnory-sandbox" } },
+        }) // preflight
         .mockRejectedValueOnce({ status: 404 }); // getTeamMembership - already absent
 
       const { toFulfilledAccessRequest } = await import("@opnory/access-types");
@@ -472,7 +585,8 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
         ...baseRequest(),
         status: "FULFILLED",
         fulfilledAt: new Date().toISOString(),
-        externalId: "github-team-membership-testuser-opnory-sandbox-opnory-engineering-contributors",
+        externalId:
+          "github-team-membership-testuser-opnory-sandbox-opnory-engineering-contributors",
       });
 
       const result = await executor.revoke(fulfilledRequest);
@@ -480,8 +594,8 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
       expect(result.success).toBe(true);
       expect(result.message).toContain("absent");
       // Should NOT call DELETE
-      const deleteCalls = mockOctokitRequest.mock.calls.filter(
-        (call) => call[0]?.startsWith("DELETE")
+      const deleteCalls = mockOctokitRequest.mock.calls.filter((call) =>
+        call[0]?.startsWith("DELETE"),
       );
       expect(deleteCalls.length).toBe(0);
     });
@@ -490,13 +604,25 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
   describe("Revocation - CASE 17: DELETE succeeds but membership remains", () => {
     it("should FAIL with REVOCATION_RECONCILIATION_FAILED when reconciliation shows still active", async () => {
       mockOctokitRequest
-        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
-        .mockResolvedValueOnce({ // getTeamMembership - active
-          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        .mockResolvedValueOnce({
+          data: { account: { login: "opnory-sandbox" } },
+        }) // preflight
+        .mockResolvedValueOnce({
+          // getTeamMembership - active
+          data: {
+            state: "active",
+            role: "member",
+            user: { login: "testuser", id: 123 },
+          },
         })
         .mockResolvedValueOnce({}) // DELETE
-        .mockResolvedValueOnce({ // reconciliation GET - still active!
-          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        .mockResolvedValueOnce({
+          // reconciliation GET - still active!
+          data: {
+            state: "active",
+            role: "member",
+            user: { login: "testuser", id: 123 },
+          },
         });
 
       const { toFulfilledAccessRequest } = await import("@opnory/access-types");
@@ -504,7 +630,8 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
         ...baseRequest(),
         status: "FULFILLED",
         fulfilledAt: new Date().toISOString(),
-        externalId: "github-team-membership-testuser-opnory-sandbox-opnory-engineering-contributors",
+        externalId:
+          "github-team-membership-testuser-opnory-sandbox-opnory-engineering-contributors",
       });
 
       const result = await executor.revoke(fulfilledRequest);
@@ -518,9 +645,16 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
   describe("Revocation - CASE 18: Generic GitHub failure", () => {
     it("should not claim access removed on generic failure", async () => {
       mockOctokitRequest
-        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
-        .mockResolvedValueOnce({ // getTeamMembership - active
-          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        .mockResolvedValueOnce({
+          data: { account: { login: "opnory-sandbox" } },
+        }) // preflight
+        .mockResolvedValueOnce({
+          // getTeamMembership - active
+          data: {
+            state: "active",
+            role: "member",
+            user: { login: "testuser", id: 123 },
+          },
         })
         .mockRejectedValueOnce(new Error("Network error")); // DELETE fails
 
@@ -529,7 +663,8 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
         ...baseRequest(),
         status: "FULFILLED",
         fulfilledAt: new Date().toISOString(),
-        externalId: "github-team-membership-testuser-opnory-sandbox-opnory-engineering-contributors",
+        externalId:
+          "github-team-membership-testuser-opnory-sandbox-opnory-engineering-contributors",
       });
 
       const result = await executor.revoke(fulfilledRequest);
@@ -543,18 +678,30 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
   describe("Revocation - CASE 19: Team-sync/external authority", () => {
     it("should classify EXTERNAL_AUTHORITY_MANAGED and not mutate", async () => {
       mockOctokitRequest
-        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
-        .mockResolvedValueOnce({ // getTeamMembership - active
-          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        .mockResolvedValueOnce({
+          data: { account: { login: "opnory-sandbox" } },
+        }) // preflight
+        .mockResolvedValueOnce({
+          // getTeamMembership - active
+          data: {
+            state: "active",
+            role: "member",
+            user: { login: "testuser", id: 123 },
+          },
         })
-        .mockRejectedValueOnce(new Error("Team is managed by an external identity provider (team_sync)")); // DELETE fails with team-sync
+        .mockRejectedValueOnce(
+          new Error(
+            "Team is managed by an external identity provider (team_sync)",
+          ),
+        ); // DELETE fails with team-sync
 
       const { toFulfilledAccessRequest } = await import("@opnory/access-types");
       const fulfilledRequest = toFulfilledAccessRequest({
         ...baseRequest(),
         status: "FULFILLED",
         fulfilledAt: new Date().toISOString(),
-        externalId: "github-team-membership-testuser-opnory-sandbox-opnory-engineering-contributors",
+        externalId:
+          "github-team-membership-testuser-opnory-sandbox-opnory-engineering-contributors",
       });
 
       const result = await executor.revoke(fulfilledRequest);
@@ -569,9 +716,16 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
     it("should be idempotent - second revoke returns success with zero extra DELETE", async () => {
       // First revoke - full flow
       mockOctokitRequest
-        .mockResolvedValueOnce({ data: { account: { login: "opnory-sandbox" } } }) // preflight
-        .mockResolvedValueOnce({ // getTeamMembership - active
-          data: { state: "active", role: "member", user: { login: "testuser", id: 123 } },
+        .mockResolvedValueOnce({
+          data: { account: { login: "opnory-sandbox" } },
+        }) // preflight
+        .mockResolvedValueOnce({
+          // getTeamMembership - active
+          data: {
+            state: "active",
+            role: "member",
+            user: { login: "testuser", id: 123 },
+          },
         })
         .mockResolvedValueOnce({}) // DELETE
         .mockRejectedValueOnce({ status: 404 }); // reconciliation GET
@@ -581,7 +735,8 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
         ...baseRequest(),
         status: "FULFILLED",
         fulfilledAt: new Date().toISOString(),
-        externalId: "github-team-membership-testuser-opnory-sandbox-opnory-engineering-contributors",
+        externalId:
+          "github-team-membership-testuser-opnory-sandbox-opnory-engineering-contributors",
       });
 
       const result1 = await executor.revoke(fulfilledRequest);
@@ -589,7 +744,9 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
 
       // Second revoke - should hit idempotency check
       vi.clearAllMocks();
-      mockOctokitRequest.mockResolvedValue({ data: { account: { login: "opnory-sandbox" } } });
+      mockOctokitRequest.mockResolvedValue({
+        data: { account: { login: "opnory-sandbox" } },
+      });
 
       const result2 = await executor.revoke(fulfilledRequest);
       expect(result2.success).toBe(true);
@@ -611,7 +768,9 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
         externalId: undefined,
       };
 
-      expect(() => toFulfilledAccessRequest(notFulfilledRequest)).toThrow("Must be FULFILLED");
+      expect(() => toFulfilledAccessRequest(notFulfilledRequest)).toThrow(
+        "Must be FULFILLED",
+      );
     });
 
     it("should reject revoke for DENIED request", async () => {
@@ -627,7 +786,9 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
         externalId: undefined,
       };
 
-      expect(() => toFulfilledAccessRequest(deniedRequest)).toThrow("Must be FULFILLED");
+      expect(() => toFulfilledAccessRequest(deniedRequest)).toThrow(
+        "Must be FULFILLED",
+      );
     });
 
     it("should reject revoke for FAILED request", async () => {
@@ -641,7 +802,9 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
         externalId: undefined,
       };
 
-      expect(() => toFulfilledAccessRequest(failedRequest)).toThrow("Must be FULFILLED");
+      expect(() => toFulfilledAccessRequest(failedRequest)).toThrow(
+        "Must be FULFILLED",
+      );
     });
 
     it("should reject revoke for already REVOKED request", async () => {
@@ -655,7 +818,9 @@ describe("GitHubAccessExecutor - Adapter Tests", () => {
         externalId: "some-external-id",
       };
 
-      expect(() => toFulfilledAccessRequest(revokedRequest)).toThrow("Must be FULFILLED");
+      expect(() => toFulfilledAccessRequest(revokedRequest)).toThrow(
+        "Must be FULFILLED",
+      );
     });
   });
 });

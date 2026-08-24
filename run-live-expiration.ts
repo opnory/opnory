@@ -1,9 +1,17 @@
 #!/usr/bin/env tsx
 // Live expiration test - run directly with tsx
-import { GitHubAccessExecutor, InMemoryIdempotencyStore } from "./packages/access-executor/src/index.js";
+import {
+  GitHubAccessExecutor,
+  InMemoryIdempotencyStore,
+} from "./packages/access-executor/src/index.js";
 import { InMemoryAuditEventStore } from "./packages/access-audit/src/index.js";
 import { ExpirationScheduler } from "./packages/access-store-pg/src/expiration-scheduler.js";
-import { AccessRequest, FulfilledAccessRequest, EntitlementRef, toFulfilledAccessRequest } from "./packages/access-types/src/index.js";
+import {
+  AccessRequest,
+  FulfilledAccessRequest,
+  EntitlementRef,
+  toFulfilledAccessRequest,
+} from "./packages/access-types/src/index.js";
 import { Pool } from "pg";
 import { randomUUID as uuidv4 } from "crypto";
 
@@ -33,7 +41,7 @@ async function checkGitHubMembership(login: string): Promise<boolean> {
           Authorization: `Bearer ${GITHUB_TOKEN}`,
           Accept: "application/vnd.github+json",
         },
-      }
+      },
     );
     return response.status === 200;
   } catch {
@@ -57,12 +65,14 @@ async function runLiveExpirationTest() {
     {
       appId: "4647201",
       installationId: "154891672",
-      privateKey: process.env.OPNORY_GITHUB_PRIVATE_KEY || "-----BEGIN RSA PRIVATE KEY-----\nMOCK_KEY\n-----END RSA PRIVATE KEY-----",
+      privateKey:
+        process.env.OPNORY_GITHUB_PRIVATE_KEY ||
+        "-----BEGIN RSA PRIVATE KEY-----\nMOCK_KEY\n-----END RSA PRIVATE KEY-----",
       allowedOrganizations: ["opnory-sandbox"],
       allowedTeams: ["opnory-engineering-contributors"],
     },
     new InMemoryIdempotencyStore(),
-    auditStore
+    auditStore,
   );
 
   // Create scheduler with fast polling (every 5 seconds for testing)
@@ -78,7 +88,7 @@ async function runLiveExpirationTest() {
   try {
     // Test 1: Normal expiration
     console.log("\n--- TEST 1: Normal expiration ---");
-    
+
     // Verify opnory-dev is NOT on the team
     const initialMember = await checkGitHubMembership("opnory-dev");
     console.log(`Initial membership: ${initialMember ? "YES" : "NO"}`);
@@ -90,7 +100,12 @@ async function runLiveExpirationTest() {
         requesterId: "opnory-dev",
         requesterEmail: "opnory-dev@example.com",
         externalIdentities: {
-          github: { login: "opnory-dev", verified: true, verifiedAt: new Date().toISOString(), source: "admin" }
+          github: {
+            login: "opnory-dev",
+            verified: true,
+            verifiedAt: new Date().toISOString(),
+            source: "admin",
+          },
         },
         entitlement: entitlementRef,
         reason: "Cleanup",
@@ -102,11 +117,12 @@ async function runLiveExpirationTest() {
         approvedAt: new Date().toISOString(),
         approvedBy: "test",
         fulfilledAt: new Date().toISOString(),
-        externalId: "github-team-membership-opnory-dev-opnory-sandbox-opnory-engineering-contributors",
+        externalId:
+          "github-team-membership-opnory-dev-opnory-sandbox-opnory-engineering-contributors",
         idempotencyKey: `grant:${uuidv4()}:${entitlementRef.id}:opnory-dev`,
         metadata: {},
       } as FulfilledAccessRequest);
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise((r) => setTimeout(r, 2000));
     }
 
     // Create a test request with short TTL (30 seconds)
@@ -143,7 +159,8 @@ async function runLiveExpirationTest() {
       deniedReason: undefined,
       fulfilledAt: new Date(now.getTime() - 30000).toISOString(),
       fulfillmentError: undefined,
-      externalId: "github-team-membership-opnory-dev-opnory-sandbox-opnory-engineering-contributors",
+      externalId:
+        "github-team-membership-opnory-dev-opnory-sandbox-opnory-engineering-contributors",
       idempotencyKey: `grant:${testRequestId}:${entitlementRef.id}:opnory-dev`,
       metadata: {},
     };
@@ -175,15 +192,21 @@ async function runLiveExpirationTest() {
         request.externalId,
         request.idempotencyKey,
         JSON.stringify(request.metadata),
-      ]
+      ],
     );
 
-    console.log(`Created test request ${testRequestId} with expiry at ${accessExpiresAt.toISOString()}`);
+    console.log(
+      `Created test request ${testRequestId} with expiry at ${accessExpiresAt.toISOString()}`,
+    );
 
     // Grant access via executor
     const fulfilledRequest = toFulfilledAccessRequest(request);
     const grantResult = await executor.grant(fulfilledRequest as any);
-    console.log("Grant result:", grantResult.success ? "SUCCESS" : "FAILED", grantResult.message);
+    console.log(
+      "Grant result:",
+      grantResult.success ? "SUCCESS" : "FAILED",
+      grantResult.message,
+    );
 
     // Wait for the expiration to trigger
     console.log("Waiting for expiration to trigger (up to 90 seconds)...");
@@ -192,17 +215,19 @@ async function runLiveExpirationTest() {
     const startTime = Date.now();
 
     while (!revoked && Date.now() - startTime < maxWaitMs) {
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+
       const result = await pgPool.query(
         "SELECT status, access_expires_at FROM access_requests WHERE id = $1",
-        [testRequestId]
+        [testRequestId],
       );
-      
+
       if (result.rows.length > 0) {
         const row = result.rows[0];
-        console.log(`  Status: ${row.status}, expires: ${row.access_expires_at}`);
-        
+        console.log(
+          `  Status: ${row.status}, expires: ${row.access_expires_at}`,
+        );
+
         if (row.status === "REVOKED") {
           revoked = true;
           break;
@@ -230,7 +255,7 @@ async function runLiveExpirationTest() {
     console.log("\n--- TEST 2: Idempotent second run ---");
     const result2 = await pgPool.query(
       "SELECT status FROM access_requests WHERE id = $1",
-      [testRequestId]
+      [testRequestId],
     );
     console.log(`Request status: ${result2.rows[0].status}`);
     if (result2.rows[0].status !== "REVOKED") {
@@ -241,7 +266,7 @@ async function runLiveExpirationTest() {
 
     // Test 3: Extension protection
     console.log("\n--- TEST 3: Extension protection ---");
-    
+
     const testRequestId2 = uuidv4();
     const correlationId2 = uuidv4();
     const now2 = new Date();
@@ -253,7 +278,12 @@ async function runLiveExpirationTest() {
       requesterId: "opnory-dev",
       requesterEmail: "opnory-dev@example.com",
       externalIdentities: {
-        github: { login: "opnory-dev", verified: true, verifiedAt: new Date().toISOString(), source: "admin" }
+        github: {
+          login: "opnory-dev",
+          verified: true,
+          verifiedAt: new Date().toISOString(),
+          source: "admin",
+        },
       },
       entitlement: entitlementRef,
       reason: "Extension protection test",
@@ -270,7 +300,8 @@ async function runLiveExpirationTest() {
       deniedReason: undefined,
       fulfilledAt: new Date(now2.getTime() - 30000).toISOString(),
       fulfillmentError: undefined,
-      externalId: "github-team-membership-opnory-dev-opnory-sandbox-opnory-engineering-contributors-ext",
+      externalId:
+        "github-team-membership-opnory-dev-opnory-sandbox-opnory-engineering-contributors-ext",
       idempotencyKey: `grant:${testRequestId2}:${entitlementRef.id}:opnory-dev-ext`,
       metadata: {},
     };
@@ -284,9 +315,16 @@ async function runLiveExpirationTest() {
         idempotency_key, metadata
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
       [
-        request2.id, request2.correlationId, request2.requesterId, request2.requesterEmail,
-        request2.entitlement.id, request2.entitlement.name, request2.entitlement.system,
-        request2.reason, request2.status, request2.version,
+        request2.id,
+        request2.correlationId,
+        request2.requesterId,
+        request2.requesterEmail,
+        request2.entitlement.id,
+        request2.entitlement.name,
+        request2.entitlement.system,
+        request2.reason,
+        request2.status,
+        request2.version,
         request2.accessExpiresAt ? new Date(request2.accessExpiresAt) : null,
         request2.approvedAt ? new Date(request2.approvedAt) : null,
         request2.approvedBy,
@@ -294,7 +332,7 @@ async function runLiveExpirationTest() {
         request2.externalId,
         request2.idempotencyKey,
         JSON.stringify(request2.metadata),
-      ]
+      ],
     );
 
     // Grant access
@@ -303,27 +341,29 @@ async function runLiveExpirationTest() {
     console.log("Granted access for extension test");
 
     // Wait a bit then extend the accessExpiresAt to T2 (far future)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
     const accessExpiresAtT2 = new Date(now2.getTime() + 300000); // 5 minutes
     await pgPool.query(
       `UPDATE access_requests SET access_expires_at = $1, version = version + 1, updated_at = NOW() WHERE id = $2`,
-      [accessExpiresAtT2, testRequestId2]
+      [accessExpiresAtT2, testRequestId2],
     );
-    console.log(`Extended accessExpiresAt to ${accessExpiresAtT2.toISOString()}`);
+    console.log(
+      `Extended accessExpiresAt to ${accessExpiresAtT2.toISOString()}`,
+    );
 
     // Wait for scheduler to process (it should see T2 and skip)
-    await new Promise(resolve => setTimeout(resolve, 15000));
+    await new Promise((resolve) => setTimeout(resolve, 15000));
 
     // Verify request is still FULFILLED (not revoked)
     const result3 = await pgPool.query(
       "SELECT status, access_expires_at FROM access_requests WHERE id = $1",
-      [testRequestId2]
+      [testRequestId2],
     );
-    
+
     console.log(`Status after extension: ${result3.rows[0].status}`);
     console.log(`Access expires at: ${result3.rows[0].access_expires_at}`);
-    
+
     if (result3.rows[0].status !== "FULFILLED") {
       console.error("FAIL: Request was revoked despite extension");
       process.exit(1);
@@ -342,11 +382,11 @@ async function runLiveExpirationTest() {
     // Clean up: manually revoke
     await executor.revoke(fulfilledRequest2);
     console.log("Cleaned up: manually revoked extension test request");
-    
+
     // Verify cleaned up
     const cleanupResult = await pgPool.query(
       "SELECT status FROM access_requests WHERE id = $1",
-      [testRequestId2]
+      [testRequestId2],
     );
     console.log(`Cleanup status: ${cleanupResult.rows[0].status}`);
     if (cleanupResult.rows[0].status !== "REVOKED") {
@@ -356,14 +396,13 @@ async function runLiveExpirationTest() {
     console.log("✓ Cleanup successful");
 
     console.log("\n=== ALL TESTS PASSED ===");
-    
   } finally {
     await scheduler.stop();
     await pgPool.end();
   }
 }
 
-runLiveExpirationTest().catch(err => {
+runLiveExpirationTest().catch((err) => {
   console.error("Test failed:", err);
   process.exit(1);
 });

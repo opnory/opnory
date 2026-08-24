@@ -1,7 +1,18 @@
 import { getLogger } from "@opnory/observability";
 import { v4 as uuidv4 } from "uuid";
-import { ApprovedAccessRequest, ExecutionResult, FulfilledAccessRequest, ExternalIdentity, RevocationResult, AccessExecutor } from "@opnory/access-types";
-import { AuditEventStore, InMemoryAuditEventStore, recordAuditEvent } from "@opnory/access-audit";
+import {
+  ApprovedAccessRequest,
+  ExecutionResult,
+  FulfilledAccessRequest,
+  ExternalIdentity,
+  RevocationResult,
+  AccessExecutor,
+} from "@opnory/access-types";
+import {
+  AuditEventStore,
+  InMemoryAuditEventStore,
+  recordAuditEvent,
+} from "@opnory/access-audit";
 import { Octokit } from "@octokit/rest";
 import { createAppAuth } from "@octokit/auth-app";
 
@@ -43,7 +54,7 @@ export class FakeGitHubAccessExecutor implements AccessExecutor {
 
   constructor(
     idempotencyStore?: InMemoryIdempotencyStore,
-    auditStore?: AuditEventStore
+    auditStore?: AuditEventStore,
   ) {
     this.idempotencyStore = idempotencyStore || new InMemoryIdempotencyStore();
     this.auditStore = auditStore || new InMemoryAuditEventStore();
@@ -58,12 +69,18 @@ export class FakeGitHubAccessExecutor implements AccessExecutor {
     // Build idempotency key: accessRequestId + entitlementId + subjectId
     const idempotencyKey = `${request.id}:${request.entitlement.id}:${request.requesterId}`;
 
-    logger.info({ requestId: request.id, idempotencyKey }, "Executing access grant");
+    logger.info(
+      { requestId: request.id, idempotencyKey },
+      "Executing access grant",
+    );
 
     // Check idempotency
     const isFirstAttempt = this.idempotencyStore.checkAndMark(idempotencyKey);
     if (!isFirstAttempt) {
-      logger.info({ requestId: request.id, idempotencyKey }, "Idempotency check: already fulfilled");
+      logger.info(
+        { requestId: request.id, idempotencyKey },
+        "Idempotency check: already fulfilled",
+      );
       await recordAuditEvent(this.auditStore, {
         eventId: uuidv4(),
         requestId: request.id,
@@ -105,7 +122,9 @@ export class FakeGitHubAccessExecutor implements AccessExecutor {
 
     if (this.shouldFail) {
       const error = this.failReason;
-      const isReconciliationFailure = error.toLowerCase().includes("reconciliation") || error.toLowerCase().includes("verification");
+      const isReconciliationFailure =
+        error.toLowerCase().includes("reconciliation") ||
+        error.toLowerCase().includes("verification");
 
       await recordAuditEvent(this.auditStore, {
         eventId: uuidv4(),
@@ -146,7 +165,10 @@ export class FakeGitHubAccessExecutor implements AccessExecutor {
       },
     });
 
-    logger.info({ requestId: request.id, externalId }, "Access granted successfully");
+    logger.info(
+      { requestId: request.id, externalId },
+      "Access granted successfully",
+    );
 
     return {
       success: true,
@@ -159,7 +181,10 @@ export class FakeGitHubAccessExecutor implements AccessExecutor {
     // Build idempotency key for revocation
     const idempotencyKey = `revoke:${request.id}:${request.entitlement.id}:${request.requesterId}`;
 
-    logger.info({ requestId: request.id, idempotencyKey }, "Executing access revocation");
+    logger.info(
+      { requestId: request.id, idempotencyKey },
+      "Executing access revocation",
+    );
 
     const isFirstAttempt = this.idempotencyStore.checkAndMark(idempotencyKey);
     if (!isFirstAttempt) {
@@ -226,7 +251,7 @@ export class GitHubAccessExecutor implements AccessExecutor {
     config: GitHubExecutorConfig,
     idempotencyStore?: InMemoryIdempotencyStore,
     auditStore?: AuditEventStore,
-    octokit?: Octokit // For testing: inject mock Octokit
+    octokit?: Octokit, // For testing: inject mock Octokit
   ) {
     this.config = config;
     this.idempotencyStore = idempotencyStore || new InMemoryIdempotencyStore();
@@ -254,10 +279,14 @@ export class GitHubAccessExecutor implements AccessExecutor {
    */
   private validateAllowlist(org: string, teamSlug: string): void {
     if (!this.config.allowedOrganizations.includes(org)) {
-      throw new Error(`Organization '${org}' is not in the allowlist: ${this.config.allowedOrganizations.join(", ")}`);
+      throw new Error(
+        `Organization '${org}' is not in the allowlist: ${this.config.allowedOrganizations.join(", ")}`,
+      );
     }
     if (!this.config.allowedTeams.includes(teamSlug)) {
-      throw new Error(`Team '${teamSlug}' is not in the allowlist: ${this.config.allowedTeams.join(", ")}`);
+      throw new Error(
+        `Team '${teamSlug}' is not in the allowlist: ${this.config.allowedTeams.join(", ")}`,
+      );
     }
   }
 
@@ -265,7 +294,14 @@ export class GitHubAccessExecutor implements AccessExecutor {
    * Pre-flight checks before any mutation
    * Validates installation auth, allowlist, and verified identity
    */
-  private async preflightChecks(request: ApprovedAccessRequest | FulfilledAccessRequest): Promise<{ org: string; teamSlug: string; teamRole: "member" | "maintainer"; githubLogin: string }> {
+  private async preflightChecks(
+    request: ApprovedAccessRequest | FulfilledAccessRequest,
+  ): Promise<{
+    org: string;
+    teamSlug: string;
+    teamRole: "member" | "maintainer";
+    githubLogin: string;
+  }> {
     // Extract GitHub-specific config from entitlement
     const githubConfig = request.entitlement.githubConfig;
     if (!githubConfig) {
@@ -285,25 +321,38 @@ export class GitHubAccessExecutor implements AccessExecutor {
     // 3. Verify installation authentication works (GET /app/installations/{installation_id})
     // This confirms the installation resolves to the expected org
     try {
-      const installation = await this.octokit.request("GET /app/installations/{installation_id}", {
-        installation_id: Number(this.config.installationId),
-      });
+      const installation = await this.octokit.request(
+        "GET /app/installations/{installation_id}",
+        {
+          installation_id: Number(this.config.installationId),
+        },
+      );
 
       const account = installation.data.account;
       // account can be User or Organization, both have login
       const accountLogin = (account as { login: string })?.login;
       if (accountLogin !== org) {
-        throw new Error(`Installation ${this.config.installationId} belongs to ${accountLogin}, not ${org}`);
+        throw new Error(
+          `Installation ${this.config.installationId} belongs to ${accountLogin}, not ${org}`,
+        );
       }
-      logger.info({ installationId: this.config.installationId, accountLogin }, "Installation verified");
+      logger.info(
+        { installationId: this.config.installationId, accountLogin },
+        "Installation verified",
+      );
     } catch (error) {
       if (error instanceof Error && error.message.includes("belongs to")) {
         throw error;
       }
-      throw new Error(`Failed to verify installation: ${error instanceof Error ? error.message : "Unknown error"}`);
+      throw new Error(
+        `Failed to verify installation: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
 
-    logger.info({ org, teamSlug, githubLogin, teamRole }, "Pre-flight checks passed");
+    logger.info(
+      { org, teamSlug, githubLogin, teamRole },
+      "Pre-flight checks passed",
+    );
     return { org, teamSlug, teamRole, githubLogin };
   }
 
@@ -311,7 +360,9 @@ export class GitHubAccessExecutor implements AccessExecutor {
    * Validates and extracts the verified GitHub username from the request
    * The request must contain a verified github identity in externalIdentities
    */
-  private getGitHubLogin(request: ApprovedAccessRequest | FulfilledAccessRequest): string {
+  private getGitHubLogin(
+    request: ApprovedAccessRequest | FulfilledAccessRequest,
+  ): string {
     const githubIdentity = request.externalIdentities?.github;
     if (!githubIdentity) {
       throw new Error("Request missing github identity in externalIdentities");
@@ -319,7 +370,11 @@ export class GitHubAccessExecutor implements AccessExecutor {
     if (!githubIdentity.verified) {
       throw new Error("GitHub identity not verified - cannot provision");
     }
-    if (!githubIdentity.login || typeof githubIdentity.login !== "string" || githubIdentity.login.trim() === "") {
+    if (
+      !githubIdentity.login ||
+      typeof githubIdentity.login !== "string" ||
+      githubIdentity.login.trim() === ""
+    ) {
       throw new Error("GitHub identity missing login");
     }
     return githubIdentity.login.trim();
@@ -329,20 +384,32 @@ export class GitHubAccessExecutor implements AccessExecutor {
    * GET existing team membership
    * Uses team-slug endpoint: GET /orgs/{org}/teams/{team_slug}/memberships/{username}
    */
-  private async getTeamMembership(org: string, teamSlug: string, username: string): Promise<{ membership: GitHubTeamMembership | null; exists: boolean }> {
+  private async getTeamMembership(
+    org: string,
+    teamSlug: string,
+    username: string,
+  ): Promise<{ membership: GitHubTeamMembership | null; exists: boolean }> {
     try {
-      const response = await this.octokit.request("GET /orgs/{org}/teams/{team_slug}/memberships/{username}", {
-        org,
-        team_slug: teamSlug,
-        username,
-      });
+      const response = await this.octokit.request(
+        "GET /orgs/{org}/teams/{team_slug}/memberships/{username}",
+        {
+          org,
+          team_slug: teamSlug,
+          username,
+        },
+      );
 
       return {
         membership: response.data as GitHubTeamMembership,
         exists: true,
       };
     } catch (error: unknown) {
-      if (error && typeof error === "object" && "status" in error && (error as { status: number }).status === 404) {
+      if (
+        error &&
+        typeof error === "object" &&
+        "status" in error &&
+        (error as { status: number }).status === 404
+      ) {
         return { membership: null, exists: false };
       }
       throw error;
@@ -353,13 +420,21 @@ export class GitHubAccessExecutor implements AccessExecutor {
    * PUT team membership (add or update)
    * Uses team-slug endpoint: PUT /orgs/{org}/teams/{team_slug}/memberships/{username}
    */
-  private async putTeamMembership(org: string, teamSlug: string, username: string, role: "member" | "maintainer"): Promise<GitHubTeamMembership> {
-    const response = await this.octokit.request("PUT /orgs/{org}/teams/{team_slug}/memberships/{username}", {
-      org,
-      team_slug: teamSlug,
-      username,
-      role,
-    });
+  private async putTeamMembership(
+    org: string,
+    teamSlug: string,
+    username: string,
+    role: "member" | "maintainer",
+  ): Promise<GitHubTeamMembership> {
+    const response = await this.octokit.request(
+      "PUT /orgs/{org}/teams/{team_slug}/memberships/{username}",
+      {
+        org,
+        team_slug: teamSlug,
+        username,
+        role,
+      },
+    );
 
     return response.data as GitHubTeamMembership;
   }
@@ -368,22 +443,35 @@ export class GitHubAccessExecutor implements AccessExecutor {
    * DELETE team membership (revoke)
    * Uses team-slug endpoint: DELETE /orgs/{org}/teams/{team_slug}/memberships/{username}
    */
-  private async deleteTeamMembership(org: string, teamSlug: string, username: string): Promise<void> {
-    await this.octokit.request("DELETE /orgs/{org}/teams/{team_slug}/memberships/{username}", {
-      org,
-      team_slug: teamSlug,
-      username,
-    });
+  private async deleteTeamMembership(
+    org: string,
+    teamSlug: string,
+    username: string,
+  ): Promise<void> {
+    await this.octokit.request(
+      "DELETE /orgs/{org}/teams/{team_slug}/memberships/{username}",
+      {
+        org,
+        team_slug: teamSlug,
+        username,
+      },
+    );
   }
 
   async grant(request: ApprovedAccessRequest): Promise<ExecutionResult> {
     const idempotencyKey = `${request.id}:${request.entitlement.id}:${request.requesterId}`;
 
-    logger.info({ requestId: request.id, idempotencyKey }, "Executing GitHub access grant");
+    logger.info(
+      { requestId: request.id, idempotencyKey },
+      "Executing GitHub access grant",
+    );
 
     const isFirstAttempt = this.idempotencyStore.checkAndMark(idempotencyKey);
     if (!isFirstAttempt) {
-      logger.info({ requestId: request.id, idempotencyKey }, "Idempotency check: already fulfilled");
+      logger.info(
+        { requestId: request.id, idempotencyKey },
+        "Idempotency check: already fulfilled",
+      );
       await recordAuditEvent(this.auditStore, {
         eventId: uuidv4(),
         requestId: request.id,
@@ -422,14 +510,22 @@ export class GitHubAccessExecutor implements AccessExecutor {
 
     try {
       // Pre-flight checks (installation auth, allowlist, verified identity)
-      const { org, teamSlug, teamRole, githubLogin } = await this.preflightChecks(request);
+      const { org, teamSlug, teamRole, githubLogin } =
+        await this.preflightChecks(request);
 
       // Step 1: Check existing membership
-      const existingMembership = await this.getTeamMembership(org, teamSlug, githubLogin);
+      const existingMembership = await this.getTeamMembership(
+        org,
+        teamSlug,
+        githubLogin,
+      );
 
       if (existingMembership.exists && existingMembership.membership) {
         // Already a member - check if role matches
-        if (existingMembership.membership.state === "active" && existingMembership.membership.role === teamRole) {
+        if (
+          existingMembership.membership.state === "active" &&
+          existingMembership.membership.role === teamRole
+        ) {
           // Idempotent success - already in correct state
           await recordAuditEvent(this.auditStore, {
             eventId: uuidv4(),
@@ -449,7 +545,10 @@ export class GitHubAccessExecutor implements AccessExecutor {
             },
           });
 
-          logger.info({ requestId: request.id, githubLogin, org, teamSlug }, "Already member with correct role - idempotent success");
+          logger.info(
+            { requestId: request.id, githubLogin, org, teamSlug },
+            "Already member with correct role - idempotent success",
+          );
           return {
             success: true,
             externalId: `github-team-membership-${githubLogin}-${org}-${teamSlug}`,
@@ -476,7 +575,10 @@ export class GitHubAccessExecutor implements AccessExecutor {
             },
           });
 
-          logger.info({ requestId: request.id, githubLogin, org, teamSlug }, "Membership pending - awaiting external acceptance");
+          logger.info(
+            { requestId: request.id, githubLogin, org, teamSlug },
+            "Membership pending - awaiting external acceptance",
+          );
           return {
             success: true,
             externalId: `github-team-membership-${githubLogin}-${org}-${teamSlug}`,
@@ -487,20 +589,34 @@ export class GitHubAccessExecutor implements AccessExecutor {
       }
 
       // Step 2: PUT team membership (add or update)
-      const membership = await this.putTeamMembership(org, teamSlug, githubLogin, teamRole);
+      const membership = await this.putTeamMembership(
+        org,
+        teamSlug,
+        githubLogin,
+        teamRole,
+      );
 
       // Step 3: RECONCILIATION - Read back membership to verify
       // Note: GitHub may return immediately, but we verify the state
-      const verification = await this.getTeamMembership(org, teamSlug, githubLogin);
+      const verification = await this.getTeamMembership(
+        org,
+        teamSlug,
+        githubLogin,
+      );
 
       if (!verification.exists) {
-        throw new Error("Membership not found after PUT - reconciliation failed");
+        throw new Error(
+          "Membership not found after PUT - reconciliation failed",
+        );
       }
 
       const reconciledMembership = verification.membership!;
 
       // Check the membership state AND role match
-      if (reconciledMembership.state === "active" && reconciledMembership.role === teamRole) {
+      if (
+        reconciledMembership.state === "active" &&
+        reconciledMembership.role === teamRole
+      ) {
         // Success - verified active membership with correct role
         const externalId = `github-team-membership-${githubLogin}-${org}-${teamSlug}`;
 
@@ -529,13 +645,25 @@ export class GitHubAccessExecutor implements AccessExecutor {
           },
         });
 
-        logger.info({ requestId: request.id, githubLogin, org, teamSlug, role: reconciledMembership.role }, "Access granted and verified successfully");
+        logger.info(
+          {
+            requestId: request.id,
+            githubLogin,
+            org,
+            teamSlug,
+            role: reconciledMembership.role,
+          },
+          "Access granted and verified successfully",
+        );
         return {
           success: true,
           externalId,
           message: `Successfully granted ${request.entitlement.name} access (verified)`,
         };
-      } else if (reconciledMembership.state === "active" && reconciledMembership.role !== teamRole) {
+      } else if (
+        reconciledMembership.state === "active" &&
+        reconciledMembership.role !== teamRole
+      ) {
         // Role mismatch - reconciliation succeeded but role doesn't match requested
         const errorMessage = `Reconciliation role mismatch: requested ${teamRole}, got ${reconciledMembership.role}`;
 
@@ -560,7 +688,17 @@ export class GitHubAccessExecutor implements AccessExecutor {
           },
         });
 
-        logger.warn({ requestId: request.id, githubLogin, org, teamSlug, requestedRole: teamRole, actualRole: reconciledMembership.role }, "Reconciliation role mismatch");
+        logger.warn(
+          {
+            requestId: request.id,
+            githubLogin,
+            org,
+            teamSlug,
+            requestedRole: teamRole,
+            actualRole: reconciledMembership.role,
+          },
+          "Reconciliation role mismatch",
+        );
         return {
           success: false,
           message: errorMessage,
@@ -590,7 +728,10 @@ export class GitHubAccessExecutor implements AccessExecutor {
           },
         });
 
-        logger.info({ requestId: request.id, githubLogin, org, teamSlug }, "Membership pending - awaiting external acceptance");
+        logger.info(
+          { requestId: request.id, githubLogin, org, teamSlug },
+          "Membership pending - awaiting external acceptance",
+        );
         return {
           success: true,
           externalId,
@@ -598,14 +739,18 @@ export class GitHubAccessExecutor implements AccessExecutor {
           status: "AWAITING_EXTERNAL_ACCEPTANCE",
         };
       } else {
-        throw new Error(`Unexpected membership state: ${reconciledMembership.state}`);
+        throw new Error(
+          `Unexpected membership state: ${reconciledMembership.state}`,
+        );
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
 
       // More precise detection of externally managed team (team-sync)
       // GitHub returns specific error for team-sync: "Team is managed by an external identity provider"
-      const isExternalAuthorityManaged = errorMessage.includes("team_sync") ||
+      const isExternalAuthorityManaged =
+        errorMessage.includes("team_sync") ||
         errorMessage.includes("managed by external") ||
         errorMessage.includes("managed by an external identity provider");
 
@@ -620,7 +765,9 @@ export class GitHubAccessExecutor implements AccessExecutor {
           entitlementId: request.entitlement.id,
           error: errorMessage,
           externalAuthorityManaged: isExternalAuthorityManaged,
-          authority: isExternalAuthorityManaged ? "github-team-sync" : undefined,
+          authority: isExternalAuthorityManaged
+            ? "github-team-sync"
+            : undefined,
           // Safe diagnostic metadata (no tokens, no PEM, no auth headers)
           provider: "github",
           organization: request.entitlement.githubConfig?.organization,
@@ -631,17 +778,24 @@ export class GitHubAccessExecutor implements AccessExecutor {
       });
 
       if (isExternalAuthorityManaged) {
-        logger.warn({ requestId: request.id, error: errorMessage }, "Team membership managed by external authority (e.g., Okta/Entra ID)");
+        logger.warn(
+          { requestId: request.id, error: errorMessage },
+          "Team membership managed by external authority (e.g., Okta/Entra ID)",
+        );
         return {
           success: false,
-          message: "Team membership is managed by an external identity provider (e.g., Okta/Entra ID). Cannot modify via GitHub API.",
+          message:
+            "Team membership is managed by an external identity provider (e.g., Okta/Entra ID). Cannot modify via GitHub API.",
           error: errorMessage,
           reason: "EXTERNAL_AUTHORITY_MANAGED",
           authority: "github-team-sync",
         };
       }
 
-      logger.error({ requestId: request.id, error: errorMessage }, "GitHub fulfillment failed");
+      logger.error(
+        { requestId: request.id, error: errorMessage },
+        "GitHub fulfillment failed",
+      );
       return {
         success: false,
         message: "Failed to grant access",
@@ -653,12 +807,18 @@ export class GitHubAccessExecutor implements AccessExecutor {
   async revoke(request: FulfilledAccessRequest): Promise<RevocationResult> {
     const idempotencyKey = `revoke:${request.id}:${request.entitlement.id}:${request.requesterId}`;
 
-    logger.info({ requestId: request.id, idempotencyKey }, "Executing GitHub access revocation");
+    logger.info(
+      { requestId: request.id, idempotencyKey },
+      "Executing GitHub access revocation",
+    );
 
     // Check idempotency
     const isFirstAttempt = this.idempotencyStore.checkAndMark(idempotencyKey);
     if (!isFirstAttempt) {
-      logger.info({ requestId: request.id, idempotencyKey }, "Revocation idempotency check: already revoked");
+      logger.info(
+        { requestId: request.id, idempotencyKey },
+        "Revocation idempotency check: already revoked",
+      );
       await recordAuditEvent(this.auditStore, {
         eventId: uuidv4(),
         requestId: request.id,
@@ -697,7 +857,8 @@ export class GitHubAccessExecutor implements AccessExecutor {
 
     try {
       // Pre-flight checks (installation auth, allowlist, verified identity)
-      const { org, teamSlug, githubLogin } = await this.preflightChecks(request);
+      const { org, teamSlug, githubLogin } =
+        await this.preflightChecks(request);
 
       // Record revocation started
       await recordAuditEvent(this.auditStore, {
@@ -717,7 +878,11 @@ export class GitHubAccessExecutor implements AccessExecutor {
       });
 
       // Step 1: GET existing membership (check if already absent)
-      const existingMembership = await this.getTeamMembership(org, teamSlug, githubLogin);
+      const existingMembership = await this.getTeamMembership(
+        org,
+        teamSlug,
+        githubLogin,
+      );
 
       if (!existingMembership.exists) {
         // Already absent - idempotent revocation success
@@ -740,7 +905,10 @@ export class GitHubAccessExecutor implements AccessExecutor {
           },
         });
 
-        logger.info({ requestId: request.id, githubLogin, org, teamSlug }, "Already absent - idempotent revocation success");
+        logger.info(
+          { requestId: request.id, githubLogin, org, teamSlug },
+          "Already absent - idempotent revocation success",
+        );
         return {
           success: true,
           message: "Access already absent (idempotent revocation)",
@@ -753,12 +921,18 @@ export class GitHubAccessExecutor implements AccessExecutor {
         try {
           await this.deleteTeamMembership(org, teamSlug, githubLogin);
         } catch (deleteError) {
-          const deleteErrorMessage = deleteError instanceof Error ? deleteError.message : "Unknown error";
+          const deleteErrorMessage =
+            deleteError instanceof Error
+              ? deleteError.message
+              : "Unknown error";
 
           // Check for external authority (team-sync)
-          const isExternalAuthorityManaged = deleteErrorMessage.includes("team_sync") ||
+          const isExternalAuthorityManaged =
+            deleteErrorMessage.includes("team_sync") ||
             deleteErrorMessage.includes("managed by external") ||
-            deleteErrorMessage.includes("managed by an external identity provider");
+            deleteErrorMessage.includes(
+              "managed by an external identity provider",
+            );
 
           if (isExternalAuthorityManaged) {
             await recordAuditEvent(this.auditStore, {
@@ -780,10 +954,14 @@ export class GitHubAccessExecutor implements AccessExecutor {
               },
             });
 
-            logger.warn({ requestId: request.id, error: deleteErrorMessage }, "Team membership managed by external authority (e.g., Okta/Entra ID)");
+            logger.warn(
+              { requestId: request.id, error: deleteErrorMessage },
+              "Team membership managed by external authority (e.g., Okta/Entra ID)",
+            );
             return {
               success: false,
-              message: "Team membership is managed by an external identity provider (e.g., Okta/Entra ID). Cannot modify via GitHub API.",
+              message:
+                "Team membership is managed by an external identity provider (e.g., Okta/Entra ID). Cannot modify via GitHub API.",
               error: deleteErrorMessage,
               reason: "EXTERNAL_AUTHORITY_MANAGED",
               authority: "github-team-sync",
@@ -793,7 +971,11 @@ export class GitHubAccessExecutor implements AccessExecutor {
         }
 
         // Step 3: RECONCILIATION - GET to verify absence
-        const verification = await this.getTeamMembership(org, teamSlug, githubLogin);
+        const verification = await this.getTeamMembership(
+          org,
+          teamSlug,
+          githubLogin,
+        );
 
         if (!verification.exists) {
           // Successfully revoked - confirmed absent
@@ -817,7 +999,10 @@ export class GitHubAccessExecutor implements AccessExecutor {
             },
           });
 
-          logger.info({ requestId: request.id, githubLogin, org, teamSlug }, "Access revoked and verified successfully");
+          logger.info(
+            { requestId: request.id, githubLogin, org, teamSlug },
+            "Access revoked and verified successfully",
+          );
           return {
             success: true,
             message: `Successfully revoked ${request.entitlement.name} access (verified)`,
@@ -847,7 +1032,17 @@ export class GitHubAccessExecutor implements AccessExecutor {
             },
           });
 
-          logger.error({ requestId: request.id, githubLogin, org, teamSlug, reconciledState, reconciledRole }, "Revocation reconciliation failed - user still has membership");
+          logger.error(
+            {
+              requestId: request.id,
+              githubLogin,
+              org,
+              teamSlug,
+              reconciledState,
+              reconciledRole,
+            },
+            "Revocation reconciliation failed - user still has membership",
+          );
           return {
             success: false,
             message: `Revocation reconciliation failed: user still has ${reconciledState}/${reconciledRole} membership`,
@@ -876,7 +1071,16 @@ export class GitHubAccessExecutor implements AccessExecutor {
           },
         });
 
-        logger.error({ requestId: request.id, githubLogin, org, teamSlug, state: existingMembership.membership?.state }, "Unexpected membership state for revocation");
+        logger.error(
+          {
+            requestId: request.id,
+            githubLogin,
+            org,
+            teamSlug,
+            state: existingMembership.membership?.state,
+          },
+          "Unexpected membership state for revocation",
+        );
         return {
           success: false,
           message: `Unexpected membership state for revocation: ${existingMembership.membership?.state || "unknown"}`,
@@ -885,10 +1089,12 @@ export class GitHubAccessExecutor implements AccessExecutor {
         };
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
 
       // Check for external authority (team-sync) in error
-      const isExternalAuthorityManaged = errorMessage.includes("team_sync") ||
+      const isExternalAuthorityManaged =
+        errorMessage.includes("team_sync") ||
         errorMessage.includes("managed by external") ||
         errorMessage.includes("managed by an external identity provider");
 
@@ -904,7 +1110,9 @@ export class GitHubAccessExecutor implements AccessExecutor {
           entitlementName: request.entitlement.name,
           error: errorMessage,
           externalAuthorityManaged: isExternalAuthorityManaged,
-          authority: isExternalAuthorityManaged ? "github-team-sync" : undefined,
+          authority: isExternalAuthorityManaged
+            ? "github-team-sync"
+            : undefined,
           provider: "github",
           organization: request.entitlement.githubConfig?.organization,
           teamSlug: request.entitlement.githubConfig?.teamSlug,
@@ -913,17 +1121,24 @@ export class GitHubAccessExecutor implements AccessExecutor {
       });
 
       if (isExternalAuthorityManaged) {
-        logger.warn({ requestId: request.id, error: errorMessage }, "Team membership managed by external authority (e.g., Okta/Entra ID)");
+        logger.warn(
+          { requestId: request.id, error: errorMessage },
+          "Team membership managed by external authority (e.g., Okta/Entra ID)",
+        );
         return {
           success: false,
-          message: "Team membership is managed by an external identity provider (e.g., Okta/Entra ID). Cannot modify via GitHub API.",
+          message:
+            "Team membership is managed by an external identity provider (e.g., Okta/Entra ID). Cannot modify via GitHub API.",
           error: errorMessage,
           reason: "EXTERNAL_AUTHORITY_MANAGED",
           authority: "github-team-sync",
         };
       }
 
-      logger.error({ requestId: request.id, error: errorMessage }, "Revocation failed");
+      logger.error(
+        { requestId: request.id, error: errorMessage },
+        "Revocation failed",
+      );
       return {
         success: false,
         message: "Failed to revoke access",

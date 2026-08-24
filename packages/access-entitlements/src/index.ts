@@ -35,7 +35,8 @@ export const EntitlementSchema = z.object({
 });
 
 export type Entitlement = z.infer<typeof EntitlementSchema>;
-export const EntitlementTypeGuard = (value: unknown): value is Entitlement => EntitlementSchema.safeParse(value).success;
+export const EntitlementTypeGuard = (value: unknown): value is Entitlement =>
+  EntitlementSchema.safeParse(value).success;
 
 // ============================================================================
 // Entitlement Catalog
@@ -63,7 +64,10 @@ export class EntitlementCatalog {
       this.entitlementsBySystem.set(system, [validated]);
     }
 
-    logger.info({ entitlementId: validated.id, system }, "Entitlement registered");
+    logger.info(
+      { entitlementId: validated.id, system },
+      "Entitlement registered",
+    );
   }
 
   getById(id: string): Entitlement | undefined {
@@ -91,10 +95,11 @@ export class EntitlementCatalog {
     const candidates = system ? this.getBySystem(system) : this.getAll();
     const lowerQuery = query.toLowerCase();
 
-    return candidates.filter((e) =>
-      (e.name as string).toLowerCase().includes(lowerQuery) ||
-      (e.description as string).toLowerCase().includes(lowerQuery) ||
-      (e.id as string).toLowerCase().includes(lowerQuery)
+    return candidates.filter(
+      (e) =>
+        (e.name as string).toLowerCase().includes(lowerQuery) ||
+        (e.description as string).toLowerCase().includes(lowerQuery) ||
+        (e.id as string).toLowerCase().includes(lowerQuery),
     );
   }
 }
@@ -103,13 +108,15 @@ export class EntitlementCatalog {
 // Canonical Entitlements
 // ============================================================================
 
-export const ENGINEERING_CONTRIBUTOR_ENTITLEMENT_ID = "550e8400-e29b-41d4-a716-446655440101";
+export const ENGINEERING_CONTRIBUTOR_ENTITLEMENT_ID =
+  "550e8400-e29b-41d4-a716-446655440101";
 
 export const canonicalEngineeringContributorEntitlement: Entitlement = {
   id: ENGINEERING_CONTRIBUTOR_ENTITLEMENT_ID,
   name: "Engineering Contributor",
   system: "github",
-  description: "Contributor access to approved engineering repositories via team membership",
+  description:
+    "Contributor access to approved engineering repositories via team membership",
   durationDays: 90,
   approvalPolicy: "MANAGER",
   risk: "standard",

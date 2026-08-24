@@ -4,19 +4,19 @@
 
 ### Relevant Packages & Files
 
-| Package | Key Files | Purpose |
-|---------|-----------|---------|
-| `access-types` | `src/index.ts` | Core types: AccessRequest, EntitlementRef, GovernanceProvider, GovernanceAuthority, state machine, external identities |
-| `access-entitlements` | `src/index.ts` | Entitlement catalog, canonical entitlements, GitHub-specific config |
-| `access-policy` | `src/index.ts` | PolicyEngine evaluates approval requirements based on entitlement approvalPolicy |
-| `access-approval` | `src/index.ts` | ApprovalService manages PENDING_APPROVAL → APPROVED/DENIED with optimistic concurrency |
-| `access-service` | `src/index.ts` | AccessRequestService orchestrates: create → policy → approval → executor |
-| `access-store-pg` | `src/index.ts` | PostgreSQL persistence for AccessRequest, AuditEvent, idempotency |
-| `access-audit` | `src/index.ts` | AuditEventStore, event types including GOVERNANCE_REQUEST_SUBMITTED |
-| `access-executor` | `src/index.ts` | GitHubAccessExecutor (grant/revoke with reconciliation), FakeGitHubAccessExecutor |
-| `access-governance` | `src/index.ts` | **NEW** GovernanceProvider interface + LocalGovernanceProvider + EntraGovernanceProvider + GovernanceService |
-| `apps/api` | `src/index.ts` | Fastify endpoints: POST /v1/access/requests, POST /:id/approve, POST /:id/deny |
-| `apps/slack` | `src/` | Slack Bolt app (not yet inspected in detail) |
+| Package               | Key Files      | Purpose                                                                                                                |
+| --------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `access-types`        | `src/index.ts` | Core types: AccessRequest, EntitlementRef, GovernanceProvider, GovernanceAuthority, state machine, external identities |
+| `access-entitlements` | `src/index.ts` | Entitlement catalog, canonical entitlements, GitHub-specific config                                                    |
+| `access-policy`       | `src/index.ts` | PolicyEngine evaluates approval requirements based on entitlement approvalPolicy                                       |
+| `access-approval`     | `src/index.ts` | ApprovalService manages PENDING_APPROVAL → APPROVED/DENIED with optimistic concurrency                                 |
+| `access-service`      | `src/index.ts` | AccessRequestService orchestrates: create → policy → approval → executor                                               |
+| `access-store-pg`     | `src/index.ts` | PostgreSQL persistence for AccessRequest, AuditEvent, idempotency                                                      |
+| `access-audit`        | `src/index.ts` | AuditEventStore, event types including GOVERNANCE_REQUEST_SUBMITTED                                                    |
+| `access-executor`     | `src/index.ts` | GitHubAccessExecutor (grant/revoke with reconciliation), FakeGitHubAccessExecutor                                      |
+| `access-governance`   | `src/index.ts` | **NEW** GovernanceProvider interface + LocalGovernanceProvider + EntraGovernanceProvider + GovernanceService           |
+| `apps/api`            | `src/index.ts` | Fastify endpoints: POST /v1/access/requests, POST /:id/approve, POST /:id/deny                                         |
+| `apps/slack`          | `src/`         | Slack Bolt app (not yet inspected in detail)                                                                           |
 
 ### Current Access Lifecycle
 
@@ -71,6 +71,7 @@ REVOKED
 ### Current Persistence Model
 
 PostgreSQL `access_requests` table includes:
+
 - Core fields: id, correlation_id, requester_id, entitlement_id, status, version
 - Expiration retry fields: expiration_attempt_count, expiration_next_attempt_at, expiration_max_retries, expiration_last_error
 - Lease fields: lease_owner, lease_until, lease_acquired_at
@@ -91,12 +92,18 @@ interface GovernanceProvider {
   resolveEntitlement(entitlement: EntitlementRef): Promise<GovernedEntitlement>;
   submitRequest(request: GovernedAccessRequest): Promise<GovernanceRequest>;
   getRequestStatus(externalRequestId: string): Promise<GovernanceRequestStatus>;
-  getAssignment(subject: GovernanceSubject, entitlement: GovernedEntitlement): Promise<GovernanceAssignment | null>;
-  revokeAssignment(assignment: GovernanceAssignment): Promise<GovernanceRevocationResult>;
+  getAssignment(
+    subject: GovernanceSubject,
+    entitlement: GovernedEntitlement,
+  ): Promise<GovernanceAssignment | null>;
+  revokeAssignment(
+    assignment: GovernanceAssignment,
+  ): Promise<GovernanceRevocationResult>;
 }
 ```
 
 **Refinements needed:**
+
 - `OpnoryIdentity` type should be explicit (not `any`)
 - `resolveEntitlement` parameter should be `EntitlementRef` not `any`
 - Add `governance` field to `EntitlementRefSchema` with typed config:
@@ -109,7 +116,7 @@ governance: z.object({
   assignmentPolicyId: z.string().optional(),
   // Who owns downstream fulfillment (GitHub team membership)
   fulfillmentOwner: z.enum(["local", "entra"]).default("local"),
-}).optional()
+}).optional();
 ```
 
 ### LocalGovernanceProvider Placement
@@ -148,14 +155,16 @@ governance: {
 **Current states already include**: `AWAITING_EXTERNAL_ACCEPTANCE` (for GitHub pending invitations)
 
 **Add one new state**:
+
 ```typescript
 AccessRequestStatusSchema = z.enum([
   // ... existing ...
   "AWAITING_AUTHORITY_DECISION", // Entra-owned: submitted, awaiting Entra decision
-])
+]);
 ```
 
 **Transitions for Entra-owned**:
+
 ```
 PENDING_APPROVAL → AWAITING_AUTHORITY_DECISION (on submitRequest)
 AWAITING_AUTHORITY_DECISION → APPROVED (Entra approves + assignment confirmed)
@@ -215,6 +224,7 @@ external_governance_last_checked_at -- Last reconciliation timestamp
 ```
 
 **Metadata fields** (standardized):
+
 ```typescript
 {
   provider: "entra",
@@ -232,88 +242,88 @@ external_governance_last_checked_at -- Last reconciliation timestamp
 
 ### access-types (`packages/access-types/src/index.ts`)
 
-| Change | Purpose | Dependencies |
-|--------|---------|--------------|
-| Add `AWAITING_AUTHORITY_DECISION` to `AccessRequestStatusSchema` | New state for Entra-owned requests | State machine transitions |
-| Add transitions for `AWAITING_AUTHORITY_DECISION` in `VALID_TRANSITIONS` | Define valid flows | `canTransition`, `transitionOrThrow` |
-| Extend `EntitlementRefSchema.governance` with typed fields | Entra config (accessPackageId, fulfillmentOwner) | EntitlementCatalog registration validation |
-| Extend `ExternalIdentitySchema` with `entra` field | Store Entra identity mapping | `resolveSubject` in EntraGovernanceProvider |
-| Ensure `OpnoryIdentity` type is explicit for `resolveSubject` param | Type safety | GovernanceProvider interface |
+| Change                                                                   | Purpose                                          | Dependencies                                |
+| ------------------------------------------------------------------------ | ------------------------------------------------ | ------------------------------------------- |
+| Add `AWAITING_AUTHORITY_DECISION` to `AccessRequestStatusSchema`         | New state for Entra-owned requests               | State machine transitions                   |
+| Add transitions for `AWAITING_AUTHORITY_DECISION` in `VALID_TRANSITIONS` | Define valid flows                               | `canTransition`, `transitionOrThrow`        |
+| Extend `EntitlementRefSchema.governance` with typed fields               | Entra config (accessPackageId, fulfillmentOwner) | EntitlementCatalog registration validation  |
+| Extend `ExternalIdentitySchema` with `entra` field                       | Store Entra identity mapping                     | `resolveSubject` in EntraGovernanceProvider |
+| Ensure `OpnoryIdentity` type is explicit for `resolveSubject` param      | Type safety                                      | GovernanceProvider interface                |
 
 ### access-entitlements (`packages/access-entitlements/src/index.ts`)
 
-| Change | Purpose | Dependencies |
-|--------|---------|--------------|
+| Change                                            | Purpose                                             | Dependencies      |
+| ------------------------------------------------- | --------------------------------------------------- | ----------------- |
 | Add validation in `EntitlementCatalog.register()` | Reject Entra entitlements missing `accessPackageId` | Governance schema |
-| Export `createEntitlementWithGovernance()` helper | Ergonomic creation with governance config | — |
+| Export `createEntitlementWithGovernance()` helper | Ergonomic creation with governance config           | —                 |
 
 ### access-policy (`packages/access-policy/src/index.ts`)
 
-| Change | Purpose | Dependencies |
-|--------|---------|--------------|
-| **No change to PolicyEngine** | Local approval policy unchanged | — |
+| Change                                  | Purpose                               | Dependencies                   |
+| --------------------------------------- | ------------------------------------- | ------------------------------ |
+| **No change to PolicyEngine**           | Local approval policy unchanged       | —                              |
 | Add `evaluateGovernancePolicy()` helper | Returns governance authority decision | Called by AccessRequestService |
 
 ### access-approval (`packages/access-approval/src/index.ts`)
 
-| Change | Purpose | Dependencies |
-|--------|---------|--------------|
-| **No change to ApprovalService** | Local approval logic preserved | — |
-| Add `canApprove()` guard method | Check if request is locally approvable | Called by API endpoints |
+| Change                           | Purpose                                | Dependencies            |
+| -------------------------------- | -------------------------------------- | ----------------------- |
+| **No change to ApprovalService** | Local approval logic preserved         | —                       |
+| Add `canApprove()` guard method  | Check if request is locally approvable | Called by API endpoints |
 
 ### access-service (`packages/access-service/src/index.ts`)
 
-| Change | Purpose | Dependencies |
-|--------|---------|--------------|
-| Inject `GovernanceService` into constructor | Orchestrate provider selection | access-governance |
-| Modify `createAccessRequest()` | After policy eval, if Entra-owned: submit to provider → AWAITING_AUTHORITY_DECISION | GovernanceProvider, GovernanceService |
-| Modify `decideAccessRequest()` | **Reject** local approve/deny for Entra-owned requests | `canApprove` check |
-| Add `reconcileGovernanceRequest()` | Poll Entra status, transition to APPROVED/DENIED | EntraGovernanceProvider.getRequestStatus |
-| Add `getGovernanceProvider()` | Select provider based on entitlement.governance.authority | GovernanceService |
+| Change                                      | Purpose                                                                             | Dependencies                             |
+| ------------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------- |
+| Inject `GovernanceService` into constructor | Orchestrate provider selection                                                      | access-governance                        |
+| Modify `createAccessRequest()`              | After policy eval, if Entra-owned: submit to provider → AWAITING_AUTHORITY_DECISION | GovernanceProvider, GovernanceService    |
+| Modify `decideAccessRequest()`              | **Reject** local approve/deny for Entra-owned requests                              | `canApprove` check                       |
+| Add `reconcileGovernanceRequest()`          | Poll Entra status, transition to APPROVED/DENIED                                    | EntraGovernanceProvider.getRequestStatus |
+| Add `getGovernanceProvider()`               | Select provider based on entitlement.governance.authority                           | GovernanceService                        |
 
 ### access-governance (`packages/access-governance/src/index.ts`)
 
-| Change | Purpose | Dependencies |
-|--------|---------|--------------|
-| Complete `EntraGovernanceProvider` implementation | Already largely done | Microsoft Graph SDK/types |
-| Add `GovernanceService` method `submitAndTrack()` | Submit + schedule reconciliation | AccessRequestService |
-| Add idempotency for `submitRequest` | Use `request.idempotencyKey` to prevent duplicate Entra requests | InMemoryIdempotencyStore |
+| Change                                            | Purpose                                                          | Dependencies              |
+| ------------------------------------------------- | ---------------------------------------------------------------- | ------------------------- |
+| Complete `EntraGovernanceProvider` implementation | Already largely done                                             | Microsoft Graph SDK/types |
+| Add `GovernanceService` method `submitAndTrack()` | Submit + schedule reconciliation                                 | AccessRequestService      |
+| Add idempotency for `submitRequest`               | Use `request.idempotencyKey` to prevent duplicate Entra requests | InMemoryIdempotencyStore  |
 
 ### access-store-pg (`packages/access-store-pg/src/index.ts`)
 
-| Change | Purpose | Dependencies |
-|--------|---------|--------------|
-| Add `external_governance_status`, `external_governance_last_checked_at` columns | Persistence for reconciliation | Migration SQL |
-| Update `mapRowToRequest()` / `create()` / `update()` | Include new fields | PgAccessRequestStore |
-| Add `getByGovernanceRequestId()` query | Lookup by external request ID for reconciliation | — |
+| Change                                                                          | Purpose                                          | Dependencies         |
+| ------------------------------------------------------------------------------- | ------------------------------------------------ | -------------------- |
+| Add `external_governance_status`, `external_governance_last_checked_at` columns | Persistence for reconciliation                   | Migration SQL        |
+| Update `mapRowToRequest()` / `create()` / `update()`                            | Include new fields                               | PgAccessRequestStore |
+| Add `getByGovernanceRequestId()` query                                          | Lookup by external request ID for reconciliation | —                    |
 
 ### access-audit (`packages/access-audit/src/index.ts`)
 
-| Change | Purpose | Dependencies |
-|--------|---------|--------------|
-| Add new `AuditEventType` enum values | See Audit Changes above | — |
+| Change                               | Purpose                 | Dependencies |
+| ------------------------------------ | ----------------------- | ------------ |
+| Add new `AuditEventType` enum values | See Audit Changes above | —            |
 
 ### access-executor (`packages/access-executor/src/index.ts`)
 
-| Change | Purpose | Dependencies |
-|--------|---------|--------------|
-| **No functional change** | Entra-owned fulfillment depends on `fulfillmentOwner` | — |
+| Change                                | Purpose                                                               | Dependencies                   |
+| ------------------------------------- | --------------------------------------------------------------------- | ------------------------------ |
+| **No functional change**              | Entra-owned fulfillment depends on `fulfillmentOwner`                 | —                              |
 | Add `canExecute()` guard on `grant()` | Return `EXTERNAL_AUTHORITY_MANAGED` if `fulfillmentOwner === "entra"` | Called by AccessRequestService |
 
 ### apps/api (`apps/api/src/index.ts`)
 
-| Change | Purpose | Dependencies |
-|--------|---------|--------------|
-| Modify `POST /:id/approve` | Check `governanceAuthority === "entra"` → 409 CONFLICT | access-service |
-| Modify `POST /:id/deny` | Same guard | access-service |
-| Add `POST /:id/reconcile` (admin) | Manual reconciliation trigger | access-service.reconcileGovernanceRequest |
+| Change                            | Purpose                                                | Dependencies                              |
+| --------------------------------- | ------------------------------------------------------ | ----------------------------------------- |
+| Modify `POST /:id/approve`        | Check `governanceAuthority === "entra"` → 409 CONFLICT | access-service                            |
+| Modify `POST /:id/deny`           | Same guard                                             | access-service                            |
+| Add `POST /:id/reconcile` (admin) | Manual reconciliation trigger                          | access-service.reconcileGovernanceRequest |
 
 ### apps/slack (`apps/slack/src/`)
 
-| Change | Purpose | Dependencies |
-|--------|---------|--------------|
-| Inspect Slack command handler | Apply same local-override guard | — |
-| Add Entra identity verification flow (optional) | `/verify-entra` command | EntraGovernanceProvider.resolveSubject |
+| Change                                          | Purpose                         | Dependencies                           |
+| ----------------------------------------------- | ------------------------------- | -------------------------------------- |
+| Inspect Slack command handler                   | Apply same local-override guard | —                                      |
+| Add Entra identity verification flow (optional) | `/verify-entra` command         | EntraGovernanceProvider.resolveSubject |
 
 ---
 
@@ -321,25 +331,25 @@ external_governance_last_checked_at -- Last reconciliation timestamp
 
 ### Core Cases (41–48)
 
-| Case | Scenario | Given | When | Then |
-|------|----------|-------|------|------|
-| **41** | Known Entra entitlement | Entitlement with `governance: { authority: "entra", accessPackageId: "pkg-123" }` | Create request | External request submitted to Entra; state = `AWAITING_AUTHORITY_DECISION`; Local ApprovalService NOT invoked |
-| **42** | Pending authority decision | Request in `AWAITING_AUTHORITY_DECISION` | Poll status via `getRequestStatus` | Returns Entra status; GitHub executor NOT called |
-| **43** | Authoritative approval | Entra returns `APPROVED` + assignment | Reconciliation runs | State → `APPROVED`; if `fulfillmentOwner=local` → executor runs; if `fulfillmentOwner=entra` → executor NOT called |
-| **44** | Authoritative denial | Entra returns `DENIED` | Reconciliation runs | State → `DENIED`; executor NEVER called |
-| **45** | Unknown external entitlement | Entitlement with `authority: "entra"` but NO `accessPackageId` | Create request | Error: "missing entraAccessPackageId"; NO external request submitted |
-| **46** | Restart recovery | External request ID persisted in DB | Process restarts, reconciliation job runs | Resumes polling same `externalRequestId`; NO duplicate Entra request |
-| **47** | Local override attempt | Entra-owned request in `AWAITING_AUTHORITY_DECISION` | Call `POST /:id/approve` | 409 CONFLICT; state unchanged; audit `LOCAL_OVERRIDE_REJECTED`; executor NOT called |
-| **48** | External expiration ownership | Entra entitlement with `fulfillmentOwner: "entra"` + Entra-managed duration | Expiration scheduler runs | Scheduler does NOT claim this request (skips Entra-owned) |
+| Case   | Scenario                      | Given                                                                             | When                                      | Then                                                                                                               |
+| ------ | ----------------------------- | --------------------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **41** | Known Entra entitlement       | Entitlement with `governance: { authority: "entra", accessPackageId: "pkg-123" }` | Create request                            | External request submitted to Entra; state = `AWAITING_AUTHORITY_DECISION`; Local ApprovalService NOT invoked      |
+| **42** | Pending authority decision    | Request in `AWAITING_AUTHORITY_DECISION`                                          | Poll status via `getRequestStatus`        | Returns Entra status; GitHub executor NOT called                                                                   |
+| **43** | Authoritative approval        | Entra returns `APPROVED` + assignment                                             | Reconciliation runs                       | State → `APPROVED`; if `fulfillmentOwner=local` → executor runs; if `fulfillmentOwner=entra` → executor NOT called |
+| **44** | Authoritative denial          | Entra returns `DENIED`                                                            | Reconciliation runs                       | State → `DENIED`; executor NEVER called                                                                            |
+| **45** | Unknown external entitlement  | Entitlement with `authority: "entra"` but NO `accessPackageId`                    | Create request                            | Error: "missing entraAccessPackageId"; NO external request submitted                                               |
+| **46** | Restart recovery              | External request ID persisted in DB                                               | Process restarts, reconciliation job runs | Resumes polling same `externalRequestId`; NO duplicate Entra request                                               |
+| **47** | Local override attempt        | Entra-owned request in `AWAITING_AUTHORITY_DECISION`                              | Call `POST /:id/approve`                  | 409 CONFLICT; state unchanged; audit `LOCAL_OVERRIDE_REJECTED`; executor NOT called                                |
+| **48** | External expiration ownership | Entra entitlement with `fulfillmentOwner: "entra"` + Entra-managed duration       | Expiration scheduler runs                 | Scheduler does NOT claim this request (skips Entra-owned)                                                          |
 
 ### Additional Essential Cases
 
-| Case | Scenario |
-|------|----------|
-| **49** | Duplicate submit idempotency — same request submitted twice → single Entra request |
-| **50** | Stale external state — Entra shows APPROVED but local still AWAITING_AUTHORITY_DECISION → reconciliation fixes |
-| **51** | Provider outage retry — Graph API 5xx → exponential backoff, max 3 retries, then alert |
-| **52** | Conflicting provider responses — Entra says APPROVED, then DENIED on subsequent poll → audit alert, manual review |
+| Case   | Scenario                                                                                                           |
+| ------ | ------------------------------------------------------------------------------------------------------------------ |
+| **49** | Duplicate submit idempotency — same request submitted twice → single Entra request                                 |
+| **50** | Stale external state — Entra shows APPROVED but local still AWAITING_AUTHORITY_DECISION → reconciliation fixes     |
+| **51** | Provider outage retry — Graph API 5xx → exponential backoff, max 3 retries, then alert                             |
+| **52** | Conflicting provider responses — Entra says APPROVED, then DENIED on subsequent poll → audit alert, manual review  |
 | **53** | Missing Entra identity mapping — requesterEmail not found in Entra → fallback to manual subject with audit warning |
 
 ---
@@ -368,21 +378,22 @@ external_governance_last_checked_at -- Last reconciliation timestamp
 
 ## 6. OPEN QUESTIONS
 
-| # | Question | Decision Required |
-|---|----------|-------------------|
-| 1 | **Tenant strategy**: Single-tenant or multi-tenant Entra config? | If multi-tenant, `tenantId` must be part of entitlement governance config, not just provider config. |
-| 2 | **Assignment policy ID**: Is `assignmentPolicyId` needed in addition to `accessPackageId`? | Entra allows multiple assignment policies per access package. If customer uses this, add to schema. |
-| 3 | **Fulfillment owner default**: Should default be `"local"` or `"entra"` for Entra entitlements? | Default `"local"` preserves current behavior; `"entra"` requires Entra Lifecycle Workflows. |
-| 4 | **Entra identity source**: How is Slack user → Entra objectId mapped initially? | Options: (a) admin CSV upload, (b) Entra Connect sync, (c) just-in-time lookup by email. |
-| 5 | **Reconciliation interval**: How often to poll Entra for status? | Suggest: 5 min initial, exponential backoff to 1 hr. Configurable? |
-| 6 | **Graph API version**: Use v1.0 or beta for Entitlement Management? | v1.0 has limited EM support; beta has full. Decision affects stability. |
-| 7 | **Local vs Entra for same entitlement**: Can an entitlement switch authority? | If yes, need migration path for existing requests. |
+| #   | Question                                                                                        | Decision Required                                                                                    |
+| --- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| 1   | **Tenant strategy**: Single-tenant or multi-tenant Entra config?                                | If multi-tenant, `tenantId` must be part of entitlement governance config, not just provider config. |
+| 2   | **Assignment policy ID**: Is `assignmentPolicyId` needed in addition to `accessPackageId`?      | Entra allows multiple assignment policies per access package. If customer uses this, add to schema.  |
+| 3   | **Fulfillment owner default**: Should default be `"local"` or `"entra"` for Entra entitlements? | Default `"local"` preserves current behavior; `"entra"` requires Entra Lifecycle Workflows.          |
+| 4   | **Entra identity source**: How is Slack user → Entra objectId mapped initially?                 | Options: (a) admin CSV upload, (b) Entra Connect sync, (c) just-in-time lookup by email.             |
+| 5   | **Reconciliation interval**: How often to poll Entra for status?                                | Suggest: 5 min initial, exponential backoff to 1 hr. Configurable?                                   |
+| 6   | **Graph API version**: Use v1.0 or beta for Entitlement Management?                             | v1.0 has limited EM support; beta has full. Decision affects stability.                              |
+| 7   | **Local vs Entra for same entitlement**: Can an entitlement switch authority?                   | If yes, need migration path for existing requests.                                                   |
 
 ---
 
 ## 7. RECOMMENDED IMPLEMENTATION ORDER
 
 ### Phase 1: Types & Contracts (No behavior change)
+
 1. `access-types`: Add `AWAITING_AUTHORITY_DECISION` state + transitions
 2. `access-types`: Extend `EntitlementRefSchema.governance` with typed fields
 3. `access-types`: Extend `ExternalIdentitySchema` with `entra` field
@@ -390,27 +401,32 @@ external_governance_last_checked_at -- Last reconciliation timestamp
 5. `access-entitlements`: Add registration validation for Entra entitlements
 
 ### Phase 2: LocalGovernanceProvider (Wrap existing)
+
 6. `access-governance`: Finalize `LocalGovernanceProvider` wrapping `ApprovalService`
 7. `access-governance`: Add idempotency to `submitRequest`
 8. `access-service`: Inject `GovernanceService`, add `getGovernanceProvider()`
 
 ### Phase 3: EntraGovernanceProvider (Core integration)
+
 9. `access-governance`: Complete `EntraGovernanceProvider` (Graph API calls, error handling, retries)
 10. `access-governance`: Add `GovernanceService.submitAndTrack()` with reconciliation scheduling
 11. `access-store-pg`: Add `external_governance_status`, `external_governance_last_checked_at` columns + migration
 
 ### Phase 4: Service Orchestration
+
 12. `access-service`: Modify `createAccessRequest()` → submit to provider for Entra-owned
 13. `access-service`: Add `reconcileGovernanceRequest()` polling logic
 14. `access-service`: Modify `decideAccessRequest()` → reject local override for Entra-owned
 15. `access-executor`: Add `fulfillmentOwner` guard on `grant()`
 
 ### Phase 5: API & Security Boundaries
+
 16. `apps/api`: Add local-override guards on `/approve` and `/deny` endpoints
 17. `apps/api`: Add `POST /:id/reconcile` admin endpoint
 18. `apps/slack`: Apply same guards to Slack approval handlers
 
 ### Phase 6: Tests & Validation
+
 19. Write executable tests for CASE 41–53
 20. Run full test suite: `bun test`, `bun run typecheck`, `bun run build`
 21. Verify baseline SHA unchanged for unrelated code

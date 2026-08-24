@@ -76,7 +76,10 @@ export class InMemoryAuditEventStore implements AuditEventStore {
   async append(event: AuditEvent): Promise<void> {
     const validated = AuditEventSchema.parse(event);
     this.events.push(validated);
-    logger.debug({ eventId: validated.eventId, type: validated.type }, "Audit event recorded");
+    logger.debug(
+      { eventId: validated.eventId, type: validated.type },
+      "Audit event recorded",
+    );
   }
 
   async getByRequestId(requestId: string): Promise<AuditEvent[]> {
@@ -94,7 +97,7 @@ export class InMemoryAuditEventStore implements AuditEventStore {
 
 export async function recordAuditEvent(
   store: AuditEventStore,
-  event: Omit<AuditEvent, "eventId"> & { eventId?: string }
+  event: Omit<AuditEvent, "eventId"> & { eventId?: string },
 ): Promise<void> {
   const fullEvent: AuditEvent = {
     eventId: event.eventId || crypto.randomUUID(),

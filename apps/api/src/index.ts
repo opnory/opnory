@@ -39,7 +39,10 @@ export async function createApiServer(): Promise<FastifyInstance> {
   });
 
   // Health check
-  server.get("/health", async () => ({ status: "ok", timestamp: new Date().toISOString() }));
+  server.get("/health", async () => ({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+  }));
 
   // Process support request endpoint (primary internal endpoint)
   server.post<{
@@ -51,7 +54,15 @@ export async function createApiServer(): Promise<FastifyInstance> {
       schema: {
         body: {
           type: "object",
-          required: ["requestId", "workspaceId", "userId", "channelId", "text", "timestamp", "source"],
+          required: [
+            "requestId",
+            "workspaceId",
+            "userId",
+            "channelId",
+            "text",
+            "timestamp",
+            "source",
+          ],
           properties: {
             requestId: { type: "string", format: "uuid" },
             workspaceId: { type: "string" },
@@ -92,7 +103,10 @@ export async function createApiServer(): Promise<FastifyInstance> {
     },
     async (request, reply) => {
       const requestId = request.body.requestId || uuidv4();
-      const traceLogger = logger.child({ requestId, workspaceId: request.body.workspaceId });
+      const traceLogger = logger.child({
+        requestId,
+        workspaceId: request.body.workspaceId,
+      });
 
       traceLogger.info({ step: "api_receive" }, "Received API request");
 
@@ -105,9 +119,11 @@ export async function createApiServer(): Promise<FastifyInstance> {
         const response = await agent.processRequest(validatedRequest);
         const validatedResponse = AgentResponseSchema.parse(response);
 
-        traceLogger.info({ step: "api_respond", confidence: response.confidence }, "API request processed");
+        traceLogger.info(
+          { step: "api_respond", confidence: response.confidence },
+          "API request processed",
+        );
         return validatedResponse;
-
       } catch (error) {
         traceLogger.error({ error }, "Error processing API request");
         reply.code(500);
@@ -120,7 +136,7 @@ export async function createApiServer(): Promise<FastifyInstance> {
           escalationReason: "SYSTEM_ERROR",
         } as AgentResponse;
       }
-    }
+    },
   );
 
   // Slack-specific endpoint - normalizes Slack payload to NormalizedRequest
@@ -177,9 +193,13 @@ export async function createApiServer(): Promise<FastifyInstance> {
       },
     },
     async (request, reply) => {
-      const { text, userId, channelId, threadId, workspaceId, requestId } = request.body;
+      const { text, userId, channelId, threadId, workspaceId, requestId } =
+        request.body;
       const finalRequestId = requestId || uuidv4();
-      const traceLogger = logger.child({ requestId: finalRequestId, workspaceId });
+      const traceLogger = logger.child({
+        requestId: finalRequestId,
+        workspaceId,
+      });
 
       traceLogger.info({ step: "slack_receive" }, "Received Slack request");
 
@@ -198,9 +218,11 @@ export async function createApiServer(): Promise<FastifyInstance> {
         const response = await agent.processRequest(normalizedRequest);
         const validatedResponse = AgentResponseSchema.parse(response);
 
-        traceLogger.info({ step: "slack_respond", confidence: response.confidence }, "Slack request processed");
+        traceLogger.info(
+          { step: "slack_respond", confidence: response.confidence },
+          "Slack request processed",
+        );
         return validatedResponse;
-
       } catch (error) {
         traceLogger.error({ error }, "Error processing Slack request");
         reply.code(500);
@@ -213,7 +235,7 @@ export async function createApiServer(): Promise<FastifyInstance> {
           escalationReason: "SYSTEM_ERROR",
         } as AgentResponse;
       }
-    }
+    },
   );
 
   // ============================================================================
@@ -238,7 +260,12 @@ export async function createApiServer(): Promise<FastifyInstance> {
       schema: {
         body: {
           type: "object",
-          required: ["requesterId", "requesterEmail", "entitlementIdOrName", "reason"],
+          required: [
+            "requesterId",
+            "requesterEmail",
+            "entitlementIdOrName",
+            "reason",
+          ],
           properties: {
             requesterId: { type: "string" },
             requesterEmail: { type: "string", format: "email" },
@@ -266,7 +293,10 @@ export async function createApiServer(): Promise<FastifyInstance> {
           metadata: request.body.metadata,
         });
 
-        traceLogger.info({ requestId: accessRequest.id }, "Access request created");
+        traceLogger.info(
+          { requestId: accessRequest.id },
+          "Access request created",
+        );
         return accessRequest;
       } catch (error) {
         traceLogger.error({ error }, "Error creating access request");
@@ -275,9 +305,11 @@ export async function createApiServer(): Promise<FastifyInstance> {
           return { error: error.message } as any;
         }
         reply.code(400);
-        return { error: error instanceof Error ? error.message : "Invalid request" } as any;
+        return {
+          error: error instanceof Error ? error.message : "Invalid request",
+        } as any;
       }
-    }
+    },
   );
 
   // GET /v1/access/requests/:id - Get access request status
@@ -300,13 +332,15 @@ export async function createApiServer(): Promise<FastifyInstance> {
       },
     },
     async (request, reply) => {
-      const accessRequest = await accessService.getRequestById(request.params.id);
+      const accessRequest = await accessService.getRequestById(
+        request.params.id,
+      );
       if (!accessRequest) {
         reply.code(404);
         return { error: "Access request not found" };
       }
       return accessRequest;
-    }
+    },
   );
 
   // POST /v1/access/requests/:id/approve - Approve access request
@@ -343,7 +377,10 @@ export async function createApiServer(): Promise<FastifyInstance> {
       },
     },
     async (request, reply) => {
-      const traceLogger = logger.child({ requestId: request.params.id, component: "access-approval" });
+      const traceLogger = logger.child({
+        requestId: request.params.id,
+        component: "access-approval",
+      });
 
       try {
         const decision = ApprovalDecisionSchema.parse(request.body);
@@ -352,10 +389,13 @@ export async function createApiServer(): Promise<FastifyInstance> {
         const updatedRequest = await accessService.decideAccessRequest(
           request.params.id,
           decision,
-          correlationId
+          correlationId,
         );
 
-        traceLogger.info({ requestId: request.params.id, decision: decision.decision }, "Access request decided");
+        traceLogger.info(
+          { requestId: request.params.id, decision: decision.decision },
+          "Access request decided",
+        );
         return updatedRequest;
       } catch (error) {
         traceLogger.error({ error }, "Error deciding access request");
@@ -364,15 +404,20 @@ export async function createApiServer(): Promise<FastifyInstance> {
             reply.code(404);
             return { error: error.message } as any;
           }
-          if (error.message.includes("cannot approve") || error.message.includes("transition")) {
+          if (
+            error.message.includes("cannot approve") ||
+            error.message.includes("transition")
+          ) {
             reply.code(409);
             return { error: error.message } as any;
           }
         }
         reply.code(400);
-        return { error: error instanceof Error ? error.message : "Invalid decision" } as any;
+        return {
+          error: error instanceof Error ? error.message : "Invalid decision",
+        } as any;
       }
-    }
+    },
   );
 
   // POST /v1/access/requests/:id/deny - Deny access request (alias for approve with DENY)
@@ -409,7 +454,10 @@ export async function createApiServer(): Promise<FastifyInstance> {
       },
     },
     async (request, reply) => {
-      const traceLogger = logger.child({ requestId: request.params.id, component: "access-approval" });
+      const traceLogger = logger.child({
+        requestId: request.params.id,
+        component: "access-approval",
+      });
 
       try {
         const decision = ApprovalDecisionSchema.parse({
@@ -421,10 +469,13 @@ export async function createApiServer(): Promise<FastifyInstance> {
         const updatedRequest = await accessService.decideAccessRequest(
           request.params.id,
           decision,
-          correlationId
+          correlationId,
         );
 
-        traceLogger.info({ requestId: request.params.id, decision: "DENY" }, "Access request denied");
+        traceLogger.info(
+          { requestId: request.params.id, decision: "DENY" },
+          "Access request denied",
+        );
         return updatedRequest;
       } catch (error) {
         traceLogger.error({ error }, "Error denying access request");
@@ -433,15 +484,20 @@ export async function createApiServer(): Promise<FastifyInstance> {
             reply.code(404);
             return { error: error.message } as any;
           }
-          if (error.message.includes("cannot approve") || error.message.includes("transition")) {
+          if (
+            error.message.includes("cannot approve") ||
+            error.message.includes("transition")
+          ) {
             reply.code(409);
             return { error: error.message } as any;
           }
         }
         reply.code(400);
-        return { error: error instanceof Error ? error.message : "Invalid decision" } as any;
+        return {
+          error: error instanceof Error ? error.message : "Invalid decision",
+        } as any;
       }
-    }
+    },
   );
 
   // GET /v1/access/requests/:id/audit - Get audit trail for request
@@ -478,7 +534,9 @@ export async function createApiServer(): Promise<FastifyInstance> {
       },
     },
     async (request, reply) => {
-      const accessRequest = await accessService.getRequestById(request.params.id);
+      const accessRequest = await accessService.getRequestById(
+        request.params.id,
+      );
       if (!accessRequest) {
         reply.code(404);
         return { error: "Access request not found" };
@@ -486,7 +544,7 @@ export async function createApiServer(): Promise<FastifyInstance> {
 
       const auditTrail = await accessService.getAuditTrail(request.params.id);
       return auditTrail;
-    }
+    },
   );
 
   return server;

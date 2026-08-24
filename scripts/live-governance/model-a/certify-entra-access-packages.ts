@@ -20,7 +20,12 @@ import {
   ExternalIdentity,
   GovernanceRequestStatus,
 } from "@opnory/access-types";
-import { PgAccessRequestStore, migrate, getPool, closePool } from "@opnory/access-store-pg";
+import {
+  PgAccessRequestStore,
+  migrate,
+  getPool,
+  closePool,
+} from "@opnory/access-store-pg";
 import { PgAuditEventStore } from "@opnory/access-store-pg";
 import { loadConfig } from "@opnory/config";
 import { Octokit } from "@octokit/rest";
@@ -86,7 +91,8 @@ function loadEntraConfig(): EntraSandboxConfig {
     assignmentPolicyId: getEnv("OPNORY_ENTRA_ASSIGNMENT_POLICY_ID"),
     githubOrg: getEnv("OPNORY_ENTRA_GITHUB_ORG"),
     githubTeamSlug: getEnv("OPNORY_ENTRA_GITHUB_TEAM_SLUG"),
-    fulfillmentOwner: getEnv("OPNORY_ENTRA_FULFILLMENT_OWNER") as "opnory" | "entra",
+    fulfillmentOwner: getEnv("OPNORY_ENTRA_FULFILLMENT_OWNER") as
+      "opnory" | "entra",
   };
 }
 
@@ -105,7 +111,11 @@ export async function runEntraLiveValidation(): Promise<void> {
   requireSandboxConfirmation("entra");
 
   const sandboxConfig = loadEntraConfig();
-  const evidence = new EvidenceRecorder("entra", commitSha, sandboxConfig.tenantId);
+  const evidence = new EvidenceRecorder(
+    "entra",
+    commitSha,
+    sandboxConfig.tenantId,
+  );
 
   // Initialize infrastructure
   await migrate();
@@ -127,7 +137,10 @@ export async function runEntraLiveValidation(): Promise<void> {
     // E1 - Authenticate
     // ========================================================================
     {
-      const step = evidence.startStep("E1", "Authenticate with app-only credentials");
+      const step = evidence.startStep(
+        "E1",
+        "Authenticate with app-only credentials",
+      );
       try {
         // Test auth by making a safe Graph request
         await provider.resolveSubject({
@@ -135,7 +148,9 @@ export async function runEntraLiveValidation(): Promise<void> {
           requesterEmail: sandboxConfig.testSubjectEmail,
           externalIdentities: {},
         });
-        step.end("PASS", { message: "Entra app-only auth acquired successfully" });
+        step.end("PASS", {
+          message: "Entra app-only auth acquired successfully",
+        });
       } catch (error) {
         step.end("FAIL", { error: String(error) });
         throw error;
@@ -158,7 +173,9 @@ export async function runEntraLiveValidation(): Promise<void> {
           expected: sandboxConfig.expectedSubjectId,
           actual: subject.id,
         });
-        throw new Error(`Subject ID mismatch: expected ${sandboxConfig.expectedSubjectId}, got ${subject.id}`);
+        throw new Error(
+          `Subject ID mismatch: expected ${sandboxConfig.expectedSubjectId}, got ${subject.id}`,
+        );
       }
 
       step.end("PASS", { subjectId: subject.id, source: subject.source });
@@ -168,7 +185,10 @@ export async function runEntraLiveValidation(): Promise<void> {
     // E3 - Resolve exact configured entitlement
     // ========================================================================
     {
-      const step = evidence.startStep("E3", "Resolve exact configured accessPackageId + assignmentPolicyId");
+      const step = evidence.startStep(
+        "E3",
+        "Resolve exact configured accessPackageId + assignmentPolicyId",
+      );
       const entitlementRef: EntitlementRef = {
         id: randomUUID(), // Opnory entitlement ID
         name: "Entra Sandbox Access Package",
@@ -191,7 +211,9 @@ export async function runEntraLiveValidation(): Promise<void> {
           expected: sandboxConfig.accessPackageId,
           actual: entitlement.externalId,
         });
-        throw new Error(`Entitlement externalId mismatch: expected ${sandboxConfig.accessPackageId}, got ${entitlement.externalId}`);
+        throw new Error(
+          `Entitlement externalId mismatch: expected ${sandboxConfig.accessPackageId}, got ${entitlement.externalId}`,
+        );
       }
 
       step.end("PASS", {
@@ -208,7 +230,10 @@ export async function runEntraLiveValidation(): Promise<void> {
     let governanceRequest: GovernanceRequest;
     let externalRequestId: string;
     {
-      const step = evidence.startStep("E4", "Submit exactly one assignment request");
+      const step = evidence.startStep(
+        "E4",
+        "Submit exactly one assignment request",
+      );
       const subject = await provider.resolveSubject({
         requesterId: "test-requester",
         requesterEmail: sandboxConfig.testSubjectEmail,
@@ -328,12 +353,19 @@ export async function runEntraLiveValidation(): Promise<void> {
 
       // Reload and verify
       const reloaded = await requestStore.getById(accessRequest.id);
-      if (!reloaded || reloaded.metadata?.governance?.externalRequestId !== externalRequestId) {
-        step.end("FAIL", { error: "External request ID not persisted correctly" });
+      if (
+        !reloaded ||
+        reloaded.metadata?.governance?.externalRequestId !== externalRequestId
+      ) {
+        step.end("FAIL", {
+          error: "External request ID not persisted correctly",
+        });
         throw new Error("External request ID not persisted correctly");
       }
 
-      step.end("PASS", { externalRequestId: reloaded.metadata?.governance?.externalRequestId });
+      step.end("PASS", {
+        externalRequestId: reloaded.metadata?.governance?.externalRequestId,
+      });
     }
 
     // ========================================================================
@@ -343,11 +375,15 @@ export async function runEntraLiveValidation(): Promise<void> {
       const step = evidence.startStep("E6", "Confirm pending blocks executor");
 
       // Attempt fulfillment - should be blocked by status
-      const reloaded = await requestStore.getById((await requestStore.getAll())[0].id);
+      const reloaded = await requestStore.getById(
+        (await requestStore.getAll())[0].id,
+      );
       if (reloaded && reloaded.status === "AWAITING_AUTHORITY_DECISION") {
         step.end("PASS", { status: reloaded.status });
       } else {
-        step.end("FAIL", { error: "Request not in AWAITING_AUTHORITY_DECISION state" });
+        step.end("FAIL", {
+          error: "Request not in AWAITING_AUTHORITY_DECISION state",
+        });
         throw new Error("Request not in AWAITING_AUTHORITY_DECISION state");
       }
     }
@@ -361,12 +397,18 @@ export async function runEntraLiveValidation(): Promise<void> {
       console.log(`     Please approve the assignment request in Entra for:`);
       console.log(`     Subject: ${sandboxConfig.testSubjectEmail}`);
       console.log(`     Access Package: ${sandboxConfig.accessPackageId}`);
-      console.log(`     Assignment Policy: ${sandboxConfig.assignmentPolicyId}`);
+      console.log(
+        `     Assignment Policy: ${sandboxConfig.assignmentPolicyId}`,
+      );
       console.log(`     External Request ID: ${externalRequestId}`);
       console.log(`     Polling Entra for approval...`);
 
-      const timeoutMs = parseInt(getEnvOptional("OPNORY_LIVE_APPROVAL_TIMEOUT_MS") || "300000"); // 5 min default
-      const pollIntervalMs = parseInt(getEnvOptional("OPNORY_LIVE_POLL_INTERVAL_MS") || "10000"); // 10s default
+      const timeoutMs = parseInt(
+        getEnvOptional("OPNORY_LIVE_APPROVAL_TIMEOUT_MS") || "300000",
+      ); // 5 min default
+      const pollIntervalMs = parseInt(
+        getEnvOptional("OPNORY_LIVE_POLL_INTERVAL_MS") || "10000",
+      ); // 10s default
 
       await pollWithTimeout(
         async () => {
@@ -380,7 +422,7 @@ export async function runEntraLiveValidation(): Promise<void> {
           intervalMs: pollIntervalMs,
           timeoutMs,
           description: "Entra approval",
-        }
+        },
       );
 
       step.end("PASS", { message: "Entra approval observed" });
@@ -393,8 +435,14 @@ export async function runEntraLiveValidation(): Promise<void> {
       const step = evidence.startStep("E8", "Observe authoritative approval");
       const requestStatus = await provider.getRequestStatus(externalRequestId);
 
-      if (requestStatus.status !== "APPROVED" && requestStatus.status !== "FAILED") {
-        step.end("FAIL", { status: requestStatus.status, expected: "APPROVED/FAILED" });
+      if (
+        requestStatus.status !== "APPROVED" &&
+        requestStatus.status !== "FAILED"
+      ) {
+        step.end("FAIL", {
+          status: requestStatus.status,
+          expected: "APPROVED/FAILED",
+        });
         throw new Error(`Request not approved: ${requestStatus.status}`);
       }
 
@@ -432,22 +480,24 @@ export async function runEntraLiveValidation(): Promise<void> {
 
       if (!assignment || assignment.status !== "ACTIVE") {
         step.end("FAIL", { assignment: assignment?.status || "NOT_FOUND" });
-        throw new Error(`Assignment not active: ${assignment?.status || "NOT_FOUND"}`);
+        throw new Error(
+          `Assignment not active: ${assignment?.status || "NOT_FOUND"}`,
+        );
       }
 
       externalAssignmentId = assignment.assignmentId;
 
       // Update stored request with assignment ID
       const requests = await requestStore.getAll();
-      const reloaded = requests.find(r => r.correlationId === correlationId);
+      const reloaded = requests.find((r) => r.correlationId === correlationId);
       if (reloaded) {
         reloaded.governanceAssignmentId = externalAssignmentId;
         reloaded.status = "FULFILLED" as AccessRequestStatus;
         await requestStore.update(reloaded);
       }
 
-      step.end("PASS", { 
-        externalAssignmentId, 
+      step.end("PASS", {
+        externalAssignmentId,
         assignmentStatus: assignment.status,
       });
     }
@@ -459,10 +509,14 @@ export async function runEntraLiveValidation(): Promise<void> {
       const step = evidence.startStep("E10", "Downstream fulfillment");
 
       if (sandboxConfig.fulfillmentOwner === "opnory") {
-        console.log("  FulfillmentOwner=opnory: invoking GitHub executor (if applicable)");
+        console.log(
+          "  FulfillmentOwner=opnory: invoking GitHub executor (if applicable)",
+        );
         step.end("PASS", { fulfillmentOwner: "opnory" });
       } else {
-        console.log("  FulfillmentOwner=entra: asserting no local downstream mutation");
+        console.log(
+          "  FulfillmentOwner=entra: asserting no local downstream mutation",
+        );
         step.end("PASS", { fulfillmentOwner: "entra" });
       }
     }
@@ -498,10 +552,15 @@ export async function runEntraLiveValidation(): Promise<void> {
 
       if (!assignment || assignment.status !== "ACTIVE") {
         step.end("FAIL", { assignment: assignment?.status || "NOT_FOUND" });
-        throw new Error(`Assignment not active after fulfillment: ${assignment?.status || "NOT_FOUND"}`);
+        throw new Error(
+          `Assignment not active after fulfillment: ${assignment?.status || "NOT_FOUND"}`,
+        );
       }
 
-      step.end("PASS", { message: "Authoritative assignment confirmed", assignmentId: externalAssignmentId });
+      step.end("PASS", {
+        message: "Authoritative assignment confirmed",
+        assignmentId: externalAssignmentId,
+      });
     }
 
     // ========================================================================
@@ -509,7 +568,10 @@ export async function runEntraLiveValidation(): Promise<void> {
     // ========================================================================
     let revocationResult: GovernanceRevocationResult;
     {
-      const step = evidence.startStep("E12", "adminRemove (POST assignmentRequests with adminRemove)");
+      const step = evidence.startStep(
+        "E12",
+        "adminRemove (POST assignmentRequests with adminRemove)",
+      );
       const subject = await provider.resolveSubject({
         requesterId: "test-requester",
         requesterEmail: sandboxConfig.testSubjectEmail,
@@ -550,9 +612,10 @@ export async function runEntraLiveValidation(): Promise<void> {
         throw new Error(`adminRemove failed: ${revocationResult.error}`);
       }
 
-      step.end("PASS", { 
+      step.end("PASS", {
         message: revocationResult.message,
-        authoritativeMutationPerformed: revocationResult.authoritativeMutationPerformed,
+        authoritativeMutationPerformed:
+          revocationResult.authoritativeMutationPerformed,
       });
     }
 
@@ -561,8 +624,12 @@ export async function runEntraLiveValidation(): Promise<void> {
     // ========================================================================
     {
       const step = evidence.startStep("E13", "Reconcile removal");
-      const timeoutMs = parseInt(getEnvOptional("OPNORY_LIVE_REVOCATION_TIMEOUT_MS") || "300000");
-      const pollIntervalMs = parseInt(getEnvOptional("OPNORY_LIVE_POLL_INTERVAL_MS") || "10000");
+      const timeoutMs = parseInt(
+        getEnvOptional("OPNORY_LIVE_REVOCATION_TIMEOUT_MS") || "300000",
+      );
+      const pollIntervalMs = parseInt(
+        getEnvOptional("OPNORY_LIVE_POLL_INTERVAL_MS") || "10000",
+      );
 
       await pollWithTimeout(
         async () => {
@@ -588,7 +655,11 @@ export async function runEntraLiveValidation(): Promise<void> {
           });
 
           const assignment = await provider.getAssignment(subject, entitlement);
-          if (!assignment || assignment.status === "REVOKED" || assignment.status === "NOT_FOUND") {
+          if (
+            !assignment ||
+            assignment.status === "REVOKED" ||
+            assignment.status === "NOT_FOUND"
+          ) {
             return assignment;
           }
           return null;
@@ -597,10 +668,12 @@ export async function runEntraLiveValidation(): Promise<void> {
           intervalMs: pollIntervalMs,
           timeoutMs,
           description: "Entra revocation confirmation",
-        }
+        },
       );
 
-      step.end("PASS", { message: "Entra assignment confirmed absent/revoked" });
+      step.end("PASS", {
+        message: "Entra assignment confirmed absent/revoked",
+      });
     }
 
     // ========================================================================
@@ -609,10 +682,14 @@ export async function runEntraLiveValidation(): Promise<void> {
     {
       const step = evidence.startStep("E14", "Downstream revocation");
       if (sandboxConfig.fulfillmentOwner === "opnory") {
-        console.log("  FulfillmentOwner=opnory: invoking GitHub executor for revocation (if applicable)");
+        console.log(
+          "  FulfillmentOwner=opnory: invoking GitHub executor for revocation (if applicable)",
+        );
         step.end("PASS", { fulfillmentOwner: "opnory" });
       } else {
-        console.log("  FulfillmentOwner=entra: asserting no local downstream mutation");
+        console.log(
+          "  FulfillmentOwner=entra: asserting no local downstream mutation",
+        );
         step.end("PASS", { fulfillmentOwner: "entra" });
       }
     }
@@ -625,17 +702,28 @@ export async function runEntraLiveValidation(): Promise<void> {
 
       // Run reconciliation again
       const requests = await requestStore.getAll();
-      const testRequest = requests.find(r => r.correlationId === correlationId);
-      
+      const testRequest = requests.find(
+        (r) => r.correlationId === correlationId,
+      );
+
       if (testRequest) {
         // Verify status is still correct
-        if (testRequest.status !== "FULFILLED" && testRequest.status !== "REVOKED") {
-          step.end("FAIL", { error: `Unexpected state after re-reconciliation: ${testRequest.status}` });
-          throw new Error(`Unexpected state after re-reconciliation: ${testRequest.status}`);
+        if (
+          testRequest.status !== "FULFILLED" &&
+          testRequest.status !== "REVOKED"
+        ) {
+          step.end("FAIL", {
+            error: `Unexpected state after re-reconciliation: ${testRequest.status}`,
+          });
+          throw new Error(
+            `Unexpected state after re-reconciliation: ${testRequest.status}`,
+          );
         }
       }
 
-      step.end("PASS", { message: "Zero duplicate mutations on re-reconciliation" });
+      step.end("PASS", {
+        message: "Zero duplicate mutations on re-reconciliation",
+      });
     }
 
     // ========================================================================
@@ -649,7 +737,9 @@ export async function runEntraLiveValidation(): Promise<void> {
       const freshAuditStore = new PgAuditEventStore(freshPool);
 
       const requests = await freshRequestStore.getAll();
-      const testRequest = requests.find(r => r.correlationId === correlationId);
+      const testRequest = requests.find(
+        (r) => r.correlationId === correlationId,
+      );
 
       if (!testRequest) {
         step.end("FAIL", { error: "Request not found after restart" });
@@ -657,18 +747,31 @@ export async function runEntraLiveValidation(): Promise<void> {
       }
 
       // Verify state is still correct
-      if (testRequest.status !== "FULFILLED" && testRequest.status !== "REVOKED") {
-        step.end("FAIL", { error: `Unexpected state after restart: ${testRequest.status}` });
-        throw new Error(`Unexpected state after restart: ${testRequest.status}`);
+      if (
+        testRequest.status !== "FULFILLED" &&
+        testRequest.status !== "REVOKED"
+      ) {
+        step.end("FAIL", {
+          error: `Unexpected state after restart: ${testRequest.status}`,
+        });
+        throw new Error(
+          `Unexpected state after restart: ${testRequest.status}`,
+        );
       }
 
       // Verify external IDs persisted
-      if (testRequest.metadata?.governance?.externalRequestId !== externalRequestId) {
+      if (
+        testRequest.metadata?.governance?.externalRequestId !==
+        externalRequestId
+      ) {
         step.end("FAIL", { error: "External request ID lost after restart" });
         throw new Error("External request ID lost after restart");
       }
 
-      step.end("PASS", { message: "State correct after restart", externalRequestId });
+      step.end("PASS", {
+        message: "State correct after restart",
+        externalRequestId,
+      });
     }
 
     // ========================================================================
@@ -690,7 +793,7 @@ export async function runEntraLiveValidation(): Promise<void> {
 
 // Run if invoked directly
 if (import.meta.main) {
-  runEntraLiveValidation().catch(error => {
+  runEntraLiveValidation().catch((error) => {
     console.error("Entra live validation failed:", error);
     process.exit(1);
   });

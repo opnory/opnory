@@ -1,0 +1,33 @@
+{
+  "name": "@opnory/governance-core",
+  "version": "0.1.0",
+  "description": "Opnory Governance Core Domain Model",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./domain": {
+      "import": "./dist/domain/index.js",
+      "types": "./dist/domain/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "bun test",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "zod": "^3.22.4"
+  }
+}

@@ -224,7 +224,8 @@ export class PgAccessRequestStore {
       governanceExternalRequestId: row.governance_external_request_id,
       governanceAuthority: row.governance_authority,
       governanceAssignmentId: row.governance_assignment_id,
-      governanceAssignmentExpiresAt: row.governance_assignment_expires_at?.toISOString(),
+      governanceAssignmentExpiresAt:
+        row.governance_assignment_expires_at?.toISOString(),
       // Reconciliation state fields
       governanceLastCheckedAt: row.governance_last_checked_at?.toISOString(),
       governanceNextCheckAt: row.governance_next_check_at?.toISOString(),
@@ -234,7 +235,8 @@ export class PgAccessRequestStore {
       // Governance lease fields
       governanceLeaseOwner: row.governance_lease_owner,
       governanceLeaseUntil: row.governance_lease_until?.toISOString(),
-      governanceLeaseAcquiredAt: row.governance_lease_acquired_at?.toISOString(),
+      governanceLeaseAcquiredAt:
+        row.governance_lease_acquired_at?.toISOString(),
       governanceAttemptCount: row.governance_attempt_count ?? 0,
       governanceNextAttemptAt: row.governance_next_attempt_at?.toISOString(),
       governanceLastAttemptAt: row.governance_last_attempt_at?.toISOString(),
@@ -268,13 +270,16 @@ export class PgAccessRequestStore {
   async getById(id: string): Promise<AccessRequest | undefined> {
     const result = await this.pool.query(
       "SELECT * FROM access_requests WHERE id = $1",
-      [id]
+      [id],
     );
     if (result.rows.length === 0) return undefined;
     return this.mapRowToRequest(result.rows[0]);
   }
 
-  async update(request: AccessRequest, expectedVersion?: number): Promise<void> {
+  async update(
+    request: AccessRequest,
+    expectedVersion?: number,
+  ): Promise<void> {
     let sql: string;
     let params: any[];
 
@@ -311,19 +316,29 @@ export class PgAccessRequestStore {
         request.externalId,
         JSON.stringify(request.metadata),
         request.expirationAttemptCount ?? 0,
-        request.expirationNextAttemptAt ? new Date(request.expirationNextAttemptAt) : null,
+        request.expirationNextAttemptAt
+          ? new Date(request.expirationNextAttemptAt)
+          : null,
         request.expirationMaxRetries ?? 3,
         request.expirationLastError,
-        request.expirationLastAttemptAt ? new Date(request.expirationLastAttemptAt) : null,
+        request.expirationLastAttemptAt
+          ? new Date(request.expirationLastAttemptAt)
+          : null,
         request.leaseOwner,
         request.leaseUntil ? new Date(request.leaseUntil) : null,
         request.leaseAcquiredAt ? new Date(request.leaseAcquiredAt) : null,
         request.governanceExternalRequestId,
         request.governanceAuthority,
         request.governanceAssignmentId,
-        request.governanceAssignmentExpiresAt ? new Date(request.governanceAssignmentExpiresAt) : null,
-        request.governanceLastCheckedAt ? new Date(request.governanceLastCheckedAt) : null,
-        request.governanceNextCheckAt ? new Date(request.governanceNextCheckAt) : null,
+        request.governanceAssignmentExpiresAt
+          ? new Date(request.governanceAssignmentExpiresAt)
+          : null,
+        request.governanceLastCheckedAt
+          ? new Date(request.governanceLastCheckedAt)
+          : null,
+        request.governanceNextCheckAt
+          ? new Date(request.governanceNextCheckAt)
+          : null,
         request.governanceRetryCount ?? 0,
         request.governanceLastError,
         request.governanceLastErrorCode,
@@ -362,19 +377,29 @@ export class PgAccessRequestStore {
         request.externalId,
         JSON.stringify(request.metadata),
         request.expirationAttemptCount ?? 0,
-        request.expirationNextAttemptAt ? new Date(request.expirationNextAttemptAt) : null,
+        request.expirationNextAttemptAt
+          ? new Date(request.expirationNextAttemptAt)
+          : null,
         request.expirationMaxRetries ?? 3,
         request.expirationLastError,
-        request.expirationLastAttemptAt ? new Date(request.expirationLastAttemptAt) : null,
+        request.expirationLastAttemptAt
+          ? new Date(request.expirationLastAttemptAt)
+          : null,
         request.leaseOwner,
         request.leaseUntil ? new Date(request.leaseUntil) : null,
         request.leaseAcquiredAt ? new Date(request.leaseAcquiredAt) : null,
         request.governanceExternalRequestId,
         request.governanceAuthority,
         request.governanceAssignmentId,
-        request.governanceAssignmentExpiresAt ? new Date(request.governanceAssignmentExpiresAt) : null,
-        request.governanceLastCheckedAt ? new Date(request.governanceLastCheckedAt) : null,
-        request.governanceNextCheckAt ? new Date(request.governanceNextCheckAt) : null,
+        request.governanceAssignmentExpiresAt
+          ? new Date(request.governanceAssignmentExpiresAt)
+          : null,
+        request.governanceLastCheckedAt
+          ? new Date(request.governanceLastCheckedAt)
+          : null,
+        request.governanceNextCheckAt
+          ? new Date(request.governanceNextCheckAt)
+          : null,
         request.governanceRetryCount ?? 0,
         request.governanceLastError,
         request.governanceLastErrorCode,
@@ -383,19 +408,23 @@ export class PgAccessRequestStore {
 
     const result = await this.pool.query(sql, params);
     if (expectedVersion !== undefined && result.rowCount === 0) {
-      throw new Error(`Optimistic concurrency conflict: expected version ${expectedVersion}, found different`);
+      throw new Error(
+        `Optimistic concurrency conflict: expected version ${expectedVersion}, found different`,
+      );
     }
   }
 
   async getAll(): Promise<AccessRequest[]> {
-    const result = await this.pool.query("SELECT * FROM access_requests ORDER BY created_at DESC");
+    const result = await this.pool.query(
+      "SELECT * FROM access_requests ORDER BY created_at DESC",
+    );
     return result.rows.map((row) => this.mapRowToRequest(row));
   }
 
   async getByIdempotencyKey(key: string): Promise<AccessRequest | undefined> {
     const result = await this.pool.query(
       "SELECT * FROM access_requests WHERE idempotency_key = $1",
-      [key]
+      [key],
     );
     if (result.rows.length === 0) return undefined;
     return this.mapRowToRequest(result.rows[0]);
@@ -432,7 +461,7 @@ export class PgAuditEventStore implements AuditEventStore {
   async getByRequestId(requestId: string): Promise<AuditEvent[]> {
     const result = await this.pool.query(
       "SELECT * FROM audit_events WHERE request_id = $1 ORDER BY timestamp ASC",
-      [requestId]
+      [requestId],
     );
     return result.rows.map((row) => ({
       eventId: row.event_id,
@@ -446,7 +475,9 @@ export class PgAuditEventStore implements AuditEventStore {
   }
 
   async getAll(): Promise<AuditEvent[]> {
-    const result = await this.pool.query("SELECT * FROM audit_events ORDER BY timestamp DESC LIMIT 1000");
+    const result = await this.pool.query(
+      "SELECT * FROM audit_events ORDER BY timestamp DESC LIMIT 1000",
+    );
     return result.rows.map((row) => ({
       eventId: row.event_id,
       requestId: row.request_id,
@@ -477,7 +508,7 @@ export class PgIdempotencyStore {
         `INSERT INTO idempotency_keys (key, request_id, expires_at) VALUES ($1, $2, $3)
          ON CONFLICT (key) DO NOTHING
          RETURNING key`,
-        [key, "pending", expiresAt]
+        [key, "pending", expiresAt],
       );
       return result.rows.length > 0;
     } catch (err) {
@@ -488,14 +519,14 @@ export class PgIdempotencyStore {
   async setResult(key: string, result: ExecutionResult): Promise<void> {
     await this.pool.query(
       `UPDATE idempotency_keys SET result = $1 WHERE key = $2`,
-      [JSON.stringify(result), key]
+      [JSON.stringify(result), key],
     );
   }
 
   async getResult(key: string): Promise<ExecutionResult | undefined> {
     const result = await this.pool.query(
       `SELECT result FROM idempotency_keys WHERE key = $1`,
-      [key]
+      [key],
     );
     if (result.rows.length === 0) return undefined;
     return result.rows[0].result;
@@ -503,7 +534,7 @@ export class PgIdempotencyStore {
 
   async cleanupExpired(): Promise<number> {
     const result = await this.pool.query(
-      `DELETE FROM idempotency_keys WHERE expires_at < NOW()`
+      `DELETE FROM idempotency_keys WHERE expires_at < NOW()`,
     );
     return result.rowCount ?? 0;
   }
@@ -519,10 +550,11 @@ export {
   DEFAULT_SCHEDULER_CONFIG,
 } from "./expiration-scheduler.js";
 
-export type { SchedulerConfig, SchedulerMetrics } from "./expiration-scheduler.js";
+export type {
+  SchedulerConfig,
+  SchedulerMetrics,
+} from "./expiration-scheduler.js";
 
-export {
-  GovernanceReconciliationWorker,
-} from "./governance-reconciliation-worker.js";
+export { GovernanceReconciliationWorker } from "./governance-reconciliation-worker.js";
 
 export type { ReconciliationWorkerConfig } from "./governance-reconciliation-worker.js";

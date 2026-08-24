@@ -49,9 +49,18 @@ export class InMemoryEscalationStore implements EscalationStore {
 export interface EscalationService {
   createEscalation(params: CreateEscalationParams): Promise<Escalation>;
   getEscalation(id: string): Promise<Escalation | null>;
-  updateEscalation(id: string, updates: Partial<Escalation>): Promise<Escalation | null>;
-  listEscalations(workspaceId: WorkspaceId, status?: Escalation["status"]): Promise<Escalation[]>;
-  shouldEscalate(response: AgentResponse, request: NormalizedRequest): Promise<EscalationDecision>;
+  updateEscalation(
+    id: string,
+    updates: Partial<Escalation>,
+  ): Promise<Escalation | null>;
+  listEscalations(
+    workspaceId: WorkspaceId,
+    status?: Escalation["status"],
+  ): Promise<Escalation[]>;
+  shouldEscalate(
+    response: AgentResponse,
+    request: NormalizedRequest,
+  ): Promise<EscalationDecision>;
 }
 
 export interface CreateEscalationParams {
@@ -94,7 +103,7 @@ export class InMemoryEscalationService implements EscalationService {
 
     logger.info(
       { escalationId: id, requestId: params.requestId, reason: params.reason },
-      "Escalation created"
+      "Escalation created",
     );
 
     return validated;
@@ -104,7 +113,10 @@ export class InMemoryEscalationService implements EscalationService {
     return this.store.get(id) || null;
   }
 
-  async updateEscalation(id: string, updates: Partial<Escalation>): Promise<Escalation | null> {
+  async updateEscalation(
+    id: string,
+    updates: Partial<Escalation>,
+  ): Promise<Escalation | null> {
     const existing = this.store.get(id);
     if (!existing) return null;
 
@@ -112,25 +124,42 @@ export class InMemoryEscalationService implements EscalationService {
     const validated = EscalationSchema.parse(updated);
     this.store.set(id, validated);
 
-    logger.info({ escalationId: id, updates: Object.keys(updates) }, "Escalation updated");
+    logger.info(
+      { escalationId: id, updates: Object.keys(updates) },
+      "Escalation updated",
+    );
     return validated;
   }
 
-  async listEscalations(workspaceId: WorkspaceId, status?: Escalation["status"]): Promise<Escalation[]> {
+  async listEscalations(
+    workspaceId: WorkspaceId,
+    status?: Escalation["status"],
+  ): Promise<Escalation[]> {
     const results: Escalation[] = [];
     for (const esc of this.store.values()) {
-      if (esc.workspaceId === workspaceId && (!status || esc.status === status)) {
+      if (
+        esc.workspaceId === workspaceId &&
+        (!status || esc.status === status)
+      ) {
         results.push(esc);
       }
     }
-    return results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return results.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
   }
 
-  async shouldEscalate(response: AgentResponse, request: NormalizedRequest): Promise<EscalationDecision> {
+  async shouldEscalate(
+    response: AgentResponse,
+    request: NormalizedRequest,
+  ): Promise<EscalationDecision> {
     if (response.shouldEscalate) {
       return {
         shouldEscalate: true,
-        reason: response.escalationReason ? EscalationReasonSchema.parse(response.escalationReason) : "LOW_CONFIDENCE",
+        reason: response.escalationReason
+          ? EscalationReasonSchema.parse(response.escalationReason)
+          : "LOW_CONFIDENCE",
         confidence: response.confidence,
       };
     }

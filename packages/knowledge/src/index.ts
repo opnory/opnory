@@ -13,19 +13,101 @@ const logger = getLogger().child({ component: "knowledge" });
 
 // Common stop words to filter from search queries
 const STOP_WORDS = new Set([
-  "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by",
-  "from", "up", "about", "into", "through", "during", "before", "after", "above", "below",
-  "between", "among", "this", "that", "these", "those", "what", "which", "who", "whom",
-  "whose", "where", "when", "why", "how", "is", "are", "was", "were", "be", "been", "being",
-  "have", "has", "had", "do", "does", "did", "will", "would", "could", "should", "may",
-  "might", "must", "can", "need", "dare", "ought", "i", "you", "he", "she", "it", "we",
-  "they", "me", "him", "her", "us", "them", "my", "your", "his", "its", "our", "their",
-  "mine", "yours", "hers", "ours", "theirs",
+  "the",
+  "a",
+  "an",
+  "and",
+  "or",
+  "but",
+  "in",
+  "on",
+  "at",
+  "to",
+  "for",
+  "of",
+  "with",
+  "by",
+  "from",
+  "up",
+  "about",
+  "into",
+  "through",
+  "during",
+  "before",
+  "after",
+  "above",
+  "below",
+  "between",
+  "among",
+  "this",
+  "that",
+  "these",
+  "those",
+  "what",
+  "which",
+  "who",
+  "whom",
+  "whose",
+  "where",
+  "when",
+  "why",
+  "how",
+  "is",
+  "are",
+  "was",
+  "were",
+  "be",
+  "been",
+  "being",
+  "have",
+  "has",
+  "had",
+  "do",
+  "does",
+  "did",
+  "will",
+  "would",
+  "could",
+  "should",
+  "may",
+  "might",
+  "must",
+  "can",
+  "need",
+  "dare",
+  "ought",
+  "i",
+  "you",
+  "he",
+  "she",
+  "it",
+  "we",
+  "they",
+  "me",
+  "him",
+  "her",
+  "us",
+  "them",
+  "my",
+  "your",
+  "his",
+  "its",
+  "our",
+  "their",
+  "mine",
+  "yours",
+  "hers",
+  "ours",
+  "theirs",
 ]);
 
 export interface VectorStore {
   upsert(documents: Document[]): Promise<void>;
-  search(query: string, workspaceId: WorkspaceId, topK: number): Promise<SearchResult[]>;
+  search(
+    query: string,
+    workspaceId: WorkspaceId,
+    topK: number,
+  ): Promise<SearchResult[]>;
   delete(documentIds: DocumentId[]): Promise<void>;
   get(documentId: DocumentId): Promise<Document | null>;
 }
@@ -47,16 +129,21 @@ export class InMemoryVectorStore implements VectorStore {
     logger.debug({ count: documents.length }, "Upserted documents");
   }
 
-  async search(query: string, workspaceId: WorkspaceId, topK: number): Promise<SearchResult[]> {
+  async search(
+    query: string,
+    workspaceId: WorkspaceId,
+    topK: number,
+  ): Promise<SearchResult[]> {
     const docIds = this.workspaceIndex.get(workspaceId);
     if (!docIds || docIds.size === 0) {
       return [];
     }
 
-    const queryTerms = query.toLowerCase()
+    const queryTerms = query
+      .toLowerCase()
       .split(/\s+/)
-      .filter(t => t.length > 2)
-      .filter(t => !STOP_WORDS.has(t));
+      .filter((t) => t.length > 2)
+      .filter((t) => !STOP_WORDS.has(t));
     const results: SearchResult[] = [];
 
     for (const docId of docIds) {
@@ -126,15 +213,20 @@ export const RELEVANCE_THRESHOLD = 0.3;
 
 export async function retrieveKnowledge(
   query: string,
-  workspaceId: WorkspaceId
+  workspaceId: WorkspaceId,
 ): Promise<SearchResult[]> {
   const store = getVectorStore();
   const results = await store.search(query, workspaceId, SEARCH_TOP_K);
-  const filtered = results.filter(r => r.score >= RELEVANCE_THRESHOLD);
+  const filtered = results.filter((r) => r.score >= RELEVANCE_THRESHOLD);
 
   logger.debug(
-    { query, workspaceId, totalResults: results.length, filteredCount: filtered.length },
-    "Knowledge retrieval complete"
+    {
+      query,
+      workspaceId,
+      totalResults: results.length,
+      filteredCount: filtered.length,
+    },
+    "Knowledge retrieval complete",
   );
 
   return filtered;
@@ -143,7 +235,10 @@ export async function retrieveKnowledge(
 export async function indexDocument(doc: Document): Promise<void> {
   const store = getVectorStore();
   await store.upsert([doc]);
-  logger.info({ documentId: doc.id, workspaceId: doc.workspaceId }, "Document indexed");
+  logger.info(
+    { documentId: doc.id, workspaceId: doc.workspaceId },
+    "Document indexed",
+  );
 }
 
 export async function indexDocuments(docs: Document[]): Promise<void> {
@@ -152,7 +247,12 @@ export async function indexDocuments(docs: Document[]): Promise<void> {
   logger.info({ count: docs.length }, "Documents indexed");
 }
 
-export { type Document, type SearchResult, type DocumentId, type WorkspaceId } from "@opnory/types";
+export {
+  type Document,
+  type SearchResult,
+  type DocumentId,
+  type WorkspaceId,
+} from "@opnory/types";
 
 export const VPN_DOCUMENT_ID = "550e8400-e29b-41d4-a716-446655440001";
 

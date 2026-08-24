@@ -21,7 +21,7 @@ describe("Config Package", () => {
     process.env.ESCALATION_CONFIDENCE_THRESHOLD = "0.7";
 
     const cfg = loadConfig();
-    
+
     expect(cfg.env).toBe("development");
     expect(cfg.port).toBe(3000);
     expect(cfg.logLevel).toBe("INFO");

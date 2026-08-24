@@ -1,6 +1,15 @@
 import { describe, it, expect, beforeEach } from "bun:test";
-import { InMemoryVectorStore, seedCanonicalDocuments, canonicalVpnDocument, VPN_DOCUMENT_ID } from "@opnory/knowledge";
-import { InMemoryEscalationStore, InMemoryEscalationService, EscalationReason } from "@opnory/escalation";
+import {
+  InMemoryVectorStore,
+  seedCanonicalDocuments,
+  canonicalVpnDocument,
+  VPN_DOCUMENT_ID,
+} from "@opnory/knowledge";
+import {
+  InMemoryEscalationStore,
+  InMemoryEscalationService,
+  EscalationReason,
+} from "@opnory/escalation";
 import { OpnoryAgent } from "../src/index.js";
 import { type NormalizedRequest } from "@opnory/types";
 
@@ -26,10 +35,10 @@ describe("Agent Package", () => {
     vectorStore = new InMemoryVectorStore();
     // Seed the canonical document into our test vector store
     await vectorStore.upsert([canonicalVpnDocument]);
-    
+
     escalationStore = new InMemoryEscalationStore();
     escalationService = new InMemoryEscalationService(escalationStore);
-    
+
     agent = new OpnoryAgent({ vectorStore, escalationService });
   });
 
@@ -58,7 +67,9 @@ describe("Agent Package", () => {
 
   describe("CASE 2 - Unknown answer", () => {
     it("should not invent answer and should escalate", async () => {
-      const request = createRequest("What is the admin password for the finance router?");
+      const request = createRequest(
+        "What is the admin password for the finance router?",
+      );
       const response = await agent.processRequest(request);
 
       // The query finds no relevant documents, so escalates with NO_RELEVANT_DOCUMENTS
@@ -70,7 +81,9 @@ describe("Agent Package", () => {
 
   describe("CASE 3 - Partially known", () => {
     it("should answer supported portion and state unavailable info", async () => {
-      const request = createRequest("How do I connect to the VPN, and what is the emergency bypass code?");
+      const request = createRequest(
+        "How do I connect to the VPN, and what is the emergency bypass code?",
+      );
       const response = await agent.processRequest(request);
 
       // The query contains "bypass" which triggers partial knowledge handling
@@ -102,7 +115,7 @@ describe("Agent Package", () => {
       for (const text of phrasings) {
         const request = createRequest(text);
         const response = await agent.processRequest(request);
-        
+
         expect(response.shouldEscalate).toBe(true);
         expect(response.escalationReason).toBe("USER_REQUESTED");
       }

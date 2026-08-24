@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach } from "bun:test";
-import { InMemoryEscalationService, InMemoryEscalationStore, EscalationReason } from "../src/index.js";
+import {
+  InMemoryEscalationService,
+  InMemoryEscalationStore,
+  EscalationReason,
+} from "../src/index.js";
 
 describe("Escalation Package", () => {
   let store: InMemoryEscalationStore;

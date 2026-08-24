@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll } from "bun:test";
-import { GitHubAccessExecutor, InMemoryIdempotencyStore, GitHubExecutorConfig } from "./index.js";
+import {
+  GitHubAccessExecutor,
+  InMemoryIdempotencyStore,
+  GitHubExecutorConfig,
+} from "./index.js";
 import { InMemoryAuditEventStore } from "@opnory/access-audit";
 import { ApprovedAccessRequest, ExternalIdentity } from "@opnory/access-types";
 
@@ -21,11 +25,14 @@ let executor: GitHubAccessExecutor;
 let idempotencyStore: InMemoryIdempotencyStore;
 let auditStore: InMemoryAuditEventStore;
 
-const baseRequest = (overrides: Partial<ApprovedAccessRequest> = {}): ApprovedAccessRequest => {
+const baseRequest = (
+  overrides: Partial<ApprovedAccessRequest> = {},
+): ApprovedAccessRequest => {
   const requestId = overrides.id || crypto.randomUUID();
-  const entitlementId = overrides.entitlement?.id || "123e4567-e89b-12d3-a456-426614174002";
+  const entitlementId =
+    overrides.entitlement?.id || "123e4567-e89b-12d3-a456-426614174002";
   const requesterId = overrides.requesterId || "user-789";
-  
+
   return {
     id: requestId,
     correlationId: overrides.correlationId || crypto.randomUUID(),
@@ -113,30 +120,30 @@ describe.skipIf(!APP_ID || !INSTALLATION_ID || !PRIVATE_KEY || !TEST_USER_A)(
     });
 
     describe.skipIf(!TEST_USER_B)(
-    "Scenario 3: Outside-org user -> AWAITING_EXTERNAL_ACCEPTANCE (no false success)",
-    () => {
-      it("returns AWAITING_EXTERNAL_ACCEPTANCE for outside-org user", async () => {
-        const request = baseRequest({
-          externalIdentities: {
-            github: {
-              login: TEST_USER_B!,
-              verified: true,
-              verifiedAt: new Date().toISOString(),
-              source: "admin",
+      "Scenario 3: Outside-org user -> AWAITING_EXTERNAL_ACCEPTANCE (no false success)",
+      () => {
+        it("returns AWAITING_EXTERNAL_ACCEPTANCE for outside-org user", async () => {
+          const request = baseRequest({
+            externalIdentities: {
+              github: {
+                login: TEST_USER_B!,
+                verified: true,
+                verifiedAt: new Date().toISOString(),
+                source: "admin",
+              },
             },
-          },
+          });
+
+          const result = await executor.grant(request);
+
+          // Should be pending external acceptance
+          expect(result.success).toBe(false);
+          expect(result.status).toBe("AWAITING_EXTERNAL_ACCEPTANCE");
+          expect(result.message).toContain("pending");
         });
-
-        const result = await executor.grant(request);
-
-        // Should be pending external acceptance
-        expect(result.success).toBe(false);
-        expect(result.status).toBe("AWAITING_EXTERNAL_ACCEPTANCE");
-        expect(result.message).toContain("pending");
-      });
-    }
-  );
-  }
+      },
+    );
+  },
 );
 
 describe.skipIf(!process.env.OPNORY_LIVE_GITHUB_TESTS)(
@@ -160,5 +167,5 @@ describe.skipIf(!process.env.OPNORY_LIVE_GITHUB_TESTS)(
     it("should have TEST_USER_A defined", () => {
       expect(TEST_USER_A).toBeTruthy();
     });
-  }
+  },
 );

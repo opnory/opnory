@@ -9,9 +9,12 @@ export function loadConfig(): AppConfig {
   }
 
   const rawConfig = {
-    env: (process.env.NODE_ENV as "development" | "staging" | "production") || "development",
+    env:
+      (process.env.NODE_ENV as "development" | "staging" | "production") ||
+      "development",
     port: parseInt(process.env.PORT || "3000", 10),
-    logLevel: (process.env.LOG_LEVEL as "DEBUG" | "INFO" | "WARN" | "ERROR") || "INFO",
+    logLevel:
+      (process.env.LOG_LEVEL as "DEBUG" | "INFO" | "WARN" | "ERROR") || "INFO",
     slack: {
       signingSecret: process.env.SLACK_SIGNING_SECRET || "",
       botToken: process.env.SLACK_BOT_TOKEN || "",
@@ -22,31 +25,40 @@ export function loadConfig(): AppConfig {
     },
     redis: process.env.REDIS_URL ? { url: process.env.REDIS_URL } : undefined,
     vectorStore: {
-      type: (process.env.VECTOR_STORE_TYPE as "pinecone" | "weaviate" | "qdrant" | "memory") || "memory",
+      type:
+        (process.env.VECTOR_STORE_TYPE as
+          "pinecone" | "weaviate" | "qdrant" | "memory") || "memory",
       config: parseJsonOrEmpty(process.env.VECTOR_STORE_CONFIG),
     },
     llm: {
-      provider: (process.env.LLM_PROVIDER as "openai" | "anthropic" | "local") || "openai",
+      provider:
+        (process.env.LLM_PROVIDER as "openai" | "anthropic" | "local") ||
+        "openai",
       model: process.env.LLM_MODEL || "gpt-4o-mini",
       apiKey: process.env.LLM_API_KEY,
       baseUrl: process.env.LLM_BASE_URL,
     },
     embedding: {
-      provider: (process.env.EMBEDDING_PROVIDER as "openai" | "local") || "openai",
+      provider:
+        (process.env.EMBEDDING_PROVIDER as "openai" | "local") || "openai",
       model: process.env.EMBEDDING_MODEL || "text-embedding-3-small",
       apiKey: process.env.EMBEDDING_API_KEY,
       baseUrl: process.env.EMBEDDING_BASE_URL,
       dimensions: parseInt(process.env.EMBEDDING_DIMENSIONS || "1536", 10),
     },
     escalation: {
-      confidenceThreshold: parseFloat(process.env.ESCALATION_CONFIDENCE_THRESHOLD || "0.7"),
+      confidenceThreshold: parseFloat(
+        process.env.ESCALATION_CONFIDENCE_THRESHOLD || "0.7",
+      ),
       defaultAssigneeId: process.env.DEFAULT_ASSIGNEE_ID,
     },
   };
 
   const result = AppConfigSchema.safeParse(rawConfig);
   if (!result.success) {
-    const errors = result.error.errors.map(e => `${e.path.join(".")}: ${e.message}`).join("; ");
+    const errors = result.error.errors
+      .map((e) => `${e.path.join(".")}: ${e.message}`)
+      .join("; ");
     throw new Error(`Invalid configuration: ${errors}`);
   }
 

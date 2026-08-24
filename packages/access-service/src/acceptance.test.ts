@@ -1,13 +1,38 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { AccessRequestService } from "@opnory/access-service";
 import { InMemoryAuditEventStore } from "@opnory/access-audit";
-import { FakeGitHubAccessExecutor, InMemoryIdempotencyStore } from "@opnory/access-executor";
+import {
+  FakeGitHubAccessExecutor,
+  InMemoryIdempotencyStore,
+} from "@opnory/access-executor";
 import { InMemoryApprovalStore } from "@opnory/access-approval";
-import { EntitlementCatalog, canonicalEngineeringContributorEntitlement, ENGINEERING_CONTRIBUTOR_ENTITLEMENT_ID, Entitlement } from "@opnory/access-entitlements";
-import { ApprovalDecision, GovernanceAuthority, GovernanceSubject, GovernedEntitlement, GovernanceRequest, GovernanceRequestStatus, GovernanceAssignment, GovernanceRevocationResult, GovernanceProvider, GovernedAccessRequest, AccessRequest } from "@opnory/access-types";
+import {
+  EntitlementCatalog,
+  canonicalEngineeringContributorEntitlement,
+  ENGINEERING_CONTRIBUTOR_ENTITLEMENT_ID,
+  Entitlement,
+} from "@opnory/access-entitlements";
+import {
+  ApprovalDecision,
+  GovernanceAuthority,
+  GovernanceSubject,
+  GovernedEntitlement,
+  GovernanceRequest,
+  GovernanceRequestStatus,
+  GovernanceAssignment,
+  GovernanceRevocationResult,
+  GovernanceProvider,
+  GovernedAccessRequest,
+  AccessRequest,
+} from "@opnory/access-types";
 import { AuditEventType } from "@opnory/access-audit";
 import { v4 as uuidv4 } from "uuid";
-import { GovernanceService, LocalGovernanceProvider, EntraConfig, OktaConfig } from "@opnory/access-governance";
+import {
+  GovernanceService,
+  LocalGovernanceProvider,
+  EntraConfig,
+  OktaConfig,
+} from "@opnory/access-governance";
 
 // ============================================================================
 // Fake Entra Governance Provider (in-memory simulation)
@@ -38,7 +63,10 @@ class FakeEntraGovernanceProvider implements GovernanceProvider {
   private requests: Map<string, FakeEntraRequest> = new Map();
   private assignments: Map<string, FakeEntraAssignment> = new Map();
   private accessPackageIds: Set<string> = new Set();
-  private userByEmail: Map<string, { id: string; displayName: string; mail: string; userPrincipalName: string }> = new Map();
+  private userByEmail: Map<
+    string,
+    { id: string; displayName: string; mail: string; userPrincipalName: string }
+  > = new Map();
 
   constructor() {
     // Pre-seed some test users
@@ -69,8 +97,10 @@ class FakeEntraGovernanceProvider implements GovernanceProvider {
     if (request) {
       request.requestStatus = "Delivered";
       request.assignmentId = assignmentId || `entra-assignment-${uuidv4()}`;
-      request.assignmentExpiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
-      
+      request.assignmentExpiresAt = new Date(
+        Date.now() + 90 * 24 * 60 * 60 * 1000,
+      ).toISOString();
+
       // Create assignment
       this.assignments.set(request.assignmentId, {
         id: request.assignmentId,
@@ -91,7 +121,11 @@ class FakeEntraGovernanceProvider implements GovernanceProvider {
     }
   }
 
-  async resolveSubject(identity: { requesterId: string; requesterEmail: string; externalIdentities: any }): Promise<GovernanceSubject> {
+  async resolveSubject(identity: {
+    requesterId: string;
+    requesterEmail: string;
+    externalIdentities: any;
+  }): Promise<GovernanceSubject> {
     const user = this.userByEmail.get(identity.requesterEmail);
     if (user) {
       return {
@@ -111,10 +145,15 @@ class FakeEntraGovernanceProvider implements GovernanceProvider {
     };
   }
 
-  async resolveEntitlement(entitlement: EntitlementRef): Promise<GovernedEntitlement> {
-    const accessPackageId = entitlement.metadata?.entraAccessPackageId as string | undefined;
+  async resolveEntitlement(
+    entitlement: EntitlementRef,
+  ): Promise<GovernedEntitlement> {
+    const accessPackageId = entitlement.metadata?.entraAccessPackageId as
+      string | undefined;
     if (!accessPackageId || !this.accessPackageIds.has(accessPackageId)) {
-      throw new Error(`Entitlement ${entitlement.id} missing or invalid entraAccessPackageId in metadata`);
+      throw new Error(
+        `Entitlement ${entitlement.id} missing or invalid entraAccessPackageId in metadata`,
+      );
     }
     return {
       entitlementId: entitlement.id,
@@ -125,11 +164,15 @@ class FakeEntraGovernanceProvider implements GovernanceProvider {
     };
   }
 
-  async submitRequest(request: GovernedAccessRequest): Promise<GovernanceRequest> {
+  async submitRequest(
+    request: GovernedAccessRequest,
+  ): Promise<GovernanceRequest> {
     const externalRequestId = `entra-request-${uuidv4()}`;
     const now = new Date().toISOString();
-    const endDate = request.requestedDuration 
-      ? new Date(Date.now() + this.parseDuration(request.requestedDuration)).toISOString()
+    const endDate = request.requestedDuration
+      ? new Date(
+          Date.now() + this.parseDuration(request.requestedDuration),
+        ).toISOString()
       : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
 
     const fakeRequest: FakeEntraRequest = {
@@ -155,7 +198,9 @@ class FakeEntraGovernanceProvider implements GovernanceProvider {
     };
   }
 
-  async getRequestStatus(externalRequestId: string): Promise<GovernanceRequestStatus> {
+  async getRequestStatus(
+    externalRequestId: string,
+  ): Promise<GovernanceRequestStatus> {
     const request = this.requests.get(externalRequestId);
     if (!request) {
       return {
@@ -177,10 +222,13 @@ class FakeEntraGovernanceProvider implements GovernanceProvider {
 
   async getAssignment(
     subject: GovernanceSubject,
-    entitlement: GovernedEntitlement
+    entitlement: GovernedEntitlement,
   ): Promise<GovernanceAssignment | null> {
     for (const assignment of this.assignments.values()) {
-      if (assignment.targetId === subject.id && assignment.accessPackageId === entitlement.externalId) {
+      if (
+        assignment.targetId === subject.id &&
+        assignment.accessPackageId === entitlement.externalId
+      ) {
         return {
           assignmentId: assignment.id,
           subject,
@@ -196,7 +244,9 @@ class FakeEntraGovernanceProvider implements GovernanceProvider {
     return null;
   }
 
-  async revokeAssignment(assignment: GovernanceAssignment): Promise<GovernanceRevocationResult> {
+  async revokeAssignment(
+    assignment: GovernanceAssignment,
+  ): Promise<GovernanceRevocationResult> {
     const entraAssignment = this.assignments.get(assignment.assignmentId);
     if (entraAssignment) {
       entraAssignment.status = "Revoked";
@@ -235,7 +285,9 @@ class FakeEntraGovernanceProvider implements GovernanceProvider {
     }
   }
 
-  private mapEntraAssignmentStatus(entraStatus: string): GovernanceAssignment["status"] {
+  private mapEntraAssignmentStatus(
+    entraStatus: string,
+  ): GovernanceAssignment["status"] {
     switch (entraStatus) {
       case "Delivered":
         return "ACTIVE";
@@ -285,7 +337,10 @@ class FakeOktaGovernanceProvider implements GovernanceProvider {
   private requests: Map<string, FakeOktaRequest> = new Map();
   private assignments: Map<string, FakeOktaAssignment> = new Map();
   private groupIds: Set<string> = new Set();
-  private userByEmail: Map<string, { id: string; displayName: string; email: string; login: string }> = new Map();
+  private userByEmail: Map<
+    string,
+    { id: string; displayName: string; email: string; login: string }
+  > = new Map();
 
   constructor() {
     // Pre-seed some test users
@@ -334,7 +389,11 @@ class FakeOktaGovernanceProvider implements GovernanceProvider {
     }
   }
 
-  async resolveSubject(identity: { requesterId: string; requesterEmail: string; externalIdentities: any }): Promise<GovernanceSubject> {
+  async resolveSubject(identity: {
+    requesterId: string;
+    requesterEmail: string;
+    externalIdentities: any;
+  }): Promise<GovernanceSubject> {
     const user = this.userByEmail.get(identity.requesterEmail);
     if (user) {
       return {
@@ -354,19 +413,27 @@ class FakeOktaGovernanceProvider implements GovernanceProvider {
     };
   }
 
-  async resolveEntitlement(entitlement: EntitlementRef): Promise<GovernedEntitlement> {
+  async resolveEntitlement(
+    entitlement: EntitlementRef,
+  ): Promise<GovernedEntitlement> {
     const governanceConfig = entitlement.governance;
     if (!governanceConfig || governanceConfig.provider !== "okta") {
-      throw new Error(`Entitlement ${entitlement.id} missing or invalid okta governance config`);
+      throw new Error(
+        `Entitlement ${entitlement.id} missing or invalid okta governance config`,
+      );
     }
 
     const groupId = governanceConfig.groupId!;
     if (!this.groupIds.has(groupId)) {
-      throw new Error(`Entitlement ${entitlement.id} missing or invalid groupId in governance config`);
+      throw new Error(
+        `Entitlement ${entitlement.id} missing or invalid groupId in governance config`,
+      );
     }
 
     if (!governanceConfig.appId) {
-      throw new Error(`Entitlement ${entitlement.id} missing or invalid okta governance config`);
+      throw new Error(
+        `Entitlement ${entitlement.id} missing or invalid okta governance config`,
+      );
     }
 
     return {
@@ -374,11 +441,17 @@ class FakeOktaGovernanceProvider implements GovernanceProvider {
       authority: "okta",
       externalId: groupId,
       externalName: entitlement.name,
-      metadata: { system: entitlement.system, groupId, appId: governanceConfig.appId },
+      metadata: {
+        system: entitlement.system,
+        groupId,
+        appId: governanceConfig.appId,
+      },
     };
   }
 
-  async submitRequest(request: GovernedAccessRequest): Promise<GovernanceRequest> {
+  async submitRequest(
+    request: GovernedAccessRequest,
+  ): Promise<GovernanceRequest> {
     const externalRequestId = `okta-group-membership-${request.subject.id}-${request.entitlement.externalId}`;
     const now = new Date().toISOString();
 
@@ -405,7 +478,9 @@ class FakeOktaGovernanceProvider implements GovernanceProvider {
     };
   }
 
-  async getRequestStatus(externalRequestId: string): Promise<GovernanceRequestStatus> {
+  async getRequestStatus(
+    externalRequestId: string,
+  ): Promise<GovernanceRequestStatus> {
     const request = this.requests.get(externalRequestId);
     if (!request) {
       return {
@@ -426,10 +501,13 @@ class FakeOktaGovernanceProvider implements GovernanceProvider {
 
   async getAssignment(
     subject: GovernanceSubject,
-    entitlement: GovernedEntitlement
+    entitlement: GovernedEntitlement,
   ): Promise<GovernanceAssignment | null> {
     for (const assignment of this.assignments.values()) {
-      if (assignment.targetId === subject.id && assignment.groupId === entitlement.externalId) {
+      if (
+        assignment.targetId === subject.id &&
+        assignment.groupId === entitlement.externalId
+      ) {
         return {
           assignmentId: assignment.id,
           subject,
@@ -444,7 +522,9 @@ class FakeOktaGovernanceProvider implements GovernanceProvider {
     return null;
   }
 
-  async revokeAssignment(assignment: GovernanceAssignment): Promise<GovernanceRevocationResult> {
+  async revokeAssignment(
+    assignment: GovernanceAssignment,
+  ): Promise<GovernanceRevocationResult> {
     const oktaAssignment = this.assignments.get(assignment.assignmentId);
     if (oktaAssignment) {
       oktaAssignment.status = "REVOKED";
@@ -514,7 +594,10 @@ describe("Access Request Service - Acceptance Tests", () => {
 
   beforeEach(() => {
     auditStore = new InMemoryAuditEventStore();
-    executor = new FakeGitHubAccessExecutor(new InMemoryIdempotencyStore(), auditStore);
+    executor = new FakeGitHubAccessExecutor(
+      new InMemoryIdempotencyStore(),
+      auditStore,
+    );
     approvalStore = new InMemoryApprovalStore();
     idempotencyStore = new InMemoryIdempotencyStore();
 
@@ -523,12 +606,17 @@ describe("Access Request Service - Acceptance Tests", () => {
       executor,
       approvalStore,
       idempotencyStore,
-      catalog: new EntitlementCatalog([canonicalEngineeringContributorEntitlement]),
+      catalog: new EntitlementCatalog([
+        canonicalEngineeringContributorEntitlement,
+      ]),
     });
   });
 
   // Helper to create valid approval decision
-  const createApprovalDecision = (decision: "APPROVE" | "DENY", overrides: Partial<ApprovalDecision> = {}): ApprovalDecision => ({
+  const createApprovalDecision = (
+    decision: "APPROVE" | "DENY",
+    overrides: Partial<ApprovalDecision> = {},
+  ): ApprovalDecision => ({
     decision,
     approverId: "manager-456",
     approverEmail: "manager@example.com",
@@ -555,7 +643,9 @@ describe("Access Request Service - Acceptance Tests", () => {
         reason: "I need GitHub access for development work",
       });
 
-      expect(request.entitlement.id).toBe(ENGINEERING_CONTRIBUTOR_ENTITLEMENT_ID);
+      expect(request.entitlement.id).toBe(
+        ENGINEERING_CONTRIBUTOR_ENTITLEMENT_ID,
+      );
       expect(request.entitlement.name).toBe("Engineering Contributor");
       expect(request.entitlement.system).toBe("github");
       expect(request.status).toBe("PENDING_APPROVAL");
@@ -564,7 +654,11 @@ describe("Access Request Service - Acceptance Tests", () => {
       // Verify no provisioning occurred
       const auditEvents = await service.getAuditTrail(request.id);
       const fulfillmentEvents = auditEvents.filter((e) =>
-        ["FULFILLMENT_STARTED", "FULFILLMENT_SUCCEEDED", "FULFILLMENT_FAILED"].includes(e.type)
+        [
+          "FULFILLMENT_STARTED",
+          "FULFILLMENT_SUCCEEDED",
+          "FULFILLMENT_FAILED",
+        ].includes(e.type),
       );
       expect(fulfillmentEvents.length).toBe(0);
 
@@ -596,9 +690,15 @@ describe("Access Request Service - Acceptance Tests", () => {
       });
 
       // Manager approves
-      const decision = createApprovalDecision("APPROVE", { approverId: "manager-456" });
+      const decision = createApprovalDecision("APPROVE", {
+        approverId: "manager-456",
+      });
 
-      const updatedRequest = await service.decideAccessRequest(request.id, decision, uuidv4());
+      const updatedRequest = await service.decideAccessRequest(
+        request.id,
+        decision,
+        uuidv4(),
+      );
 
       expect(updatedRequest.status).toBe("FULFILLED");
       expect(updatedRequest.approvedBy).toBe("manager-456");
@@ -606,8 +706,12 @@ describe("Access Request Service - Acceptance Tests", () => {
 
       // Verify executor was called exactly once
       const auditEvents = await service.getAuditTrail(request.id);
-      const fulfillmentStarted = auditEvents.filter((e) => e.type === "FULFILLMENT_STARTED");
-      const fulfillmentSucceeded = auditEvents.filter((e) => e.type === "FULFILLMENT_SUCCEEDED");
+      const fulfillmentStarted = auditEvents.filter(
+        (e) => e.type === "FULFILLMENT_STARTED",
+      );
+      const fulfillmentSucceeded = auditEvents.filter(
+        (e) => e.type === "FULFILLMENT_SUCCEEDED",
+      );
 
       expect(fulfillmentStarted.length).toBe(1);
       expect(fulfillmentSucceeded.length).toBe(1);
@@ -641,9 +745,15 @@ describe("Access Request Service - Acceptance Tests", () => {
       });
 
       // Manager denies
-      const decision = createApprovalDecision("DENY", { approverId: "manager-456" });
+      const decision = createApprovalDecision("DENY", {
+        approverId: "manager-456",
+      });
 
-      const updatedRequest = await service.decideAccessRequest(request.id, decision, uuidv4());
+      const updatedRequest = await service.decideAccessRequest(
+        request.id,
+        decision,
+        uuidv4(),
+      );
 
       expect(updatedRequest.status).toBe("DENIED");
       expect(updatedRequest.deniedBy).toBe("manager-456");
@@ -653,7 +763,11 @@ describe("Access Request Service - Acceptance Tests", () => {
       // Verify executor was never invoked
       const auditEvents = await service.getAuditTrail(request.id);
       const fulfillmentEvents = auditEvents.filter((e) =>
-        ["FULFILLMENT_STARTED", "FULFILLMENT_SUCCEEDED", "FULFILLMENT_FAILED"].includes(e.type)
+        [
+          "FULFILLMENT_STARTED",
+          "FULFILLMENT_SUCCEEDED",
+          "FULFILLMENT_FAILED",
+        ].includes(e.type),
       );
       expect(fulfillmentEvents.length).toBe(0);
 
@@ -679,7 +793,7 @@ describe("Access Request Service - Acceptance Tests", () => {
           requesterEmail: "user@example.com",
           entitlementIdOrName: "super-secret production thing",
           reason: "I need access to the super-secret production thing",
-        })
+        }),
       ).rejects.toThrow("Entitlement not found");
 
       // Verify no request was created
@@ -689,7 +803,9 @@ describe("Access Request Service - Acceptance Tests", () => {
       // Verify audit event recorded
       const allAuditEvents = await auditStore.getAll();
       const entitlementNotFoundEvents = allAuditEvents.filter(
-        (e) => e.type === "ENTITLEMENT_IDENTIFIED" && e.metadata.result === "NOT_FOUND"
+        (e) =>
+          e.type === "ENTITLEMENT_IDENTIFIED" &&
+          e.metadata.result === "NOT_FOUND",
       );
       expect(entitlementNotFoundEvents.length).toBe(1);
     });
@@ -712,10 +828,13 @@ describe("Access Request Service - Acceptance Tests", () => {
       });
 
       // Requester tries to approve their own request
-      const decision = createApprovalDecision("APPROVE", { approverId: "user-123", approverEmail: "user@example.com" });
+      const decision = createApprovalDecision("APPROVE", {
+        approverId: "user-123",
+        approverEmail: "user@example.com",
+      });
 
       await expect(
-        service.decideAccessRequest(request.id, decision, uuidv4())
+        service.decideAccessRequest(request.id, decision, uuidv4()),
       ).rejects.toThrow("Requester cannot approve their own request");
 
       // Verify request status unchanged
@@ -725,7 +844,11 @@ describe("Access Request Service - Acceptance Tests", () => {
       // Verify executor was never invoked
       const auditEvents = await service.getAuditTrail(request.id);
       const fulfillmentEvents = auditEvents.filter((e) =>
-        ["FULFILLMENT_STARTED", "FULFILLMENT_SUCCEEDED", "FULFILLMENT_FAILED"].includes(e.type)
+        [
+          "FULFILLMENT_STARTED",
+          "FULFILLMENT_SUCCEEDED",
+          "FULFILLMENT_FAILED",
+        ].includes(e.type),
       );
       expect(fulfillmentEvents.length).toBe(0);
     });
@@ -761,7 +884,9 @@ describe("Access Request Service - Acceptance Tests", () => {
 
       expect(governed.authority).toBe("okta");
       expect(governed.externalId).toBe("okta-group-salesforce-finance");
-      expect(governed.entitlementId).toBe(ENGINEERING_CONTRIBUTOR_ENTITLEMENT_ID);
+      expect(governed.entitlementId).toBe(
+        ENGINEERING_CONTRIBUTOR_ENTITLEMENT_ID,
+      );
       expect(governed.metadata?.groupId).toBe("okta-group-salesforce-finance");
       expect(governed.metadata?.appId).toBe("test-app-id");
     });
@@ -782,9 +907,9 @@ describe("Access Request Service - Acceptance Tests", () => {
         metadata: {},
       };
 
-      await expect(oktaProvider.resolveEntitlement(entitlement)).rejects.toThrow(
-        "missing or invalid groupId in governance config"
-      );
+      await expect(
+        oktaProvider.resolveEntitlement(entitlement),
+      ).rejects.toThrow("missing or invalid groupId in governance config");
     });
 
     it("should throw if appId is missing", async () => {
@@ -803,9 +928,9 @@ describe("Access Request Service - Acceptance Tests", () => {
         metadata: {},
       };
 
-      await expect(oktaProvider.resolveEntitlement(entitlement)).rejects.toThrow(
-        "missing or invalid okta governance config"
-      );
+      await expect(
+        oktaProvider.resolveEntitlement(entitlement),
+      ).rejects.toThrow("missing or invalid okta governance config");
     });
   });
 
@@ -814,7 +939,12 @@ describe("Access Request Service - Acceptance Tests", () => {
       const oktaProvider = new FakeOktaGovernanceProvider();
       const localProvider = new LocalGovernanceProvider();
       const auditStore = new InMemoryAuditEventStore();
-      const governanceService = new GovernanceService(localProvider, undefined, oktaProvider, auditStore);
+      const governanceService = new GovernanceService(
+        localProvider,
+        undefined,
+        oktaProvider,
+        auditStore,
+      );
 
       const entitlement: EntitlementRef = {
         id: ENGINEERING_CONTRIBUTOR_ENTITLEMENT_ID,
@@ -854,7 +984,7 @@ describe("Access Request Service - Acceptance Tests", () => {
       const governanceRequest = await governanceService.submitGovernedRequest(
         mockRequest,
         entitlement,
-        uuidv4()
+        uuidv4(),
       );
 
       expect(governanceRequest.status).toBe("PENDING_APPROVAL");
@@ -876,7 +1006,12 @@ describe("Access Request Service - Acceptance Tests", () => {
       const oktaProvider = new FakeOktaGovernanceProvider();
       const localProvider = new LocalGovernanceProvider();
       const auditStore = new InMemoryAuditEventStore();
-      const governanceService = new GovernanceService(localProvider, undefined, oktaProvider, auditStore);
+      const governanceService = new GovernanceService(
+        localProvider,
+        undefined,
+        oktaProvider,
+        auditStore,
+      );
 
       const entitlement: EntitlementRef = {
         id: ENGINEERING_CONTRIBUTOR_ENTITLEMENT_ID,
@@ -916,7 +1051,7 @@ describe("Access Request Service - Acceptance Tests", () => {
       const governanceRequest = await governanceService.submitGovernedRequest(
         mockRequest,
         entitlement,
-        uuidv4()
+        uuidv4(),
       );
 
       // Pre-approve in fake Okta
@@ -939,7 +1074,12 @@ describe("Access Request Service - Acceptance Tests", () => {
       const oktaProvider = new FakeOktaGovernanceProvider();
       const localProvider = new LocalGovernanceProvider();
       const auditStore = new InMemoryAuditEventStore();
-      const governanceService = new GovernanceService(localProvider, undefined, oktaProvider, auditStore);
+      const governanceService = new GovernanceService(
+        localProvider,
+        undefined,
+        oktaProvider,
+        auditStore,
+      );
 
       const entitlement: EntitlementRef = {
         id: ENGINEERING_CONTRIBUTOR_ENTITLEMENT_ID,
@@ -979,7 +1119,7 @@ describe("Access Request Service - Acceptance Tests", () => {
       const governanceRequest = await governanceService.submitGovernedRequest(
         mockRequest,
         entitlement,
-        uuidv4()
+        uuidv4(),
       );
 
       // Pre-deny in fake Okta
@@ -1013,9 +1153,9 @@ describe("Access Request Service - Acceptance Tests", () => {
         metadata: {},
       };
 
-      await expect(oktaProvider.resolveEntitlement(entitlement)).rejects.toThrow(
-        "missing or invalid groupId in governance config"
-      );
+      await expect(
+        oktaProvider.resolveEntitlement(entitlement),
+      ).rejects.toThrow("missing or invalid groupId in governance config");
     });
   });
 
@@ -1024,7 +1164,12 @@ describe("Access Request Service - Acceptance Tests", () => {
       const oktaProvider = new FakeOktaGovernanceProvider();
       const localProvider = new LocalGovernanceProvider();
       const auditStore = new InMemoryAuditEventStore();
-      const governanceService = new GovernanceService(localProvider, undefined, oktaProvider, auditStore);
+      const governanceService = new GovernanceService(
+        localProvider,
+        undefined,
+        oktaProvider,
+        auditStore,
+      );
 
       const entitlement: EntitlementRef = {
         id: ENGINEERING_CONTRIBUTOR_ENTITLEMENT_ID,
@@ -1064,20 +1209,26 @@ describe("Access Request Service - Acceptance Tests", () => {
       const governanceRequest = await governanceService.submitGovernedRequest(
         mockRequest,
         entitlement,
-        uuidv4()
+        uuidv4(),
       );
 
       const externalRequestId = mockRequest.governanceExternalRequestId;
       expect(externalRequestId).toBeDefined();
 
       // Simulate restart: create new service instance but request retains governance fields
-      const governanceService2 = new GovernanceService(localProvider, undefined, oktaProvider, auditStore);
+      const governanceService2 = new GovernanceService(
+        localProvider,
+        undefined,
+        oktaProvider,
+        auditStore,
+      );
 
       // Pre-approve
       oktaProvider.preApproveRequest(externalRequestId!);
 
       // Check status with new service instance
-      const status = await governanceService2.checkGovernanceStatus(mockRequest);
+      const status =
+        await governanceService2.checkGovernanceStatus(mockRequest);
       expect(status.status).toBe("APPROVED");
 
       // Reconcile
@@ -1091,7 +1242,12 @@ describe("Access Request Service - Acceptance Tests", () => {
       const oktaProvider = new FakeOktaGovernanceProvider();
       const localProvider = new LocalGovernanceProvider();
       const auditStore = new InMemoryAuditEventStore();
-      const governanceService = new GovernanceService(localProvider, undefined, oktaProvider, auditStore);
+      const governanceService = new GovernanceService(
+        localProvider,
+        undefined,
+        oktaProvider,
+        auditStore,
+      );
 
       const entitlement: EntitlementRef = {
         id: ENGINEERING_CONTRIBUTOR_ENTITLEMENT_ID,
@@ -1129,8 +1285,17 @@ describe("Access Request Service - Acceptance Tests", () => {
       await localProvider.approvalStore.create(mockRequest);
 
       // Submit to Okta (sets governance fields)
-      const governanceService2 = new GovernanceService(localProvider, undefined, oktaProvider, auditStore);
-      await governanceService2.submitGovernedRequest(mockRequest, entitlement, uuidv4());
+      const governanceService2 = new GovernanceService(
+        localProvider,
+        undefined,
+        oktaProvider,
+        auditStore,
+      );
+      await governanceService2.submitGovernedRequest(
+        mockRequest,
+        entitlement,
+        uuidv4(),
+      );
 
       // Now try to use local approval service directly on this Okta-governed request
       // This should be rejected because the request has governanceAuthority = "okta"
@@ -1147,9 +1312,13 @@ describe("Access Request Service - Acceptance Tests", () => {
 
       // Local approval should fail for Okta-governed request
       // The approval service should check governanceAuthority before allowing approval
-      await expect(localProvider.approvalService.approve(mockRequest.id, decision, uuidv4())).rejects.toThrow(
-        "External authority"
-      );
+      await expect(
+        localProvider.approvalService.approve(
+          mockRequest.id,
+          decision,
+          uuidv4(),
+        ),
+      ).rejects.toThrow("External authority");
     });
 
     it("should allow local approve() for LOCAL-governed request", async () => {
@@ -1196,7 +1365,11 @@ describe("Access Request Service - Acceptance Tests", () => {
         timestamp: new Date().toISOString(),
       };
 
-      const result = await localProvider.approvalService.approve(mockRequest.id, decision, uuidv4());
+      const result = await localProvider.approvalService.approve(
+        mockRequest.id,
+        decision,
+        uuidv4(),
+      );
       expect(result.request.status).toBe("APPROVED");
     });
   });
@@ -1228,7 +1401,12 @@ describe("Access Request Service - Acceptance Tests", () => {
       const oktaProvider = new FakeOktaGovernanceProvider();
       const localProvider = new LocalGovernanceProvider();
       const auditStore = new InMemoryAuditEventStore();
-      const governanceService = new GovernanceService(localProvider, undefined, oktaProvider, auditStore);
+      const governanceService = new GovernanceService(
+        localProvider,
+        undefined,
+        oktaProvider,
+        auditStore,
+      );
 
       const entitlement: EntitlementRef = {
         id: ENGINEERING_CONTRIBUTOR_ENTITLEMENT_ID,
@@ -1268,7 +1446,7 @@ describe("Access Request Service - Acceptance Tests", () => {
       const governanceRequest = await governanceService.submitGovernedRequest(
         mockRequest,
         entitlement,
-        uuidv4()
+        uuidv4(),
       );
 
       // Pre-approve

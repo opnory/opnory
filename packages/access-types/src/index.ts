@@ -9,7 +9,9 @@ const logger = getLogger().child({ component: "access-types" });
 
 export const GovernanceProviderTypeSchema = z.enum(["local", "entra", "okta"]);
 
-export type GovernanceProviderType = z.infer<typeof GovernanceProviderTypeSchema>;
+export type GovernanceProviderType = z.infer<
+  typeof GovernanceProviderTypeSchema
+>;
 
 // ============================================================================
 // Governance Authority (who decides)
@@ -125,7 +127,9 @@ export const GovernanceDecisionStatusSchema = z.enum([
   "FAILED",
 ]);
 
-export type GovernanceDecisionStatus = z.infer<typeof GovernanceDecisionStatusSchema>;
+export type GovernanceDecisionStatus = z.infer<
+  typeof GovernanceDecisionStatusSchema
+>;
 
 export const GovernanceAssignmentStatusSchema = z.enum([
   "ACTIVE",
@@ -134,7 +138,9 @@ export const GovernanceAssignmentStatusSchema = z.enum([
   "NOT_FOUND",
 ]);
 
-export type GovernanceAssignmentStatus = z.infer<typeof GovernanceAssignmentStatusSchema>;
+export type GovernanceAssignmentStatus = z.infer<
+  typeof GovernanceAssignmentStatusSchema
+>;
 
 // ============================================================================
 // Governance Request (submitted to external authority)
@@ -168,7 +174,9 @@ export const GovernanceRequestStatusSchema = z.object({
   rawResponse: z.record(z.unknown()).optional(),
 });
 
-export type GovernanceRequestStatus = z.infer<typeof GovernanceRequestStatusSchema>;
+export type GovernanceRequestStatus = z.infer<
+  typeof GovernanceRequestStatusSchema
+>;
 
 // ============================================================================
 // Governance Assignment (active assignment from authority)
@@ -207,7 +215,9 @@ export const GovernanceRevocationResultSchema = z.object({
   fallbackReason: z.string().optional(),
 });
 
-export type GovernanceRevocationResult = z.infer<typeof GovernanceRevocationResultSchema>;
+export type GovernanceRevocationResult = z.infer<
+  typeof GovernanceRevocationResultSchema
+>;
 
 // ============================================================================
 // Governance Provider Interface
@@ -217,10 +227,10 @@ export interface GovernanceProvider {
   readonly authority: GovernanceAuthority;
 
   // Resolve Opnory identity to governance subject
-  resolveSubject(identity: { 
-    requesterId: string; 
-    requesterEmail: string; 
-    externalIdentities: any 
+  resolveSubject(identity: {
+    requesterId: string;
+    requesterEmail: string;
+    externalIdentities: any;
   }): Promise<GovernanceSubject>;
 
   // Resolve Opnory entitlement to governed entitlement
@@ -234,12 +244,14 @@ export interface GovernanceProvider {
 
   // Get active assignment for subject+entitlement
   getAssignment(
-    subject: GovernanceSubject, 
-    entitlement: GovernedEntitlement
+    subject: GovernanceSubject,
+    entitlement: GovernedEntitlement,
   ): Promise<GovernanceAssignment | null>;
 
   // Revoke assignment
-  revokeAssignment(assignment: GovernanceAssignment): Promise<GovernanceRevocationResult>;
+  revokeAssignment(
+    assignment: GovernanceAssignment,
+  ): Promise<GovernanceRevocationResult>;
 }
 
 // ============================================================================
@@ -265,15 +277,33 @@ export const AccessRequestStatusSchema = z.enum([
 export type AccessRequestStatus = z.infer<typeof AccessRequestStatusSchema>;
 
 // Valid status transitions
-export const VALID_TRANSITIONS: Record<AccessRequestStatus, AccessRequestStatus[]> = {
-  PENDING_APPROVAL: ["APPROVED", "DENIED", "CANCELLED", "AWAITING_AUTHORITY_DECISION"],
+export const VALID_TRANSITIONS: Record<
+  AccessRequestStatus,
+  AccessRequestStatus[]
+> = {
+  PENDING_APPROVAL: [
+    "APPROVED",
+    "DENIED",
+    "CANCELLED",
+    "AWAITING_AUTHORITY_DECISION",
+  ],
   APPROVED: ["FULFILLING", "CANCELLED", "AWAITING_EXTERNAL_ACCEPTANCE"],
   DENIED: ["CANCELLED"],
   FULFILLING: ["FULFILLED", "FAILED"],
   FULFILLED: ["REVOCATION_PENDING", "CANCELLED", "RETRY", "REVOCATION_FAILED"],
-  FAILED: ["FULFILLING", "CANCELLED", "FULFILLED", "AWAITING_EXTERNAL_ACCEPTANCE"],
+  FAILED: [
+    "FULFILLING",
+    "CANCELLED",
+    "FULFILLED",
+    "AWAITING_EXTERNAL_ACCEPTANCE",
+  ],
   CANCELLED: [],
-  AWAITING_EXTERNAL_ACCEPTANCE: ["FULFILLED", "FAILED", "CANCELLED", "REVOCATION_PENDING"],
+  AWAITING_EXTERNAL_ACCEPTANCE: [
+    "FULFILLED",
+    "FAILED",
+    "CANCELLED",
+    "REVOCATION_PENDING",
+  ],
   REVOCATION_PENDING: ["REVOKED", "FAILED"],
   REVOKED: [],
   RETRY: ["REVOCATION_PENDING", "RETRY", "REVOCATION_FAILED", "FULFILLED"], // Retry can go to pending, retry again, terminal, or extension
@@ -281,21 +311,29 @@ export const VALID_TRANSITIONS: Record<AccessRequestStatus, AccessRequestStatus[
   AWAITING_AUTHORITY_DECISION: ["APPROVED", "DENIED", "CANCELLED"],
 };
 
-export function canTransition(from: AccessRequestStatus, to: AccessRequestStatus): boolean {
+export function canTransition(
+  from: AccessRequestStatus,
+  to: AccessRequestStatus,
+): boolean {
   return VALID_TRANSITIONS[from]?.includes(to) ?? false;
 }
 
 export function transitionOrThrow(
   from: AccessRequestStatus,
   to: AccessRequestStatus,
-  options?: { expectedVersion?: number; actualVersion?: number }
+  options?: { expectedVersion?: number; actualVersion?: number },
 ): void {
   if (!canTransition(from, to)) {
     throw new Error(`Invalid status transition: ${from} -> ${to}`);
   }
-  if (options?.expectedVersion !== undefined && options?.actualVersion !== undefined) {
+  if (
+    options?.expectedVersion !== undefined &&
+    options?.actualVersion !== undefined
+  ) {
     if (options.expectedVersion !== options.actualVersion) {
-      throw new Error(`Optimistic concurrency conflict: expected version ${options.expectedVersion}, found ${options.actualVersion}`);
+      throw new Error(
+        `Optimistic concurrency conflict: expected version ${options.expectedVersion}, found ${options.actualVersion}`,
+      );
     }
   }
 }
@@ -415,9 +453,13 @@ export const ApprovedAccessRequestSchema = AccessRequestSchema.extend({
 export type ApprovedAccessRequest = z.infer<typeof ApprovedAccessRequestSchema>;
 
 // Type guard to ensure only approved requests can be executed
-export function toApprovedAccessRequest(request: AccessRequest): ApprovedAccessRequest {
+export function toApprovedAccessRequest(
+  request: AccessRequest,
+): ApprovedAccessRequest {
   if (request.status !== "APPROVED") {
-    throw new Error(`Cannot execute request in status: ${request.status}. Must be APPROVED.`);
+    throw new Error(
+      `Cannot execute request in status: ${request.status}. Must be APPROVED.`,
+    );
   }
   if (!request.approvedAt || !request.approvedBy) {
     throw new Error("Approved request missing approval metadata");
@@ -426,9 +468,13 @@ export function toApprovedAccessRequest(request: AccessRequest): ApprovedAccessR
 }
 
 // Type guard for retry fulfillment (allows FULFILLING status from retry)
-export function toRetryFulfillmentRequest(request: AccessRequest): ApprovedAccessRequest {
+export function toRetryFulfillmentRequest(
+  request: AccessRequest,
+): ApprovedAccessRequest {
   if (request.status !== "APPROVED" && request.status !== "FULFILLING") {
-    throw new Error(`Cannot execute request in status: ${request.status}. Must be APPROVED or FULFILLING.`);
+    throw new Error(
+      `Cannot execute request in status: ${request.status}. Must be APPROVED or FULFILLING.`,
+    );
   }
   if (!request.approvedAt || !request.approvedBy) {
     throw new Error("Approved request missing approval metadata");
@@ -453,12 +499,18 @@ export const FulfilledAccessRequestSchema = AccessRequestSchema.extend({
   governanceLastAttemptAt: z.string().datetime().optional(),
 });
 
-export type FulfilledAccessRequest = z.infer<typeof FulfilledAccessRequestSchema>;
+export type FulfilledAccessRequest = z.infer<
+  typeof FulfilledAccessRequestSchema
+>;
 
 // Type guard to ensure only fulfilled requests can be revoked
-export function toFulfilledAccessRequest(request: AccessRequest): FulfilledAccessRequest {
+export function toFulfilledAccessRequest(
+  request: AccessRequest,
+): FulfilledAccessRequest {
   if (request.status !== "FULFILLED") {
-    throw new Error(`Cannot revoke request in status: ${request.status}. Must be FULFILLED.`);
+    throw new Error(
+      `Cannot revoke request in status: ${request.status}. Must be FULFILLED.`,
+    );
   }
   if (!request.fulfilledAt || !request.externalId) {
     throw new Error("Fulfilled request missing fulfillment metadata");
@@ -497,11 +549,13 @@ export const ReconciliationResultSchema = z.object({
   requestsChecked: z.number().int().nonnegative(),
   requestsUpdated: z.number().int().nonnegative(),
   driftDetected: z.number().int().nonnegative(),
-  errors: z.array(z.object({
-    externalRequestId: z.string().optional(),
-    error: z.string(),
-    errorCode: z.number().optional(),
-  })),
+  errors: z.array(
+    z.object({
+      externalRequestId: z.string().optional(),
+      error: z.string(),
+      errorCode: z.number().optional(),
+    }),
+  ),
 });
 
 export type ReconciliationResult = z.infer<typeof ReconciliationResultSchema>;
@@ -513,7 +567,9 @@ export const GovernanceReconcilerConfigSchema = z.object({
   driftDetectionEnabled: z.boolean().default(true),
 });
 
-export type GovernanceReconcilerConfig = z.infer<typeof GovernanceReconcilerConfigSchema>;
+export type GovernanceReconcilerConfig = z.infer<
+  typeof GovernanceReconcilerConfigSchema
+>;
 
 export interface GovernanceReconciler {
   reconcilePendingRequests(): Promise<ReconciliationResult>;
@@ -541,14 +597,19 @@ export const ReconciliationAuditEventTypeSchema = z.enum([
   "GOVERNANCE_STATE_CORRECTED",
 ]);
 
-export type ReconciliationAuditEventType = z.infer<typeof ReconciliationAuditEventTypeSchema>;
+export type ReconciliationAuditEventType = z.infer<
+  typeof ReconciliationAuditEventTypeSchema
+>;
 
 export const ApprovalDecisionSchema = z.object({
   decision: z.enum(["APPROVE", "DENY"]),
   approverId: z.string(),
   approverEmail: z.string().email(),
   reason: z.string().max(2000).optional(),
-  timestamp: z.string().datetime().default(() => new Date().toISOString()),
+  timestamp: z
+    .string()
+    .datetime()
+    .default(() => new Date().toISOString()),
 });
 
 export type ApprovalDecision = z.infer<typeof ApprovalDecisionSchema>;
@@ -557,7 +618,11 @@ export type ApprovalDecision = z.infer<typeof ApprovalDecisionSchema>;
 // Policy Evaluation Result
 // ============================================================================
 
-export const PolicyDecisionSchema = z.enum(["APPROVAL_REQUIRED", "DENY", "ALLOW"]);
+export const PolicyDecisionSchema = z.enum([
+  "APPROVAL_REQUIRED",
+  "DENY",
+  "ALLOW",
+]);
 
 export type PolicyDecision = z.infer<typeof PolicyDecisionSchema>;
 
@@ -569,7 +634,9 @@ export const PolicyEvaluationResultSchema = z.object({
   metadata: z.record(z.unknown()).optional().default({}),
 });
 
-export type PolicyEvaluationResult = z.infer<typeof PolicyEvaluationResultSchema>;
+export type PolicyEvaluationResult = z.infer<
+  typeof PolicyEvaluationResultSchema
+>;
 
 // ============================================================================
 // Execution Result

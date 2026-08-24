@@ -1,6 +1,7 @@
 import { Pool } from "pg";
 
-const databaseUrl = process.env.DATABASE_URL || "postgresql://raelldottin@localhost:5432/opnory";
+const databaseUrl =
+  process.env.DATABASE_URL || "postgresql://raelldottin@localhost:5432/opnory";
 
 const SCHEMA_SQL = `
 -- Access Requests table

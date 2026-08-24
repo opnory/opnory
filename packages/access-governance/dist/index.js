@@ -1,7 +1,7 @@
 import { getLogger } from "@opnory/observability";
 import { GovernanceSubjectSchema, GovernedEntitlementSchema, GovernedAccessRequestSchema, GovernanceRequestSchema, GovernanceRequestStatusSchema, GovernanceAssignmentSchema, GovernanceRevocationResultSchema, } from "@opnory/access-types";
-import { InMemoryApprovalStore, ApprovalService } from "@opnory/access-approval";
-import { InMemoryAuditEventStore, recordAuditEvent } from "@opnory/access-audit";
+import { InMemoryApprovalStore, ApprovalService, } from "@opnory/access-approval";
+import { InMemoryAuditEventStore, recordAuditEvent, } from "@opnory/access-audit";
 const logger = getLogger().child({ component: "access-governance" });
 // ============================================================================
 // Local Governance Provider (current Opnory-managed flow)
@@ -116,7 +116,7 @@ export class EntraGovernanceProvider {
             const error = await response.text();
             throw new Error(`Entra token request failed: ${response.status} ${error}`);
         }
-        const data = await response.json();
+        const data = (await response.json());
         this.accessToken = data.access_token;
         this.tokenExpiresAt = now + data.expires_in * 1000;
         return this.accessToken;
@@ -190,11 +190,13 @@ export class EntraGovernanceProvider {
             accessPackageId: request.entitlement.externalId,
             subjectId: request.subject.id,
             assignmentType: "UserAdd",
-            schedule: request.requestedDuration ? {
-                type: "Once",
-                startDateTime: new Date().toISOString(),
-                endDateTime: new Date(Date.now() + this.parseDuration(request.requestedDuration)).toISOString(),
-            } : undefined,
+            schedule: request.requestedDuration
+                ? {
+                    type: "Once",
+                    startDateTime: new Date().toISOString(),
+                    endDateTime: new Date(Date.now() + this.parseDuration(request.requestedDuration)).toISOString(),
+                }
+                : undefined,
             justification: request.justification,
         };
         try {
@@ -267,7 +269,11 @@ export class EntraGovernanceProvider {
             return null;
         }
         catch (error) {
-            logger.warn({ error, subjectId: subject.id, entitlementId: entitlement.entitlementId }, "Failed to get Entra assignment");
+            logger.warn({
+                error,
+                subjectId: subject.id,
+                entitlementId: entitlement.entitlementId,
+            }, "Failed to get Entra assignment");
             return null;
         }
     }
@@ -388,7 +394,7 @@ export class OktaGovernanceProvider {
             const error = await response.text();
             throw new Error(`Okta token request failed: ${response.status} ${error}`);
         }
-        const data = await response.json();
+        const data = (await response.json());
         this.accessToken = data.access_token;
         this.tokenExpiresAt = now + data.expires_in * 1000;
         return this.accessToken;
@@ -477,7 +483,12 @@ export class OktaGovernanceProvider {
             authority: "okta",
             externalId: governanceConfig.groupId, // OIG request condition ID or group ID
             externalName: entitlement.name,
-            metadata: { system: entitlement.system, groupId: governanceConfig.groupId, appId: governanceConfig.appId, requestConditionId: this.config.requestConditionId },
+            metadata: {
+                system: entitlement.system,
+                groupId: governanceConfig.groupId,
+                appId: governanceConfig.appId,
+                requestConditionId: this.config.requestConditionId,
+            },
         });
     }
     async submitRequest(request) {
@@ -547,7 +558,9 @@ export class OktaGovernanceProvider {
             // GET /api/v1/users/{userId}/groups
             const groups = await this.oktaRequest(`/api/v1/users/${subject.id}/groups`);
             const targetGroupId = entitlement.metadata?.groupId;
-            const isMember = targetGroupId ? groups.some(g => g.id === targetGroupId) : false;
+            const isMember = targetGroupId
+                ? groups.some((g) => g.id === targetGroupId)
+                : false;
             if (isMember) {
                 return GovernanceAssignmentSchema.parse({
                     assignmentId: `okta-group-membership-${subject.id}-${targetGroupId}`,
@@ -569,7 +582,7 @@ export class OktaGovernanceProvider {
             // This requires listing requests and filtering
             try {
                 const requests = await this.oktaRequest(`/governance/api/v2/requests?subjectId=${subject.id}&requestConditionId=${this.config.requestConditionId}`);
-                const activeRequest = requests.find(r => r.requestConditionId === this.config.requestConditionId &&
+                const activeRequest = requests.find((r) => r.requestConditionId === this.config.requestConditionId &&
                     (r.state === "RESOLVED" || r.state === "ACTIVE") &&
                     r.target);
                 if (activeRequest && activeRequest.target) {
@@ -581,7 +594,10 @@ export class OktaGovernanceProvider {
                         grantedAt: new Date().toISOString(),
                         expiresAt: activeRequest.target.endDate,
                         status: "ACTIVE",
-                        raw: { requestId: activeRequest.id, requestConditionId: this.config.requestConditionId },
+                        raw: {
+                            requestId: activeRequest.id,
+                            requestConditionId: this.config.requestConditionId,
+                        },
                     });
                 }
             }
@@ -591,7 +607,11 @@ export class OktaGovernanceProvider {
             return null;
         }
         catch (error) {
-            logger.warn({ error, subjectId: subject.id, entitlementId: entitlement.entitlementId }, "Failed to get Okta assignment");
+            logger.warn({
+                error,
+                subjectId: subject.id,
+                entitlementId: entitlement.entitlementId,
+            }, "Failed to get Okta assignment");
             return null;
         }
     }
@@ -647,7 +667,9 @@ export class OktaGovernanceProvider {
             // The fulfillment executor handles downstream mutations based on governance state
             return GovernanceRevocationResultSchema.parse({
                 success: true,
-                message: principalOrn ? "Okta principal access revoked" : "Okta governance revocation observed (no authoritative grant to revoke)",
+                message: principalOrn
+                    ? "Okta principal access revoked"
+                    : "Okta governance revocation observed (no authoritative grant to revoke)",
                 authority: "okta",
                 assignmentId: assignment.assignmentId,
                 status: principalOrn ? "REVOKED" : "OBSERVE_ONLY",
@@ -894,7 +916,8 @@ export class GovernanceReconcilerImpl {
                             newStatus = "APPROVED";
                             needsUpdate = true;
                             request.governanceAssignmentId = status.assignmentId;
-                            request.governanceAssignmentExpiresAt = status.assignmentExpiresAt;
+                            request.governanceAssignmentExpiresAt =
+                                status.assignmentExpiresAt;
                             request.governanceRetryCount = 0;
                             request.governanceLastError = undefined;
                             request.governanceLastErrorCode = undefined;
@@ -920,7 +943,8 @@ export class GovernanceReconcilerImpl {
                         break;
                     case "FAILED":
                         // Could not determine status - increment retry
-                        request.governanceRetryCount = (request.governanceRetryCount || 0) + 1;
+                        request.governanceRetryCount =
+                            (request.governanceRetryCount || 0) + 1;
                         request.governanceLastError = "Provider returned FAILED status";
                         needsUpdate = true;
                         break;
@@ -948,7 +972,8 @@ export class GovernanceReconcilerImpl {
                 request.governanceRetryCount = (request.governanceRetryCount || 0) + 1;
                 request.governanceLastError = errorMessage;
                 request.governanceLastErrorCode = errorCode;
-                request.governanceNextCheckAt = new Date(Date.now() + this.config.retryBackoffMs * request.governanceRetryCount).toISOString();
+                request.governanceNextCheckAt = new Date(Date.now() +
+                    this.config.retryBackoffMs * request.governanceRetryCount).toISOString();
                 await this.approvalStore.update(request);
                 result.errors.push({
                     externalRequestId: request.governanceExternalRequestId,
@@ -980,13 +1005,26 @@ export class GovernanceReconcilerImpl {
         for (const request of activeAssignments) {
             result.requestsChecked++;
             try {
-                if (!request.governanceExternalRequestId || !request.governanceAuthority) {
+                if (!request.governanceExternalRequestId ||
+                    !request.governanceAuthority) {
                     continue;
                 }
                 const provider = this.governanceService["getProvider"](request.governanceAuthority);
                 const assignment = await provider.getAssignment(
                 // We need to reconstruct subject and entitlement from request
-                { id: request.requesterId, displayName: undefined, email: request.requesterEmail, source: "manual", raw: {} }, { entitlementId: request.entitlement.id, authority: request.governanceAuthority, externalId: request.governanceAssignmentId, externalName: request.entitlement.name, metadata: {} });
+                {
+                    id: request.requesterId,
+                    displayName: undefined,
+                    email: request.requesterEmail,
+                    source: "manual",
+                    raw: {},
+                }, {
+                    entitlementId: request.entitlement.id,
+                    authority: request.governanceAuthority,
+                    externalId: request.governanceAssignmentId,
+                    externalName: request.entitlement.name,
+                    metadata: {},
+                });
                 // Check for drift: Opnory says FULFILLED but external says REVOKED/EXPIRED
                 if (assignment && assignment.status === "REVOKED") {
                     // Drift detected: external authority revoked but Opnory still FULFILLED
@@ -1115,8 +1153,20 @@ export class GovernanceReconcilerImpl {
                 const provider = this.governanceService["getProvider"](request.governanceAuthority);
                 const revocationResult = await provider.revokeAssignment({
                     assignmentId: request.governanceAssignmentId,
-                    subject: { id: request.requesterId, displayName: undefined, email: request.requesterEmail, source: "manual", raw: {} },
-                    entitlement: { entitlementId: request.entitlement.id, authority: request.governanceAuthority, externalId: request.governanceAssignmentId, externalName: request.entitlement.name, metadata: {} },
+                    subject: {
+                        id: request.requesterId,
+                        displayName: undefined,
+                        email: request.requesterEmail,
+                        source: "manual",
+                        raw: {},
+                    },
+                    entitlement: {
+                        entitlementId: request.entitlement.id,
+                        authority: request.governanceAuthority,
+                        externalId: request.governanceAssignmentId,
+                        externalName: request.entitlement.name,
+                        metadata: {},
+                    },
                     authority: request.governanceAuthority,
                     grantedAt: new Date().toISOString(),
                     status: "ACTIVE",

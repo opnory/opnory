@@ -1,18 +1,18 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { InMemoryAuditEventStore } from "@opnory/access-audit";
 import { LocalGovernanceProvider } from "@opnory/access-governance";
-import { 
-  GovernanceProvider, 
-  GovernanceSubject, 
-  GovernedEntitlement, 
+import {
+  GovernanceProvider,
+  GovernanceSubject,
+  GovernedEntitlement,
   GovernedAccessRequest,
-  GovernanceRequest, 
-  GovernanceRequestStatus, 
-  GovernanceAssignment, 
-  GovernanceRevocationResult, 
+  GovernanceRequest,
+  GovernanceRequestStatus,
+  GovernanceAssignment,
+  GovernanceRevocationResult,
   GovernanceAuthority,
   GovernanceDecisionStatus,
-  GovernanceAssignmentStatus
+  GovernanceAssignmentStatus,
 } from "@opnory/access-types";
 import { randomUUID } from "crypto";
 
@@ -66,12 +66,15 @@ export function describeGovernanceProvider(factory: ProviderFactory) {
           metadata: {},
         };
 
-        const governanceRequest: GovernanceRequest = await provider.submitRequest(request);
-       
-                expect(governanceRequest.externalRequestId).toBeDefined();
-                expect(governanceRequest.status).toBe("PENDING");
-        
-        const status: GovernanceRequestStatus = await provider.getRequestStatus(governanceRequest.externalRequestId);
+        const governanceRequest: GovernanceRequest =
+          await provider.submitRequest(request);
+
+        expect(governanceRequest.externalRequestId).toBeDefined();
+        expect(governanceRequest.status).toBe("PENDING");
+
+        const status: GovernanceRequestStatus = await provider.getRequestStatus(
+          governanceRequest.externalRequestId,
+        );
         // For external providers, status should be PENDING
         // For local provider, it returns FAILED since it doesn't track by external ID
         expect(["PENDING", "FAILED"]).toContain(status.status);
@@ -93,13 +96,20 @@ export function describeGovernanceProvider(factory: ProviderFactory) {
           };
 
           const governanceRequest = await provider.submitRequest(request);
-          
+
           // Simulate external approval (provider-specific)
-          if ("preApproveRequest" in provider && typeof provider.preApproveRequest === "function") {
-            (provider as any).preApproveRequest(governanceRequest.externalRequestId);
+          if (
+            "preApproveRequest" in provider &&
+            typeof provider.preApproveRequest === "function"
+          ) {
+            (provider as any).preApproveRequest(
+              governanceRequest.externalRequestId,
+            );
           }
-          
-          const status = await provider.getRequestStatus(governanceRequest.externalRequestId);
+
+          const status = await provider.getRequestStatus(
+            governanceRequest.externalRequestId,
+          );
           expect(status.status).toBe("APPROVED");
           expect(status.assignmentId).toBeDefined();
           expect(status.assignmentExpiresAt).toBeDefined();
@@ -119,13 +129,20 @@ export function describeGovernanceProvider(factory: ProviderFactory) {
           };
 
           const governanceRequest = await provider.submitRequest(request);
-          
+
           // Simulate external denial (provider-specific)
-          if ("preDenyRequest" in provider && typeof provider.preDenyRequest === "function") {
-            (provider as any).preDenyRequest(governanceRequest.externalRequestId);
+          if (
+            "preDenyRequest" in provider &&
+            typeof provider.preDenyRequest === "function"
+          ) {
+            (provider as any).preDenyRequest(
+              governanceRequest.externalRequestId,
+            );
           }
-          
-          const status = await provider.getRequestStatus(governanceRequest.externalRequestId);
+
+          const status = await provider.getRequestStatus(
+            governanceRequest.externalRequestId,
+          );
           expect(status.status).toBe("DENIED");
           expect(status.assignmentId).toBeUndefined();
         });
@@ -144,16 +161,25 @@ export function describeGovernanceProvider(factory: ProviderFactory) {
           };
 
           const governanceRequest = await provider.submitRequest(request);
-          
-          if ("preApproveRequest" in provider && typeof provider.preApproveRequest === "function") {
-            (provider as any).preApproveRequest(governanceRequest.externalRequestId);
+
+          if (
+            "preApproveRequest" in provider &&
+            typeof provider.preApproveRequest === "function"
+          ) {
+            (provider as any).preApproveRequest(
+              governanceRequest.externalRequestId,
+            );
           }
 
           // First check
-          const status1 = await provider.getRequestStatus(governanceRequest.externalRequestId);
+          const status1 = await provider.getRequestStatus(
+            governanceRequest.externalRequestId,
+          );
           // Second check (should be identical)
-          const status2 = await provider.getRequestStatus(governanceRequest.externalRequestId);
-          
+          const status2 = await provider.getRequestStatus(
+            governanceRequest.externalRequestId,
+          );
+
           expect(status1.status).toBe(status2.status);
           expect(status1.assignmentId).toBe(status2.assignmentId);
           expect(status1.assignmentExpiresAt).toBe(status2.assignmentExpiresAt);
@@ -174,13 +200,13 @@ export function describeGovernanceProvider(factory: ProviderFactory) {
 
           const governanceRequest = await provider.submitRequest(request);
           const externalRequestId = governanceRequest.externalRequestId;
-          
+
           // Simulate new provider instance (restart)
           const newProvider = factory.createProvider();
-          
+
           // The new provider should be able to query status using externalRequestId
           const status = await newProvider.getRequestStatus(externalRequestId);
-          
+
           // Status should be consistent
           expect(status.status).toBeDefined();
           // The externalRequestId is the recovery anchor
@@ -201,7 +227,7 @@ export function describeGovernanceProvider(factory: ProviderFactory) {
           };
 
           const governanceRequest = await provider.submitRequest(request);
-          
+
           // Query with invalid ID should not throw but return error status
           const status = await provider.getRequestStatus("invalid-request-id");
           expect(status.status).toBe("FAILED");
@@ -222,21 +248,34 @@ export function describeGovernanceProvider(factory: ProviderFactory) {
           };
 
           const governanceRequest = await provider.submitRequest(request);
-          
-          if ("preApproveRequest" in provider && typeof provider.preApproveRequest === "function") {
-            (provider as any).preApproveRequest(governanceRequest.externalRequestId);
+
+          if (
+            "preApproveRequest" in provider &&
+            typeof provider.preApproveRequest === "function"
+          ) {
+            (provider as any).preApproveRequest(
+              governanceRequest.externalRequestId,
+            );
           }
-          
-          const status = await provider.getRequestStatus(governanceRequest.externalRequestId);
+
+          const status = await provider.getRequestStatus(
+            governanceRequest.externalRequestId,
+          );
           expect(status.status).toBe("APPROVED");
-          
+
           // Simulate external revocation (provider-specific)
-          if ("preRevokeAssignment" in provider && typeof provider.preRevokeAssignment === "function") {
+          if (
+            "preRevokeAssignment" in provider &&
+            typeof provider.preRevokeAssignment === "function"
+          ) {
             (provider as any).preRevokeAssignment(status.assignmentId!);
           }
-          
-          const assignment = await provider.getAssignment(testSubject, testEntitlement);
-          
+
+          const assignment = await provider.getAssignment(
+            testSubject,
+            testEntitlement,
+          );
+
           // Assignment should reflect external revocation
           expect(assignment).toBeDefined();
           if (assignment) {
@@ -276,22 +315,28 @@ export function createFakeEntraProviderFactory(): ProviderFactory {
     providerName: "FakeEntra",
     providerAuthority: "entra",
     createProvider: () => {
-      return new class implements GovernanceProvider {
+      return new (class implements GovernanceProvider {
         readonly authority: GovernanceAuthority = "entra";
         private requests = new Map<string, GovernanceRequest>();
         private assignments = new Map<string, GovernanceAssignment>();
         private requestCounter = 0;
         private assignmentCounter = 0;
 
-        async resolveSubject(subject: GovernanceSubject): Promise<GovernanceSubject> {
+        async resolveSubject(
+          subject: GovernanceSubject,
+        ): Promise<GovernanceSubject> {
           return subject;
         }
 
-        async resolveEntitlement(entitlement: GovernedEntitlement): Promise<GovernedEntitlement> {
+        async resolveEntitlement(
+          entitlement: GovernedEntitlement,
+        ): Promise<GovernedEntitlement> {
           return entitlement;
         }
 
-        async submitRequest(request: GovernedAccessRequest): Promise<GovernanceRequest> {
+        async submitRequest(
+          request: GovernedAccessRequest,
+        ): Promise<GovernanceRequest> {
           this.requestCounter++;
           const externalRequestId = `entra-req-${this.requestCounter}`;
           const govRequest: GovernanceRequest = {
@@ -299,37 +344,47 @@ export function createFakeEntraProviderFactory(): ProviderFactory {
             authority: "entra",
             status: "PENDING",
             submittedAt: new Date().toISOString(),
-            metadata: { subject: request.subject, entitlement: request.entitlement },
+            metadata: {
+              subject: request.subject,
+              entitlement: request.entitlement,
+            },
           };
           this.requests.set(externalRequestId, govRequest);
           return govRequest;
         }
 
-        async getRequestStatus(externalRequestId: string): Promise<GovernanceRequestStatus> {
+        async getRequestStatus(
+          externalRequestId: string,
+        ): Promise<GovernanceRequestStatus> {
           const request = this.requests.get(externalRequestId);
           if (!request) {
-            return { 
-              externalRequestId, 
-              status: "FAILED", 
+            return {
+              externalRequestId,
+              status: "FAILED",
               lastPolledAt: new Date().toISOString(),
-              rawResponse: { error: "Request not found" }
+              rawResponse: { error: "Request not found" },
             };
           }
-          return { 
-            externalRequestId, 
-            status: request.status, 
-            assignmentId: request.assignmentId, 
+          return {
+            externalRequestId,
+            status: request.status,
+            assignmentId: request.assignmentId,
             assignmentExpiresAt: request.assignmentExpiresAt,
-            lastPolledAt: new Date().toISOString()
+            lastPolledAt: new Date().toISOString(),
           };
         }
 
-        async getAssignment(subject: GovernanceSubject, entitlement: GovernedEntitlement): Promise<GovernanceAssignment | null> {
+        async getAssignment(
+          subject: GovernanceSubject,
+          entitlement: GovernedEntitlement,
+        ): Promise<GovernanceAssignment | null> {
           const key = `${subject.id}:${entitlement.entitlementId}`;
           return this.assignments.get(key) || null;
         }
 
-        async revokeAssignment(assignment: GovernanceAssignment): Promise<GovernanceRevocationResult> {
+        async revokeAssignment(
+          assignment: GovernanceAssignment,
+        ): Promise<GovernanceRevocationResult> {
           return { success: true, message: "Revoked" };
         }
 
@@ -338,18 +393,26 @@ export function createFakeEntraProviderFactory(): ProviderFactory {
           if (request) {
             request.status = "APPROVED";
             request.decidedAt = new Date().toISOString();
-            request.assignmentId = assignmentId || `assignment-${this.assignmentCounter++}`;
-            request.assignmentExpiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
-            const storedSubject = request.metadata?.subject as GovernanceSubject;
-            const storedEntitlement = request.metadata?.entitlement as GovernedEntitlement;
-            this.assignments.set(`${storedSubject?.id || "unknown"}:${storedEntitlement?.entitlementId || "unknown"}`, {
-              assignmentId: request.assignmentId!,
-              subject: storedSubject!,
-              entitlement: storedEntitlement!,
-              authority: this.authority,
-              grantedAt: new Date().toISOString(),
-              status: "ACTIVE",
-            });
+            request.assignmentId =
+              assignmentId || `assignment-${this.assignmentCounter++}`;
+            request.assignmentExpiresAt = new Date(
+              Date.now() + 90 * 24 * 60 * 60 * 1000,
+            ).toISOString();
+            const storedSubject = request.metadata
+              ?.subject as GovernanceSubject;
+            const storedEntitlement = request.metadata
+              ?.entitlement as GovernedEntitlement;
+            this.assignments.set(
+              `${storedSubject?.id || "unknown"}:${storedEntitlement?.entitlementId || "unknown"}`,
+              {
+                assignmentId: request.assignmentId!,
+                subject: storedSubject!,
+                entitlement: storedEntitlement!,
+                authority: this.authority,
+                grantedAt: new Date().toISOString(),
+                status: "ACTIVE",
+              },
+            );
           }
         }
 
@@ -368,7 +431,7 @@ export function createFakeEntraProviderFactory(): ProviderFactory {
             }
           }
         }
-      } as any;
+      })() as any;
     },
   };
 }
@@ -379,22 +442,28 @@ export function createFakeOktaProviderFactory(): ProviderFactory {
     providerName: "FakeOkta",
     providerAuthority: "okta",
     createProvider: () => {
-      return new class implements GovernanceProvider {
+      return new (class implements GovernanceProvider {
         readonly authority: GovernanceAuthority = "okta";
         private requests = new Map<string, GovernanceRequest>();
         private assignments = new Map<string, GovernanceAssignment>();
         private requestCounter = 0;
         private assignmentCounter = 0;
 
-        async resolveSubject(subject: GovernanceSubject): Promise<GovernanceSubject> {
+        async resolveSubject(
+          subject: GovernanceSubject,
+        ): Promise<GovernanceSubject> {
           return subject;
         }
 
-        async resolveEntitlement(entitlement: GovernedEntitlement): Promise<GovernedEntitlement> {
+        async resolveEntitlement(
+          entitlement: GovernedEntitlement,
+        ): Promise<GovernedEntitlement> {
           return entitlement;
         }
 
-        async submitRequest(request: GovernedAccessRequest): Promise<GovernanceRequest> {
+        async submitRequest(
+          request: GovernedAccessRequest,
+        ): Promise<GovernanceRequest> {
           this.requestCounter++;
           const externalRequestId = `okta-req-${this.requestCounter}`;
           const govRequest: GovernanceRequest = {
@@ -402,37 +471,47 @@ export function createFakeOktaProviderFactory(): ProviderFactory {
             authority: "okta",
             status: "PENDING",
             submittedAt: new Date().toISOString(),
-            metadata: { subject: request.subject, entitlement: request.entitlement },
+            metadata: {
+              subject: request.subject,
+              entitlement: request.entitlement,
+            },
           };
           this.requests.set(externalRequestId, govRequest);
           return govRequest;
         }
 
-        async getRequestStatus(externalRequestId: string): Promise<GovernanceRequestStatus> {
+        async getRequestStatus(
+          externalRequestId: string,
+        ): Promise<GovernanceRequestStatus> {
           const request = this.requests.get(externalRequestId);
           if (!request) {
-            return { 
-              externalRequestId, 
-              status: "FAILED", 
+            return {
+              externalRequestId,
+              status: "FAILED",
               lastPolledAt: new Date().toISOString(),
-              rawResponse: { error: "Request not found" }
+              rawResponse: { error: "Request not found" },
             };
           }
-          return { 
-            externalRequestId, 
-            status: request.status, 
-            assignmentId: request.assignmentId, 
+          return {
+            externalRequestId,
+            status: request.status,
+            assignmentId: request.assignmentId,
             assignmentExpiresAt: request.assignmentExpiresAt,
-            lastPolledAt: new Date().toISOString()
+            lastPolledAt: new Date().toISOString(),
           };
         }
 
-        async getAssignment(subject: GovernanceSubject, entitlement: GovernedEntitlement): Promise<GovernanceAssignment | null> {
+        async getAssignment(
+          subject: GovernanceSubject,
+          entitlement: GovernedEntitlement,
+        ): Promise<GovernanceAssignment | null> {
           const key = `${subject.id}:${entitlement.entitlementId}`;
           return this.assignments.get(key) || null;
         }
 
-        async revokeAssignment(assignment: GovernanceAssignment): Promise<GovernanceRevocationResult> {
+        async revokeAssignment(
+          assignment: GovernanceAssignment,
+        ): Promise<GovernanceRevocationResult> {
           return { success: true, message: "Revoked" };
         }
 
@@ -441,18 +520,26 @@ export function createFakeOktaProviderFactory(): ProviderFactory {
           if (request) {
             request.status = "APPROVED";
             request.decidedAt = new Date().toISOString();
-            request.assignmentId = assignmentId || `assignment-${this.assignmentCounter++}`;
-            request.assignmentExpiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
-            const storedSubject = request.metadata?.subject as GovernanceSubject;
-            const storedEntitlement = request.metadata?.entitlement as GovernedEntitlement;
-            this.assignments.set(`${storedSubject?.id || "unknown"}:${storedEntitlement?.entitlementId || "unknown"}`, {
-              assignmentId: request.assignmentId!,
-              subject: storedSubject!,
-              entitlement: storedEntitlement!,
-              authority: this.authority,
-              grantedAt: new Date().toISOString(),
-              status: "ACTIVE",
-            });
+            request.assignmentId =
+              assignmentId || `assignment-${this.assignmentCounter++}`;
+            request.assignmentExpiresAt = new Date(
+              Date.now() + 90 * 24 * 60 * 60 * 1000,
+            ).toISOString();
+            const storedSubject = request.metadata
+              ?.subject as GovernanceSubject;
+            const storedEntitlement = request.metadata
+              ?.entitlement as GovernedEntitlement;
+            this.assignments.set(
+              `${storedSubject?.id || "unknown"}:${storedEntitlement?.entitlementId || "unknown"}`,
+              {
+                assignmentId: request.assignmentId!,
+                subject: storedSubject!,
+                entitlement: storedEntitlement!,
+                authority: this.authority,
+                grantedAt: new Date().toISOString(),
+                status: "ACTIVE",
+              },
+            );
           }
         }
 
@@ -471,7 +558,7 @@ export function createFakeOktaProviderFactory(): ProviderFactory {
             }
           }
         }
-      } as any;
+      })() as any;
     },
   };
 }

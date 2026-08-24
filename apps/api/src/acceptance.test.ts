@@ -1,7 +1,15 @@
 import { describe, it, expect, beforeAll, afterAll } from "bun:test";
 import { createApiServer } from "../src/index.js";
-import { InMemoryVectorStore, seedCanonicalDocuments, canonicalVpnDocument, VPN_DOCUMENT_ID } from "@opnory/knowledge";
-import { InMemoryEscalationStore, InMemoryEscalationService } from "@opnory/escalation";
+import {
+  InMemoryVectorStore,
+  seedCanonicalDocuments,
+  canonicalVpnDocument,
+  VPN_DOCUMENT_ID,
+} from "@opnory/knowledge";
+import {
+  InMemoryEscalationStore,
+  InMemoryEscalationService,
+} from "@opnory/escalation";
 import { OpnoryAgent } from "@opnory/agent";
 import { NormalizedRequestSchema, AgentResponseSchema } from "@opnory/types";
 import { v4 as uuidv4 } from "uuid";
@@ -18,26 +26,35 @@ describe("End-to-End API Acceptance Tests", () => {
     // Set up test dependencies
     vectorStore = new InMemoryVectorStore();
     await vectorStore.upsert([canonicalVpnDocument]);
-    
+
     escalationStore = new InMemoryEscalationStore();
     escalationService = new InMemoryEscalationService(escalationStore);
     agent = new OpnoryAgent({ vectorStore, escalationService });
-    
+
     // Create server with our test agent
-    const { createApiServer: createTestServer } = await import("../src/index.js");
+    const { createApiServer: createTestServer } =
+      await import("../src/index.js");
     // We need to modify the server creation to use our test agent
     // For now, we'll test the agent directly since the server is hardcoded to use getAgent()
-    
+
     // Start a test server on a random port
     const fastify = await import("fastify");
     server = fastify.default({ trustProxy: true });
-    
+
     await server.register((await import("@fastify/helmet")).default);
-    await server.register((await import("@fastify/cors")).default, { origin: true });
-    await server.register((await import("@fastify/rate-limit")).default, { max: 100, timeWindow: "1 minute" });
+    await server.register((await import("@fastify/cors")).default, {
+      origin: true,
+    });
+    await server.register((await import("@fastify/rate-limit")).default, {
+      max: 100,
+      timeWindow: "1 minute",
+    });
 
     // Health check
-    server.get("/health", async () => ({ status: "ok", timestamp: new Date().toISOString() }));
+    server.get("/health", async () => ({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+    }));
 
     // Slack commands endpoint
     server.post<{
@@ -69,7 +86,8 @@ describe("End-to-End API Acceptance Tests", () => {
         },
       },
       async (request, reply) => {
-        const { text, userId, channelId, threadId, workspaceId, requestId } = request.body;
+        const { text, userId, channelId, threadId, workspaceId, requestId } =
+          request.body;
         const finalRequestId = requestId || uuidv4();
 
         try {
@@ -98,7 +116,7 @@ describe("End-to-End API Acceptance Tests", () => {
             escalationReason: "SYSTEM_ERROR",
           } as import("@opnory/types").AgentResponse;
         }
-      }
+      },
     );
 
     await server.listen({ port: 0, host: "127.0.0.1" });

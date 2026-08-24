@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from "bun:test";
-import { InMemoryVectorStore, retrieveKnowledge, indexDocument } from "../src/index.js";
+import {
+  InMemoryVectorStore,
+  retrieveKnowledge,
+  indexDocument,
+} from "../src/index.js";
 import { DocumentSchema, type Document, type WorkspaceId } from "@opnory/types";
 
 describe("Knowledge Package", () => {
@@ -10,7 +14,8 @@ describe("Knowledge Package", () => {
     id: "550e8400-e29b-41d4-a716-446655440000",
     workspaceId,
     title: "Mac VPN Connection Guide",
-    content: "To connect to the corporate VPN on Mac:\n1. Open GlobalProtect from Applications\n2. Enter portal: vpn.company.com\n3. Sign in with your SSO credentials\n4. Click Connect\n\nIf connection fails, check System Extensions in Security & Privacy settings.",
+    content:
+      "To connect to the corporate VPN on Mac:\n1. Open GlobalProtect from Applications\n2. Enter portal: vpn.company.com\n3. Sign in with your SSO credentials\n4. Click Connect\n\nIf connection fails, check System Extensions in Security & Privacy settings.",
     source: "it-docs",
     sourceUrl: "https://wiki.company.com/vpn/mac",
     tags: ["vpn", "mac", "globalprotect"],

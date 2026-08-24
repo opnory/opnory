@@ -55,4 +55,4 @@ endorsement, affiliation, or official distribution without permission.
 
 ---
 
-*Opnory is offered by Raell Dottin under the name Opnory. No LLC, corporation, or registered DBA is claimed.*
+_Opnory is offered by Raell Dottin under the name Opnory. No LLC, corporation, or registered DBA is claimed._

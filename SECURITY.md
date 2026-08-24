@@ -18,9 +18,9 @@ Do not report security vulnerabilities through public GitHub issues, discussions
 
 ## Supported Versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| Main branch (latest) | ✅ Security fixes |
+| Version              | Supported              |
+| -------------------- | ---------------------- |
+| Main branch (latest) | ✅ Security fixes      |
 | Previous minor (N-1) | ✅ Critical fixes only |
 
 Only the latest main branch and the immediately preceding minor release receive security patches. Older versions should be upgraded.

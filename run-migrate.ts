@@ -1,6 +1,7 @@
 import { migrate, closePool } from "./packages/access-store-pg/src/index.js";
 
-const databaseUrl = process.env.DATABASE_URL || "postgresql://raelldottin@localhost:5432/opnory";
+const databaseUrl =
+  process.env.DATABASE_URL || "postgresql://raelldottin@localhost:5432/opnory";
 
 process.env.DATABASE_URL = databaseUrl;
 

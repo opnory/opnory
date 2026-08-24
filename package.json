@@ -12,7 +12,15 @@
     "typecheck": "turbo typecheck",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
     "live:entra": "OPNORY_LIVE_GOVERNANCE_TESTS=true bun run scripts/live-governance/entra.ts",
-    "live:okta": "OPNORY_LIVE_GOVERNANCE_TESTS=true bun run scripts/live-governance/okta.ts"
+    "live:okta": "OPNORY_LIVE_GOVERNANCE_TESTS=true bun run scripts/live-governance/okta.ts",
+    "entra:validate": "OPNORY_LIVE_GOVERNANCE_TESTS=true OPNORY_ENTRA_SANDBOX_CONFIRM=true bun run scripts/live-governance/validate-entra-sandbox.ts",
+    "entra:bootstrap:model-b": "OPNORY_LIVE_GOVERNANCE_TESTS=true OPNORY_ENTRA_SANDBOX_CONFIRM=true bun run scripts/live-governance/model-b/bootstrap-entra-primitives.ts",
+    "entra:certify:model-b": "OPNORY_LIVE_GOVERNANCE_TESTS=true OPNORY_ENTRA_SANDBOX_CONFIRM=true bun run scripts/live-governance/model-b/certify-entra-fulfillment.ts",
+    "entra:destroy:model-b": "OPNORY_LIVE_GOVERNANCE_TESTS=true OPNORY_ENTRA_SANDBOX_CONFIRM=true bun run scripts/live-governance/model-b/destroy-entra-primitives.ts",
+    "entra:bootstrap:model-a": "OPNORY_LIVE_GOVERNANCE_TESTS=true OPNORY_ENTRA_SANDBOX_CONFIRM=true bun run scripts/live-governance/model-a/bootstrap-entra-governance.ts",
+    "entra:certify:model-a": "OPNORY_LIVE_GOVERNANCE_TESTS=true OPNORY_ENTRA_SANDBOX_CONFIRM=true bun run scripts/live-governance/model-a/certify-entra-access-packages.ts",
+    "entra:destroy:model-a": "OPNORY_LIVE_GOVERNANCE_TESTS=true OPNORY_ENTRA_SANDBOX_CONFIRM=true bun run scripts/live-governance/model-a/destroy-entra-governance.ts",
+    "evidence:sanitize": "bun run scripts/live-governance/evidence/sanitize.ts"
   },
   "devDependencies": {
     "prettier": "^3.0.0",

@@ -45,11 +45,13 @@ export type NormalizedRequest = z.infer<typeof NormalizedRequestSchema>;
 export const AgentResponseSchema = z.object({
   requestId: RequestIdSchema,
   answer: z.string(),
-  citations: z.array(z.object({
-    documentId: DocumentIdSchema,
-    excerpt: z.string(),
-    relevanceScore: z.number().min(0).max(1),
-  })),
+  citations: z.array(
+    z.object({
+      documentId: DocumentIdSchema,
+      excerpt: z.string(),
+      relevanceScore: z.number().min(0).max(1),
+    }),
+  ),
   confidence: z.number().min(0).max(1),
   shouldEscalate: z.boolean(),
   escalationReason: z.string().optional(),
@@ -171,9 +173,11 @@ export const AppConfigSchema = z.object({
   database: z.object({
     url: z.string().url(),
   }),
-  redis: z.object({
-    url: z.string().url(),
-  }).optional(),
+  redis: z
+    .object({
+      url: z.string().url(),
+    })
+    .optional(),
   vectorStore: z.object({
     type: z.enum(["pinecone", "weaviate", "qdrant", "memory"]),
     config: z.record(z.unknown()),

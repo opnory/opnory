@@ -1,8 +1,5 @@
 import { getLogger } from "@opnory/observability";
-import {
-  OktaGovernanceProvider,
-  OktaConfig,
-} from "@opnory/access-governance";
+import { OktaGovernanceProvider, OktaConfig } from "@opnory/access-governance";
 import {
   GovernanceProvider,
   GovernanceSubject,
@@ -18,7 +15,12 @@ import {
   ExternalIdentity,
   GovernanceRequestStatus,
 } from "@opnory/access-types";
-import { PgAccessRequestStore, migrate, getPool, closePool } from "@opnory/access-store-pg";
+import {
+  PgAccessRequestStore,
+  migrate,
+  getPool,
+  closePool,
+} from "@opnory/access-store-pg";
 import { PgAuditEventStore } from "@opnory/access-store-pg";
 import { loadConfig } from "@opnory/config";
 import { Octokit } from "@octokit/rest";
@@ -74,19 +76,21 @@ function loadOktaConfig(): OktaSandboxConfig {
   ]);
 
   const privateKeyPath = getEnv("OPNORY_OKTA_PRIVATE_KEY_PATH");
-  
+
   // Validate private key file exists and has restrictive permissions
   if (!existsSync(privateKeyPath)) {
     throw new Error(`Okta private key file not found: ${privateKeyPath}`);
   }
-  
+
   // Check file permissions (0o600 = read/write for owner only)
   const stats = statSync(privateKeyPath);
   const mode = stats.mode & 0o777;
   if (mode !== 0o600) {
-    console.warn(`⚠️  Okta private key file has permissions ${mode.toString(8)}, expected 0600`);
+    console.warn(
+      `⚠️  Okta private key file has permissions ${mode.toString(8)}, expected 0600`,
+    );
   }
-  
+
   const privateKey = readFileSync(privateKeyPath, "utf-8").trim();
 
   return {
@@ -98,7 +102,8 @@ function loadOktaConfig(): OktaSandboxConfig {
     expectedPrincipalId: getEnv("OPNORY_OKTA_EXPECTED_PRINCIPAL_ID"),
     requestConditionId: getEnv("OPNORY_OKTA_REQUEST_CONDITION_ID"),
     resourceOrn: getEnv("OPNORY_OKTA_RESOURCE_ORN"),
-    fulfillmentOwner: getEnv("OPNORY_OKTA_FULFILLMENT_OWNER") as "opnory" | "okta",
+    fulfillmentOwner: getEnv("OPNORY_OKTA_FULFILLMENT_OWNER") as
+      "opnory" | "okta",
   };
 }
 
@@ -117,7 +122,11 @@ export async function runOktaLiveValidation(): Promise<void> {
   requireSandboxConfirmation("okta");
 
   const sandboxConfig = loadOktaConfig();
-  const evidence = new EvidenceRecorder("okta", commitSha, sandboxConfig.orgUrl);
+  const evidence = new EvidenceRecorder(
+    "okta",
+    commitSha,
+    sandboxConfig.orgUrl,
+  );
 
   // Initialize infrastructure
   await migrate();
@@ -140,7 +149,10 @@ export async function runOktaLiveValidation(): Promise<void> {
     // O1 - private_key_jwt authentication
     // ========================================================================
     {
-      const step = evidence.startStep("O1", "private_key_jwt token acquisition");
+      const step = evidence.startStep(
+        "O1",
+        "private_key_jwt token acquisition",
+      );
       try {
         // Test auth by making a safe Okta request
         await provider.resolveSubject({
@@ -148,7 +160,10 @@ export async function runOktaLiveValidation(): Promise<void> {
           requesterEmail: sandboxConfig.testPrincipalEmail,
           externalIdentities: {},
         });
-        step.end("PASS", { message: "Okta access token acquired successfully via private_key_jwt" });
+        step.end("PASS", {
+          message:
+            "Okta access token acquired successfully via private_key_jwt",
+        });
       } catch (error) {
         step.end("FAIL", { error: String(error) });
         throw error;
@@ -171,7 +186,9 @@ export async function runOktaLiveValidation(): Promise<void> {
           expected: sandboxConfig.expectedPrincipalId,
           actual: subject.id,
         });
-        throw new Error(`Principal ID mismatch: expected ${sandboxConfig.expectedPrincipalId}, got ${subject.id}`);
+        throw new Error(
+          `Principal ID mismatch: expected ${sandboxConfig.expectedPrincipalId}, got ${subject.id}`,
+        );
       }
 
       step.end("PASS", { principalId: subject.id, source: subject.source });
@@ -181,7 +198,10 @@ export async function runOktaLiveValidation(): Promise<void> {
     // O3 - Resolve entitlement/request condition
     // ========================================================================
     {
-      const step = evidence.startStep("O3", "Resolve exact configured request condition/resource");
+      const step = evidence.startStep(
+        "O3",
+        "Resolve exact configured request condition/resource",
+      );
       const entitlementRef: EntitlementRef = {
         id: randomUUID(), // Opnory entitlement ID
         name: "Okta Sandbox Access Request",
@@ -213,7 +233,10 @@ export async function runOktaLiveValidation(): Promise<void> {
     let governanceRequest: GovernanceRequest;
     let externalRequestId: string;
     {
-      const step = evidence.startStep("O4", "Submit exactly one Access Request");
+      const step = evidence.startStep(
+        "O4",
+        "Submit exactly one Access Request",
+      );
       const subject = await provider.resolveSubject({
         requesterId: "test-requester",
         requesterEmail: sandboxConfig.testPrincipalEmail,
@@ -333,12 +356,19 @@ export async function runOktaLiveValidation(): Promise<void> {
 
       // Reload and verify
       const reloaded = await requestStore.getById(accessRequest.id);
-      if (!reloaded || reloaded.metadata?.governance?.externalRequestId !== externalRequestId) {
-        step.end("FAIL", { error: "External request ID not persisted correctly" });
+      if (
+        !reloaded ||
+        reloaded.metadata?.governance?.externalRequestId !== externalRequestId
+      ) {
+        step.end("FAIL", {
+          error: "External request ID not persisted correctly",
+        });
         throw new Error("External request ID not persisted correctly");
       }
 
-      step.end("PASS", { externalRequestId: reloaded.metadata?.governance?.externalRequestId });
+      step.end("PASS", {
+        externalRequestId: reloaded.metadata?.governance?.externalRequestId,
+      });
     }
 
     // ========================================================================
@@ -348,11 +378,15 @@ export async function runOktaLiveValidation(): Promise<void> {
       const step = evidence.startStep("O6", "Confirm pending blocks executor");
 
       // Attempt fulfillment - should be blocked by status
-      const reloaded = await requestStore.getById((await requestStore.getAll())[0].id);
+      const reloaded = await requestStore.getById(
+        (await requestStore.getAll())[0].id,
+      );
       if (reloaded && reloaded.status === "AWAITING_AUTHORITY_DECISION") {
         step.end("PASS", { status: reloaded.status });
       } else {
-        step.end("FAIL", { error: "Request not in AWAITING_AUTHORITY_DECISION state" });
+        step.end("FAIL", {
+          error: "Request not in AWAITING_AUTHORITY_DECISION state",
+        });
         throw new Error("Request not in AWAITING_AUTHORITY_DECISION state");
       }
     }
@@ -365,12 +399,18 @@ export async function runOktaLiveValidation(): Promise<void> {
       console.log("\n  ⏳ WAITING FOR OKTA SANDBOX APPROVAL");
       console.log(`     Please approve the access request in Okta for:`);
       console.log(`     Principal: ${sandboxConfig.testPrincipalEmail}`);
-      console.log(`     Request Condition: ${sandboxConfig.requestConditionId}`);
+      console.log(
+        `     Request Condition: ${sandboxConfig.requestConditionId}`,
+      );
       console.log(`     External Request ID: ${externalRequestId}`);
       console.log(`     Polling Okta for approval...`);
 
-      const timeoutMs = parseInt(getEnvOptional("OPNORY_LIVE_APPROVAL_TIMEOUT_MS") || "300000"); // 5 min default
-      const pollIntervalMs = parseInt(getEnvOptional("OPNORY_LIVE_POLL_INTERVAL_MS") || "10000"); // 10s default
+      const timeoutMs = parseInt(
+        getEnvOptional("OPNORY_LIVE_APPROVAL_TIMEOUT_MS") || "300000",
+      ); // 5 min default
+      const pollIntervalMs = parseInt(
+        getEnvOptional("OPNORY_LIVE_POLL_INTERVAL_MS") || "10000",
+      ); // 10s default
 
       await pollWithTimeout(
         async () => {
@@ -384,7 +424,7 @@ export async function runOktaLiveValidation(): Promise<void> {
           intervalMs: pollIntervalMs,
           timeoutMs,
           description: "Okta approval",
-        }
+        },
       );
 
       step.end("PASS", { message: "Okta approval observed" });
@@ -397,8 +437,14 @@ export async function runOktaLiveValidation(): Promise<void> {
       const step = evidence.startStep("O8", "Observe authoritative approval");
       const requestStatus = await provider.getRequestStatus(externalRequestId);
 
-      if (requestStatus.status !== "APPROVED" && requestStatus.status !== "FAILED") {
-        step.end("FAIL", { status: requestStatus.status, expected: "APPROVED/FAILED" });
+      if (
+        requestStatus.status !== "APPROVED" &&
+        requestStatus.status !== "FAILED"
+      ) {
+        step.end("FAIL", {
+          status: requestStatus.status,
+          expected: "APPROVED/FAILED",
+        });
         throw new Error(`Request not approved: ${requestStatus.status}`);
       }
 
@@ -411,7 +457,10 @@ export async function runOktaLiveValidation(): Promise<void> {
     let principalOrn: string;
     let resourceOrn: string;
     {
-      const step = evidence.startStep("O9", "Resolve authoritative access (ORNs)");
+      const step = evidence.startStep(
+        "O9",
+        "Resolve authoritative access (ORNs)",
+      );
       const subject = await provider.resolveSubject({
         requesterId: "test-requester",
         requesterEmail: sandboxConfig.testPrincipalEmail,
@@ -437,24 +486,27 @@ export async function runOktaLiveValidation(): Promise<void> {
 
       if (!assignment || assignment.status !== "ACTIVE") {
         step.end("FAIL", { assignment: assignment?.status || "NOT_FOUND" });
-        throw new Error(`Assignment not active: ${assignment?.status || "NOT_FOUND"}`);
+        throw new Error(
+          `Assignment not active: ${assignment?.status || "NOT_FOUND"}`,
+        );
       }
 
       // Extract ORNs from raw assignment
-      principalOrn = assignment.raw?.principalOrn || sandboxConfig.expectedPrincipalId;
+      principalOrn =
+        assignment.raw?.principalOrn || sandboxConfig.expectedPrincipalId;
       resourceOrn = assignment.raw?.resourceOrn || sandboxConfig.resourceOrn;
 
       // Update stored request with assignment ID
       const requests = await requestStore.getAll();
-      const reloaded = requests.find(r => r.correlationId === correlationId);
+      const reloaded = requests.find((r) => r.correlationId === correlationId);
       if (reloaded) {
         reloaded.governanceAssignmentId = assignment.assignmentId;
         reloaded.status = "FULFILLED" as AccessRequestStatus;
         await requestStore.update(reloaded);
       }
 
-      step.end("PASS", { 
-        externalAssignmentId: assignment.assignmentId, 
+      step.end("PASS", {
+        externalAssignmentId: assignment.assignmentId,
         assignmentStatus: assignment.status,
         principalOrn,
         resourceOrn,
@@ -468,10 +520,14 @@ export async function runOktaLiveValidation(): Promise<void> {
       const step = evidence.startStep("O10", "Downstream fulfillment");
 
       if (sandboxConfig.fulfillmentOwner === "opnory") {
-        console.log("  FulfillmentOwner=opnory: invoking GitHub executor (if applicable)");
+        console.log(
+          "  FulfillmentOwner=opnory: invoking GitHub executor (if applicable)",
+        );
         step.end("PASS", { fulfillmentOwner: "opnory" });
       } else {
-        console.log("  FulfillmentOwner=okta: asserting no local downstream mutation");
+        console.log(
+          "  FulfillmentOwner=okta: asserting no local downstream mutation",
+        );
         step.end("PASS", { fulfillmentOwner: "okta" });
       }
     }
@@ -507,10 +563,15 @@ export async function runOktaLiveValidation(): Promise<void> {
 
       if (!assignment || assignment.status !== "ACTIVE") {
         step.end("FAIL", { assignment: assignment?.status || "NOT_FOUND" });
-        throw new Error(`Assignment not active after fulfillment: ${assignment?.status || "NOT_FOUND"}`);
+        throw new Error(
+          `Assignment not active after fulfillment: ${assignment?.status || "NOT_FOUND"}`,
+        );
       }
 
-      step.end("PASS", { message: "Authoritative access confirmed", assignmentId: assignment.assignmentId });
+      step.end("PASS", {
+        message: "Authoritative access confirmed",
+        assignmentId: assignment.assignmentId,
+      });
     }
 
     // ========================================================================
@@ -518,7 +579,10 @@ export async function runOktaLiveValidation(): Promise<void> {
     // ========================================================================
     let revocationResult: GovernanceRevocationResult;
     {
-      const step = evidence.startStep("O12", "Authoritative revoke (revoke-principal-access)");
+      const step = evidence.startStep(
+        "O12",
+        "Authoritative revoke (revoke-principal-access)",
+      );
       const subject = await provider.resolveSubject({
         requesterId: "test-requester",
         requesterEmail: sandboxConfig.testPrincipalEmail,
@@ -541,7 +605,9 @@ export async function runOktaLiveValidation(): Promise<void> {
       });
 
       const assignment: GovernanceAssignment = {
-        assignmentId: (await provider.getAssignment(subject, entitlement))?.assignmentId || "",
+        assignmentId:
+          (await provider.getAssignment(subject, entitlement))?.assignmentId ||
+          "",
         subject,
         entitlement,
         authority: "okta",
@@ -556,12 +622,15 @@ export async function runOktaLiveValidation(): Promise<void> {
 
       if (!revocationResult.success) {
         step.end("FAIL", { error: revocationResult.error });
-        throw new Error(`revoke-principal-access failed: ${revocationResult.error}`);
+        throw new Error(
+          `revoke-principal-access failed: ${revocationResult.error}`,
+        );
       }
 
-      step.end("PASS", { 
+      step.end("PASS", {
         message: revocationResult.message,
-        authoritativeMutationPerformed: revocationResult.authoritativeMutationPerformed,
+        authoritativeMutationPerformed:
+          revocationResult.authoritativeMutationPerformed,
         fallbackReason: revocationResult.fallbackReason,
       });
     }
@@ -571,8 +640,12 @@ export async function runOktaLiveValidation(): Promise<void> {
     // ========================================================================
     {
       const step = evidence.startStep("O13", "Reconcile absence");
-      const timeoutMs = parseInt(getEnvOptional("OPNORY_LIVE_REVOCATION_TIMEOUT_MS") || "300000");
-      const pollIntervalMs = parseInt(getEnvOptional("OPNORY_LIVE_POLL_INTERVAL_MS") || "10000");
+      const timeoutMs = parseInt(
+        getEnvOptional("OPNORY_LIVE_REVOCATION_TIMEOUT_MS") || "300000",
+      );
+      const pollIntervalMs = parseInt(
+        getEnvOptional("OPNORY_LIVE_POLL_INTERVAL_MS") || "10000",
+      );
 
       await pollWithTimeout(
         async () => {
@@ -598,7 +671,11 @@ export async function runOktaLiveValidation(): Promise<void> {
           });
 
           const assignment = await provider.getAssignment(subject, entitlement);
-          if (!assignment || assignment.status === "REVOKED" || assignment.status === "NOT_FOUND") {
+          if (
+            !assignment ||
+            assignment.status === "REVOKED" ||
+            assignment.status === "NOT_FOUND"
+          ) {
             return assignment;
           }
           return null;
@@ -607,10 +684,12 @@ export async function runOktaLiveValidation(): Promise<void> {
           intervalMs: pollIntervalMs,
           timeoutMs,
           description: "Okta revocation confirmation",
-        }
+        },
       );
 
-      step.end("PASS", { message: "Okta authoritative access confirmed absent/revoked" });
+      step.end("PASS", {
+        message: "Okta authoritative access confirmed absent/revoked",
+      });
     }
 
     // ========================================================================
@@ -621,17 +700,28 @@ export async function runOktaLiveValidation(): Promise<void> {
 
       // Run reconciliation again
       const requests = await requestStore.getAll();
-      const testRequest = requests.find(r => r.correlationId === correlationId);
-      
+      const testRequest = requests.find(
+        (r) => r.correlationId === correlationId,
+      );
+
       if (testRequest) {
         // Verify status is still correct
-        if (testRequest.status !== "FULFILLED" && testRequest.status !== "REVOKED") {
-          step.end("FAIL", { error: `Unexpected state after re-reconciliation: ${testRequest.status}` });
-          throw new Error(`Unexpected state after re-reconciliation: ${testRequest.status}`);
+        if (
+          testRequest.status !== "FULFILLED" &&
+          testRequest.status !== "REVOKED"
+        ) {
+          step.end("FAIL", {
+            error: `Unexpected state after re-reconciliation: ${testRequest.status}`,
+          });
+          throw new Error(
+            `Unexpected state after re-reconciliation: ${testRequest.status}`,
+          );
         }
       }
 
-      step.end("PASS", { message: "Zero duplicate mutations on re-reconciliation" });
+      step.end("PASS", {
+        message: "Zero duplicate mutations on re-reconciliation",
+      });
     }
 
     // ========================================================================
@@ -645,7 +735,9 @@ export async function runOktaLiveValidation(): Promise<void> {
       const freshAuditStore = new PgAuditEventStore(freshPool);
 
       const requests = await freshRequestStore.getAll();
-      const testRequest = requests.find(r => r.correlationId === correlationId);
+      const testRequest = requests.find(
+        (r) => r.correlationId === correlationId,
+      );
 
       if (!testRequest) {
         step.end("FAIL", { error: "Request not found after restart" });
@@ -653,18 +745,31 @@ export async function runOktaLiveValidation(): Promise<void> {
       }
 
       // Verify state is still correct
-      if (testRequest.status !== "FULFILLED" && testRequest.status !== "REVOKED") {
-        step.end("FAIL", { error: `Unexpected state after restart: ${testRequest.status}` });
-        throw new Error(`Unexpected state after restart: ${testRequest.status}`);
+      if (
+        testRequest.status !== "FULFILLED" &&
+        testRequest.status !== "REVOKED"
+      ) {
+        step.end("FAIL", {
+          error: `Unexpected state after restart: ${testRequest.status}`,
+        });
+        throw new Error(
+          `Unexpected state after restart: ${testRequest.status}`,
+        );
       }
 
       // Verify external IDs persisted
-      if (testRequest.metadata?.governance?.externalRequestId !== externalRequestId) {
+      if (
+        testRequest.metadata?.governance?.externalRequestId !==
+        externalRequestId
+      ) {
         step.end("FAIL", { error: "External request ID lost after restart" });
         throw new Error("External request ID lost after restart");
       }
 
-      step.end("PASS", { message: "State correct after restart", externalRequestId });
+      step.end("PASS", {
+        message: "State correct after restart",
+        externalRequestId,
+      });
     }
 
     // ========================================================================
@@ -686,7 +791,7 @@ export async function runOktaLiveValidation(): Promise<void> {
 
 // Run if invoked directly
 if (import.meta.main) {
-  runOktaLiveValidation().catch(error => {
+  runOktaLiveValidation().catch((error) => {
     console.error("Okta live validation failed:", error);
     process.exit(1);
   });
