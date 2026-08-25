@@ -10,6 +10,8 @@
     "build": "turbo build",
     "test": "bun test",
     "typecheck": "turbo typecheck",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
     "live:entra": "OPNORY_LIVE_GOVERNANCE_TESTS=true bun run scripts/live-governance/entra.ts",
     "live:okta": "OPNORY_LIVE_GOVERNANCE_TESTS=true bun run scripts/live-governance/okta.ts",
@@ -27,6 +29,7 @@
     "evidence:sanitize": "bun run scripts/live-governance/evidence/sanitize.ts"
   },
   "devDependencies": {
+    "oxlint": "1.80.0",
     "prettier": "^3.0.0",
     "turbo": "^2.0.0",
     "typescript": "^5.5.0"

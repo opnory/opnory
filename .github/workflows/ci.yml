@@ -47,6 +47,9 @@ jobs:
       - name: Build all packages
         run: bun run build
 
+      - name: Lint
+        run: bun run lint
+
       - name: Run database migrations
         run: bun -e "import { migrate } from './packages/access-store-pg/src/index.js'; await migrate();"
         if: runner.os == 'Linux'

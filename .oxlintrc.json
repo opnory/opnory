@@ -1,0 +1,37 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "warn",
+    "pedantic": "off",
+    "style": "off",
+    "restriction": "off"
+  },
+  "options": {
+    "reportUnusedDisableDirectives": "error"
+  },
+  "rules": {
+    "eslint/no-unused-vars": "warn",
+    "unicorn/no-empty-file": "off",
+    "unicorn/no-array-sort": "off",
+    "unicorn/require-post-message-target-origin": "off",
+    "eslint/no-underscore-dangle": "off",
+    "eslint/no-dupe-else-if": "warn",
+    "unicorn/consistent-function-scoping": "warn",
+    "eslint/no-await-in-loop": "warn",
+    "eslint/no-useless-catch": "warn",
+    "eslint/preserve-caught-error": "warn",
+    "eslint/no-shadow": "warn"
+  },
+  "ignorePatterns": [
+    "dist/**",
+    "coverage/**",
+    ".live-results/**",
+    "*.d.ts",
+    "run-*.js",
+    "run-*.mjs",
+    "distributed-*.mjs",
+    "load-test-*.mjs"
+  ]
+}
