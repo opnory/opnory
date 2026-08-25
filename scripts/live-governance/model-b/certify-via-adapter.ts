@@ -19,6 +19,7 @@ import {
   runFulfillmentAdapterCertification,
   ConformanceFixture,
   CertificationEvidenceProbe,
+  ConformanceTiming,
 } from "@opnory/governance-core";
 
 const log = getLogger("certification:entra-adapter");
@@ -184,6 +185,15 @@ async function runCertification() {
 
   // Run conformance harness
   console.log("\n▶ Running conformance suite...\n");
+
+  // Provider-specific timing (Entra Model B)
+  const entraTiming: ConformanceTiming = {
+    verifyAttempts: 30,
+    verifyIntervalMs: 3000,
+    interFixtureDelayMs: 30000,
+    postVerifyDelayMs: 10000,
+  };
+
   const result = await runFulfillmentAdapterCertification({
     provider: "entra",
     adapter,
@@ -191,10 +201,7 @@ async function runCertification() {
     fixtures,
     scope,
     evidenceProbe,
-    eventualConsistency: {
-      maxAttempts: 20,
-      delayMs: 3000,
-    },
+    timing: entraTiming,
   });
 
   console.log("\n[DEBUG] Conformance result:", JSON.stringify(result, null, 2));

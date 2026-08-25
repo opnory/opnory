@@ -329,6 +329,21 @@ export class EntraAdapter implements FulfillmentAdapter {
               method: "DELETE",
             },
           );
+          // Verify actual state after delete - Graph eventual consistency may return 204 but state still present
+          const members = await this.graphRequest<{ value: Array<{ id: string }> }>(
+            `/groups/${mapping.value}/members?$filter=id eq '${resolvedSubject.providerSubjectId}'`,
+          );
+          const stillMember = members.value && members.value.length > 0;
+          if (stillMember) {
+            // State not yet converged - still present
+            return {
+              status: "succeeded",
+              mutated: true,
+              provider: "entra",
+              providerObjectId: mapping.value,
+              correlationId,
+            };
+          }
           return {
             status: "succeeded",
             mutated: true,
@@ -346,6 +361,24 @@ export class EntraAdapter implements FulfillmentAdapter {
               error.message?.includes("removed object references do not exist"));
 
           if (isAlreadyAbsent) {
+            // Double-check actual state
+            try {
+              const members = await this.graphRequest<{ value: Array<{ id: string }> }>(
+                `/groups/${mapping.value}/members?$filter=id eq '${resolvedSubject.providerSubjectId}'`,
+              );
+              const stillMember = members.value && members.value.length > 0;
+              if (stillMember) {
+                return {
+                  status: "succeeded",
+                  mutated: true,
+                  provider: "entra",
+                  providerObjectId: mapping.value,
+                  correlationId,
+                };
+              }
+            } catch {
+              // If verification fails, trust the 404
+            }
             return {
               status: "succeeded",
               mutated: false,
@@ -370,6 +403,30 @@ export class EntraAdapter implements FulfillmentAdapter {
         );
 
         if (!found) {
+          // Double-check actual state
+          try {
+            const freshAssignments = await this.graphRequest<{
+              value: Array<{ id: string; principalId: string; appRoleId: string }>;
+            }>(
+              `/servicePrincipals/${this.config.servicePrincipalId}/appRoleAssignedTo`,
+            );
+            const stillAssigned = freshAssignments.value?.some(
+              (a) =>
+                a.principalId === resolvedSubject.providerSubjectId &&
+                a.appRoleId === mapping.value,
+            );
+            if (stillAssigned) {
+              return {
+                status: "succeeded",
+                mutated: true,
+                provider: "entra",
+                providerObjectId: this.config.servicePrincipalId,
+                correlationId,
+              };
+            }
+          } catch {
+            // If verification fails, trust the not-found
+          }
           return {
             status: "succeeded",
             mutated: false,
@@ -386,6 +443,26 @@ export class EntraAdapter implements FulfillmentAdapter {
               method: "DELETE",
             },
           );
+          // Verify actual state after delete
+          const freshAssignments = await this.graphRequest<{
+            value: Array<{ id: string; principalId: string; appRoleId: string }>;
+          }>(
+            `/servicePrincipals/${this.config.servicePrincipalId}/appRoleAssignedTo`,
+          );
+          const stillAssigned = freshAssignments.value?.some(
+            (a) =>
+              a.principalId === resolvedSubject.providerSubjectId &&
+              a.appRoleId === mapping.value,
+          );
+          if (stillAssigned) {
+            return {
+              status: "succeeded",
+              mutated: true,
+              provider: "entra",
+              providerObjectId: this.config.servicePrincipalId,
+              correlationId,
+            };
+          }
           return {
             status: "succeeded",
             mutated: true,
@@ -404,6 +481,30 @@ export class EntraAdapter implements FulfillmentAdapter {
                 error.message?.includes("removed object references do not exist")));
 
           if (isAlreadyAbsent) {
+            // Double-check actual state
+            try {
+              const freshAssignments = await this.graphRequest<{
+                value: Array<{ id: string; principalId: string; appRoleId: string }>;
+              }>(
+                `/servicePrincipals/${this.config.servicePrincipalId}/appRoleAssignedTo`,
+              );
+              const stillAssigned = freshAssignments.value?.some(
+                (a) =>
+                  a.principalId === resolvedSubject.providerSubjectId &&
+                  a.appRoleId === mapping.value,
+              );
+              if (stillAssigned) {
+                return {
+                  status: "succeeded",
+                  mutated: true,
+                  provider: "entra",
+                  providerObjectId: this.config.servicePrincipalId,
+                  correlationId,
+                };
+              }
+            } catch {
+              // If verification fails, trust the 404
+            }
             return {
               status: "succeeded",
               mutated: false,

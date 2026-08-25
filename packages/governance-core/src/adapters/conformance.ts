@@ -11,12 +11,16 @@ import {
 } from "@opnory/governance-core";
 
 /**
- * Conformance harness for FulfillmentAdapter implementations.
- *
- * Tests the contract guarantees without knowing provider-specific details.
- * Each permission carries its own provider mappings; the harness only knows
- * about Opnory domain objects (Permission, RoleAssignment, SubjectRef).
+ * Provider-configurable timing for the conformance harness.
+ * Keeps the test sequence invariant while allowing provider-specific
+ * convergence characteristics to be supplied externally.
  */
+export interface ConformanceTiming {
+  verifyAttempts?: number;
+  verifyIntervalMs?: number;
+  interFixtureDelayMs?: number;
+  postVerifyDelayMs?: number; // delay after verify to let state settle
+}
 
 export interface ConformanceFixture {
   permission: Permission;
@@ -30,11 +34,7 @@ export interface ConformanceOptions {
   fixtures: ConformanceFixture[];
   scope: ResourceScope;
   evidenceProbe?: CertificationEvidenceProbe;
-  eventualConsistency?: {
-    maxAttempts?: number;
-    delayMs?: number;
-    interFixtureDelayMs?: number;
-  };
+  timing?: ConformanceTiming;
 }
 
 export interface CertificationEvidenceProbe {
@@ -118,12 +118,13 @@ export async function runFulfillmentAdapterCertification(
     fixtures,
     scope,
     evidenceProbe,
-    eventualConsistency = {},
+    timing = {},
   } = options;
 
-  const maxAttempts = eventualConsistency.maxAttempts ?? 10;
-  const delayMs = eventualConsistency.delayMs ?? 2000;
-  const interFixtureDelayMs = eventualConsistency.interFixtureDelayMs ?? 30000;
+  const maxAttempts = timing.verifyAttempts ?? 10;
+  const delayMs = timing.verifyIntervalMs ?? 2000;
+  const interFixtureDelayMs = timing.interFixtureDelayMs ?? 30000;
+  const postVerifyDelayMs = timing.postVerifyDelayMs ?? 0;
 
   const allFixtureResults: FixtureResult[] = [];
   let overallPassed = true;
@@ -254,6 +255,11 @@ export async function runFulfillmentAdapterCertification(
         continue;
       }
 
+      // Brief delay after idempotent grant to let Graph state settle
+      if (postVerifyDelayMs > 0) {
+        await new Promise((r) => setTimeout(r, postVerifyDelayMs));
+      }
+
       // 5. Revoke → verify absent
       const revoke = await adapter.revoke(assignment, permission, scope, resolvedSubject);
       fixtureResult.revoke = {
@@ -292,7 +298,31 @@ export async function runFulfillmentAdapterCertification(
         continue;
       }
 
+      // Brief delay after verify to let Graph state settle before idempotent revoke
+      if (postVerifyDelayMs > 0) {
+        await new Promise((r) => setTimeout(r, postVerifyDelayMs));
+      }
+
       // 6. Revoke again → verify absent + idempotent (mutated: false)
+      // For providers with non-monotonic eventual consistency (like Graph),
+      // re-verify state before checking idempotent behavior
+      const preIdempotentVerify = await waitForVerification(
+        adapter,
+        assignment,
+        permission,
+        scope,
+        resolvedSubject,
+        "not-found",
+        maxAttempts,
+        delayMs,
+      );
+      if (preIdempotentVerify.status !== "not-found") {
+        fixtureResult.error = `Pre-idempotent state not clean: ${preIdempotentVerify.status}`;
+        allFixtureResults.push(fixtureResult);
+        overallPassed = false;
+        continue;
+      }
+
       const revokeAgain = await adapter.revoke(assignment, permission, scope, resolvedSubject);
       fixtureResult.revokeIdempotent = {
         passed:
