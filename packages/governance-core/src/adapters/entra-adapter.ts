@@ -130,19 +130,19 @@ export class EntraAdapter implements FulfillmentAdapter {
   ): Promise<FulfillmentResult> {
     const correlationId = crypto.randomUUID();
 
-    try {
-      const mapping = permission.mappings.find((m) => m.provider === "entra");
-      if (!mapping) {
-        return {
-          status: "failed",
-          mutated: false,
-          provider: "entra",
-          providerObjectId: undefined,
-          error: `No Entra mapping found for permission ${permission.id}`,
-          correlationId,
-        };
-      }
+    const mapping = permission.mappings.find((m) => m.provider === "entra");
+    if (!mapping) {
+      return {
+        status: "failed",
+        mutated: false,
+        provider: "entra",
+        providerObjectId: undefined,
+        error: `No Entra mapping found for permission ${permission.id}`,
+        correlationId,
+      };
+    }
 
+    try {
       if (mapping.type === "group") {
         await this.graphRequest(`/groups/${mapping.value}/members/$ref`, {
           method: "POST",
@@ -189,6 +189,31 @@ export class EntraAdapter implements FulfillmentAdapter {
         correlationId,
       };
     } catch (error: any) {
+      // Handle idempotent "already exists" cases (400, 409)
+      const isAlreadyExists =
+        (error.status === 400 || error.status === 409) &&
+        (error.code === "Request_BadRequest" ||
+          error.code === "Request_MultipleObjectsWithSameKeyValue" ||
+          error.message?.includes("already exists") ||
+          error.message?.includes("already exist"));
+      const isPermissionAlreadyAssigned =
+        error.status === 400 &&
+        error.code === "InvalidUpdate" &&
+        error.message?.includes("Permission being assigned already exists");
+
+      if (isAlreadyExists || isPermissionAlreadyAssigned) {
+        return {
+          status: "succeeded",
+          mutated: false,
+          provider: "entra",
+          providerObjectId:
+            mapping?.type === "group"
+              ? mapping.value
+              : this.config.servicePrincipalId,
+          correlationId,
+        };
+      }
+
       return {
         status: "failed",
         mutated: false,
@@ -312,10 +337,15 @@ export class EntraAdapter implements FulfillmentAdapter {
             correlationId,
           };
         } catch (error: any) {
-          if (
+          // Handle both 404 and 400 "already absent" cases
+          const isAlreadyAbsent =
             error.status === 404 ||
-            error.code === "Request_ResourceNotFound"
-          ) {
+            error.code === "Request_ResourceNotFound" ||
+            (error.status === 400 &&
+              error.code === "Request_BadRequest" &&
+              error.message?.includes("removed object references do not exist"));
+
+          if (isAlreadyAbsent) {
             return {
               status: "succeeded",
               mutated: false,
@@ -364,10 +394,16 @@ export class EntraAdapter implements FulfillmentAdapter {
             correlationId,
           };
         } catch (error: any) {
-          if (
+          // Handle 404, 400 "already absent" cases
+          const isAlreadyAbsent =
             error.status === 404 ||
-            error.code === "Request_ResourceNotFound"
-          ) {
+            error.code === "Request_ResourceNotFound" ||
+            (error.status === 400 &&
+              error.code === "Request_BadRequest" &&
+              (error.message?.includes("EntitlementGrant being updated or deleted is not found") ||
+                error.message?.includes("removed object references do not exist")));
+
+          if (isAlreadyAbsent) {
             return {
               status: "succeeded",
               mutated: false,
