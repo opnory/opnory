@@ -2,6 +2,7 @@
   "name": "opnory",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "workspaces": [
     "packages/*",
     "apps/*"
@@ -29,6 +30,7 @@
     "evidence:sanitize": "bun run scripts/live-governance/evidence/sanitize.ts"
   },
   "devDependencies": {
+    "@oxlint/plugins": "1.80.0",
     "oxlint": "1.80.0",
     "prettier": "^3.0.0",
     "turbo": "^2.0.0",
