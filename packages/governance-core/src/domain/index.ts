@@ -142,35 +142,66 @@ export type EvidenceEvent = z.infer<typeof EvidenceEventSchema>;
 // FulfillmentAdapter Interface
 // ============================================================================
 
+export const SubjectRefSchema = z.object({
+  type: z.enum(["user", "servicePrincipal", "group"]),
+  identifier: z.string(), // UPN, objectId, or displayName
+  tenantId: z.string().optional(),
+});
+
+export type SubjectRef = z.infer<typeof SubjectRefSchema>;
+
+export const ResolvedSubjectSchema = z.object({
+  provider: z.string(),
+  providerSubjectId: z.string(),
+  correlationId: z.string().optional(),
+});
+
+export type ResolvedSubject = z.infer<typeof ResolvedSubjectSchema>;
+
 export const FulfillmentResultSchema = z.object({
-  success: z.boolean(),
+  status: z.enum(["succeeded", "failed"]),
+  mutated: z.boolean(),
+  provider: z.string(),
   providerObjectId: z.string().optional(),
-  message: z.string(),
+  correlationId: z.string().optional(),
   error: z.string().optional(),
 });
 
 export type FulfillmentResult = z.infer<typeof FulfillmentResultSchema>;
 
+export const VerificationResultSchema = z.object({
+  status: z.enum(["verified", "not-found", "failed"]),
+  provider: z.string(),
+  providerObjectId: z.string().optional(),
+  correlationId: z.string().optional(),
+  error: z.string().optional(),
+});
+
+export type VerificationResult = z.infer<typeof VerificationResultSchema>;
+
 export interface FulfillmentAdapter {
   readonly provider: string;
 
-  grant(
-    subjectId: string,
-    permission: Permission,
-    scope: ResourceScope,
-  ): Promise<FulfillmentResult>;
+  resolveSubject(subject: SubjectRef): Promise<ResolvedSubject>;
 
-  revoke(
-    subjectId: string,
+  grant(
+    assignment: RoleAssignment,
     permission: Permission,
     scope: ResourceScope,
-    providerObjectId: string,
+    resolvedSubject: ResolvedSubject,
   ): Promise<FulfillmentResult>;
 
   verify(
-    subjectId: string,
+    assignment: RoleAssignment,
     permission: Permission,
     scope: ResourceScope,
-    providerObjectId: string,
-  ): Promise<boolean>;
+    resolvedSubject: ResolvedSubject,
+  ): Promise<VerificationResult>;
+
+  revoke(
+    assignment: RoleAssignment,
+    permission: Permission,
+    scope: ResourceScope,
+    resolvedSubject: ResolvedSubject,
+  ): Promise<FulfillmentResult>;
 }

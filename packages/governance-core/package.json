@@ -12,6 +12,10 @@
     "./domain": {
       "import": "./dist/domain/index.js",
       "types": "./dist/domain/index.d.ts"
+    },
+    "./adapters": {
+      "import": "./dist/adapters/index.js",
+      "types": "./dist/adapters/index.d.ts"
     }
   },
   "scripts": {

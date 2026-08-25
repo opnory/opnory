@@ -35,6 +35,7 @@
     { "path": "./packages/access-executor" },
     { "path": "./packages/access-service" },
     { "path": "./packages/access-store-pg" },
+    { "path": "./packages/governance-core" },
     { "path": "./apps/api" },
     { "path": "./apps/slack" }
   ]

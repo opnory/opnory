@@ -55,7 +55,7 @@ export type RawCertification = z.infer<typeof RawCertificationSchema>;
 
 export const sanitizeCertification = (
   raw: RawCertification,
-  options?: { sourceCommit?: string; schemaVersion?: string }
+  options?: { sourceCommit?: string; schemaVersion?: string },
 ): PublicCertification => {
   const capabilities = raw.evidence
     .filter((e) => e.passed)
@@ -77,7 +77,8 @@ export const sanitizeCertification = (
   const hasRevocation = raw.evidence.some(
     (e) =>
       e.passed &&
-      (e.test.startsWith("group-fulfillment") || e.test.startsWith("app-role-fulfillment"))
+      (e.test.startsWith("group-fulfillment") ||
+        e.test.startsWith("app-role-fulfillment")),
   );
   if (hasRevocation && !uniqueCapabilities.includes("revocation")) {
     uniqueCapabilities.push("revocation");
