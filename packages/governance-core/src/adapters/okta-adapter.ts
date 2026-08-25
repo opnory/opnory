@@ -632,11 +632,13 @@ export class OktaAdapter implements FulfillmentAdapter {
         // Verify convergence after revoke
         const afterState = await this.verifyInternal(permission, scope, resolvedSubject);
         if (afterState.state !== "absent") {
+          // API call succeeded but state not converged — fail closed
           return {
-            status: "succeeded", // API call succeeded but state not converged
-            mutated: true,
+            status: "failed",
+            mutated: false,
             provider: "okta",
             providerObjectId: mapping.value,
+            error: `Revoke API succeeded but state not converged to absent (${afterState.state})`,
             correlationId,
           };
         }
@@ -671,12 +673,14 @@ export class OktaAdapter implements FulfillmentAdapter {
               correlationId,
             };
           }
-          // Still present — state not converged
+          // DELETE said "not found", but assignment is still present.
+          // Desired state has not been achieved — fail closed.
           return {
-            status: "succeeded",
-            mutated: true,
+            status: "failed",
+            mutated: false,
             provider: "okta",
             providerObjectId: mapping.value,
+            error: `Provider state mismatch: DELETE 404 but assignment still present`,
             correlationId,
           };
         }
