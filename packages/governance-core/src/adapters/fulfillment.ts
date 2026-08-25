@@ -16,6 +16,9 @@ import {
   FulfillmentAdapter,
 } from "../domain";
 
+import { EntraAdapter, EntraAdapterConfig } from "./entra-adapter";
+import { OktaAdapter, OktaAdapterConfig } from "./okta-adapter";
+
 // ---------------------------------------------------------------------------
 // Adapter Registry
 // ---------------------------------------------------------------------------
@@ -47,3 +50,11 @@ export function getAdapter(
 export function listAdapters(): string[] {
   return Array.from(adapterRegistry.keys());
 }
+
+// Register built-in adapters
+registerAdapter("entra", (config) =>
+  new EntraAdapter(config as unknown as EntraAdapterConfig),
+);
+registerAdapter("okta", (config) =>
+  new OktaAdapter(config as unknown as OktaAdapterConfig),
+);

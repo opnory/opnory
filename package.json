@@ -20,6 +20,10 @@
     "entra:bootstrap:model-a": "OPNORY_LIVE_GOVERNANCE_TESTS=true OPNORY_ENTRA_SANDBOX_CONFIRM=true bun run scripts/live-governance/model-a/bootstrap-entra-governance.ts",
     "entra:certify:model-a": "OPNORY_LIVE_GOVERNANCE_TESTS=true OPNORY_ENTRA_SANDBOX_CONFIRM=true bun run scripts/live-governance/model-a/certify-entra-access-packages.ts",
     "entra:destroy:model-a": "OPNORY_LIVE_GOVERNANCE_TESTS=true OPNORY_ENTRA_SANDBOX_CONFIRM=true bun run scripts/live-governance/model-a/destroy-entra-governance.ts",
+    "okta:validate": "OPNORY_LIVE_GOVERNANCE_TESTS=true OPNORY_OKTA_LIVE_TEST_CONFIRMED=true bun run scripts/live-governance/model-b/validate-okta-sandbox.ts",
+    "okta:bootstrap:model-b": "OPNORY_LIVE_GOVERNANCE_TESTS=true OPNORY_OKTA_LIVE_TEST_CONFIRMED=true bun run scripts/live-governance/model-b/bootstrap-okta-primitives.ts",
+    "okta:certify:model-b": "OPNORY_LIVE_GOVERNANCE_TESTS=true OPNORY_OKTA_LIVE_TEST_CONFIRMED=true bun run scripts/live-governance/model-b/certify-okta-model-b.ts",
+    "okta:destroy:model-b": "OPNORY_LIVE_GOVERNANCE_TESTS=true OPNORY_OKTA_LIVE_TEST_CONFIRMED=true bun run scripts/live-governance/model-b/destroy-okta-sandbox.ts",
     "evidence:sanitize": "bun run scripts/live-governance/evidence/sanitize.ts"
   },
   "devDependencies": {
