@@ -68,6 +68,16 @@ interface OktaAppUser {
   scope: string;
 }
 
+/**
+ * Granular verification result — distinguishes why something is absent.
+ * This prevents fail-open paths where "not found" is conflated with "successfully absent."
+ */
+type OktaVerificationState =
+  | { state: "present" }
+  | { state: "absent" }
+  | { state: "subject-not-found" }
+  | { state: "entitlement-not-found" };
+
 export class OktaAdapter implements FulfillmentAdapter {
   readonly provider = "okta";
   private config: OktaAdapterConfig;
@@ -240,6 +250,85 @@ export class OktaAdapter implements FulfillmentAdapter {
     };
   }
 
+  /**
+   * Internal verification with granular state.
+   * Never maps 404 to success — caller decides semantics.
+   */
+  private async verifyInternal(
+    permission: Permission,
+    scope: ResourceScope,
+    resolvedSubject: ResolvedSubject,
+  ): Promise<OktaVerificationState> {
+    const mapping = permission.mappings.find((m) => m.provider === "okta");
+    if (!mapping) {
+      return { state: "entitlement-not-found" };
+    }
+
+    if (mapping.type === "group") {
+      try {
+        await this.oktaRequest<OktaGroupMember>(
+          `/groups/${mapping.value}/users/${resolvedSubject.providerSubjectId}`,
+        );
+        return { state: "present" };
+      } catch (error: any) {
+        if (error.status === 404) {
+          // Distinguish: is the user missing, or the group missing?
+          try {
+            await this.oktaRequest<OktaUser>(
+              `/users/${resolvedSubject.providerSubjectId}`,
+            );
+            // User exists, group exists, but membership absent
+            return { state: "absent" };
+          } catch (userError: any) {
+            if (userError.status === 404) {
+              return { state: "subject-not-found" };
+            }
+            throw userError;
+          }
+        }
+        throw error;
+      }
+    } else if (mapping.type === "application") {
+      try {
+        const appUsers = await this.oktaRequest<OktaAppUser[]>(
+          `/apps/${mapping.value}/users?filter=id eq "${resolvedSubject.providerSubjectId}"`,
+        );
+        const found = appUsers && appUsers.length > 0;
+        if (found) return { state: "present" };
+        // Assignment absent — check if app exists
+        try {
+          await this.oktaRequest<OktaApplication>(
+            `/apps/${mapping.value}`,
+          );
+          return { state: "absent" };
+        } catch (appError: any) {
+          if (appError.status === 404) {
+            return { state: "entitlement-not-found" };
+          }
+          throw appError;
+        }
+      } catch (error: any) {
+        if (error.status === 404) {
+          // App might not exist
+          try {
+            await this.oktaRequest<OktaApplication>(
+              `/apps/${mapping.value}`,
+            );
+            return { state: "absent" };
+          } catch (appError: any) {
+            if (appError.status === 404) {
+              return { state: "entitlement-not-found" };
+            }
+            throw appError;
+          }
+        }
+        throw error;
+      }
+    }
+
+    return { state: "entitlement-not-found" };
+  }
+
   async grant(
     assignment: RoleAssignment,
     permission: Permission,
@@ -260,100 +349,122 @@ export class OktaAdapter implements FulfillmentAdapter {
       };
     }
 
+    // Verify current state FIRST — authoritative source of truth
+    const currentState = await this.verifyInternal(permission, scope, resolvedSubject);
+
+    if (currentState.state === "present") {
+      // Already present — idempotent success
+      return {
+        status: "succeeded",
+        mutated: false,
+        provider: "okta",
+        providerObjectId: mapping.value,
+        correlationId,
+      };
+    }
+
+    if (currentState.state === "subject-not-found") {
+      return {
+        status: "failed",
+        mutated: false,
+        provider: "okta",
+        providerObjectId: undefined,
+        error: `Subject not found in Okta: ${resolvedSubject.providerSubjectId}`,
+        correlationId,
+      };
+    }
+
+    if (currentState.state === "entitlement-not-found") {
+      return {
+        status: "failed",
+        mutated: false,
+        provider: "okta",
+        providerObjectId: undefined,
+        error: `Target ${mapping.type} not found in Okta: ${mapping.value}`,
+        correlationId,
+      };
+    }
+
+    // State is "absent" — perform the grant
     try {
       if (mapping.type === "group") {
-        // Add user to group
-        try {
-          await this.oktaRequest(
-            `/groups/${mapping.value}/users/${resolvedSubject.providerSubjectId}`,
-            {
-              method: "PUT",
-            },
-          );
-          return {
-            status: "succeeded",
-            mutated: true,
-            provider: "okta",
-            providerObjectId: mapping.value,
-            correlationId,
-          };
-        } catch (error: any) {
-          // Handle idempotent "already exists" - Okta returns 400 with errorCode E0000007
-          const isAlreadyMember =
-            error.status === 400 &&
-            (error.errorCode === "E0000007" ||
-              error.errorSummary?.includes("already a member") ||
-              error.errorSummary?.includes("already exists"));
-
-          if (isAlreadyMember) {
-            return {
-              status: "succeeded",
-              mutated: false,
-              provider: "okta",
-              providerObjectId: mapping.value,
-              correlationId,
-            };
-          }
-          throw error;
-        }
+        await this.oktaRequest(
+          `/groups/${mapping.value}/users/${resolvedSubject.providerSubjectId}`,
+          {
+            method: "PUT",
+          },
+        );
       } else if (mapping.type === "application") {
-        // Assign user to application
-        try {
-          await this.oktaRequest(
-            `/apps/${mapping.value}/users`,
-            {
-              method: "POST",
-              body: JSON.stringify({
-                id: resolvedSubject.providerSubjectId,
-                scope: "USER",
-              }),
-            },
-          );
-          return {
-            status: "succeeded",
-            mutated: true,
-            provider: "okta",
-            providerObjectId: mapping.value,
-            correlationId,
-          };
-        } catch (error: any) {
-          // Handle idempotent "already assigned" - Okta returns 400 with errorCode E0000007
-          const isAlreadyAssigned =
-            error.status === 400 &&
-            (error.errorCode === "E0000007" ||
-              error.errorSummary?.includes("already assigned") ||
-              error.errorSummary?.includes("already exists"));
+        await this.oktaRequest(
+          `/apps/${mapping.value}/users`,
+          {
+            method: "POST",
+            body: JSON.stringify({
+              id: resolvedSubject.providerSubjectId,
+              scope: "USER",
+            }),
+          },
+        );
+      } else {
+        return {
+          status: "failed",
+          mutated: false,
+          provider: "okta",
+          providerObjectId: undefined,
+          error: `Unsupported mapping type: ${mapping.type}`,
+          correlationId,
+        };
+      }
 
-          if (isAlreadyAssigned) {
-            return {
-              status: "succeeded",
-              mutated: false,
-              provider: "okta",
-              providerObjectId: mapping.value,
-              correlationId,
-            };
-          }
-          throw error;
-        }
+      // Verify convergence after grant
+      const afterState = await this.verifyInternal(permission, scope, resolvedSubject);
+      if (afterState.state !== "present") {
+        return {
+          status: "failed",
+          mutated: false,
+          provider: "okta",
+          providerObjectId: mapping.value,
+          error: `Grant succeeded but state not converged to present`,
+          correlationId,
+        };
       }
 
       return {
-        status: "failed",
-        mutated: false,
+        status: "succeeded",
+        mutated: true,
         provider: "okta",
-        providerObjectId: undefined,
-        error: `Unsupported mapping type: ${mapping.type}`,
+        providerObjectId: mapping.value,
         correlationId,
       };
     } catch (error: any) {
-      return {
-        status: "failed",
-        mutated: false,
-        provider: "okta",
-        providerObjectId: undefined,
-        error: error.message,
-        correlationId,
-      };
+      // Handle 409 Conflict "Duplicate" — E0000062 for app assignment
+      // (Group membership PUT typically succeeds or returns 404 if group/user missing,
+      // which we already checked above)
+      if (
+        error.status === 409 &&
+        error.errorCode === "E0000062"
+      ) {
+        // Race: another process created it. Verify.
+        const afterState = await this.verifyInternal(permission, scope, resolvedSubject);
+        if (afterState.state === "present") {
+          return {
+            status: "succeeded",
+            mutated: false,
+            provider: "okta",
+            providerObjectId: mapping.value,
+            correlationId,
+          };
+        }
+        return {
+          status: "failed",
+          mutated: false,
+          provider: "okta",
+          providerObjectId: mapping.value,
+          error: `Duplicate error but state not present`,
+          correlationId,
+        };
+      }
+      throw error;
     }
   }
 
@@ -366,73 +477,45 @@ export class OktaAdapter implements FulfillmentAdapter {
     const correlationId = crypto.randomUUID();
 
     try {
-      const mapping = permission.mappings.find((m) => m.provider === "okta");
-      if (!mapping) {
-        return {
-          status: "failed",
-          provider: "okta",
-          providerObjectId: undefined,
-          error: `No Okta mapping found for permission ${permission.id}`,
-          correlationId,
-        };
-      }
+      const internalState = await this.verifyInternal(
+        permission,
+        scope,
+        resolvedSubject,
+      );
 
-      if (mapping.type === "group") {
-        // Check group membership
-        try {
-          await this.oktaRequest<OktaGroupMember>(
-            `/groups/${mapping.value}/users/${resolvedSubject.providerSubjectId}`,
-          );
+      // Map internal state to public VerificationResult
+      switch (internalState.state) {
+        case "present":
           return {
             status: "verified",
             provider: "okta",
-            providerObjectId: mapping.value,
+            providerObjectId: permission.mappings.find((m) => m.provider === "okta")?.value,
             correlationId,
           };
-        } catch (error: any) {
-          if (error.status === 404) {
-            return {
-              status: "not-found",
-              provider: "okta",
-              providerObjectId: mapping.value,
-              correlationId,
-            };
-          }
-          throw error;
-        }
-      } else if (mapping.type === "application") {
-        // Check application assignment
-        try {
-          const appUsers = await this.oktaRequest<OktaAppUser[]>(
-            `/apps/${mapping.value}/users?filter=id eq "${resolvedSubject.providerSubjectId}"`,
-          );
-          const found = appUsers && appUsers.length > 0;
+        case "absent":
           return {
-            status: found ? "verified" : "not-found",
+            status: "not-found",
             provider: "okta",
-            providerObjectId: mapping.value,
+            providerObjectId: permission.mappings.find((m) => m.provider === "okta")?.value,
             correlationId,
           };
-        } catch (error: any) {
-          if (error.status === 404) {
-            return {
-              status: "not-found",
-              provider: "okta",
-              providerObjectId: mapping.value,
-              correlationId,
-            };
-          }
-          throw error;
-        }
+        case "subject-not-found":
+          return {
+            status: "failed",
+            provider: "okta",
+            providerObjectId: undefined,
+            error: `Subject not found in Okta: ${resolvedSubject.providerSubjectId}`,
+            correlationId,
+          };
+        case "entitlement-not-found":
+          return {
+            status: "failed",
+            provider: "okta",
+            providerObjectId: undefined,
+            error: `Target entitlement not found in Okta`,
+            correlationId,
+          };
       }
-
-      return {
-        status: "failed",
-        provider: "okta",
-        providerObjectId: undefined,
-        error: `Unsupported mapping type: ${mapping.type}`,
-        correlationId,
-      };
     } catch (error: any) {
       return {
         status: "failed",
@@ -465,146 +548,111 @@ export class OktaAdapter implements FulfillmentAdapter {
         };
       }
 
-      if (mapping.type === "group") {
-        try {
+      // Verify current state FIRST
+      const currentState = await this.verifyInternal(permission, scope, resolvedSubject);
+
+      if (currentState.state === "absent") {
+        // Already absent — idempotent success
+        return {
+          status: "succeeded",
+          mutated: false,
+          provider: "okta",
+          providerObjectId: mapping.value,
+          correlationId,
+        };
+      }
+
+      if (currentState.state === "subject-not-found") {
+        return {
+          status: "failed",
+          mutated: false,
+          provider: "okta",
+          providerObjectId: undefined,
+          error: `Subject not found in Okta: ${resolvedSubject.providerSubjectId}`,
+          correlationId,
+        };
+      }
+
+      if (currentState.state === "entitlement-not-found") {
+        return {
+          status: "failed",
+          mutated: false,
+          provider: "okta",
+          providerObjectId: undefined,
+          error: `Target ${mapping.type} not found in Okta: ${mapping.value}`,
+          correlationId,
+        };
+      }
+
+      // State is "present" — perform the revoke
+      try {
+        if (mapping.type === "group") {
           await this.oktaRequest(
             `/groups/${mapping.value}/users/${resolvedSubject.providerSubjectId}`,
             {
               method: "DELETE",
             },
           );
-          // Verify actual state after delete
-          try {
-            await this.oktaRequest<OktaGroupMember>(
-              `/groups/${mapping.value}/users/${resolvedSubject.providerSubjectId}`,
-            );
-            // Still a member - state not converged
-            return {
-              status: "succeeded",
-              mutated: true,
-              provider: "okta",
-              providerObjectId: mapping.value,
-              correlationId,
-            };
-          } catch (error: any) {
-            if (error.status === 404) {
-              return {
-                status: "succeeded",
-                mutated: true,
-                provider: "okta",
-                providerObjectId: mapping.value,
-                correlationId,
-              };
-            }
-            throw error;
-          }
-        } catch (error: any) {
-          // Handle "already absent" - Okta returns 404 if user not in group
-          if (error.status === 404) {
-            // Double-check actual state
-            try {
-              await this.oktaRequest<OktaGroupMember>(
-                `/groups/${mapping.value}/users/${resolvedSubject.providerSubjectId}`,
-              );
-              // Still a member - return mutated true
-              return {
-                status: "succeeded",
-                mutated: true,
-                provider: "okta",
-                providerObjectId: mapping.value,
-                correlationId,
-              };
-            } catch (verifyError: any) {
-              if (verifyError.status === 404) {
-                return {
-                  status: "succeeded",
-                  mutated: false,
-                  provider: "okta",
-                  providerObjectId: mapping.value,
-                  correlationId,
-                };
-              }
-              throw verifyError;
-            }
-          }
-          throw error;
-        }
-      } else if (mapping.type === "application") {
-        // Find the app user link first
-        const appUsers = await this.oktaRequest<OktaAppUser[]>(
-          `/apps/${mapping.value}/users?filter=id eq "${resolvedSubject.providerSubjectId}"`,
-        );
-        const assignment = appUsers && appUsers.length > 0 ? appUsers[0] : null;
-
-        if (!assignment) {
-          // Double-check actual state
-          const freshAppUsers = await this.oktaRequest<OktaAppUser[]>(
+        } else if (mapping.type === "application") {
+          // Find the app user link first
+          const appUsers = await this.oktaRequest<OktaAppUser[]>(
             `/apps/${mapping.value}/users?filter=id eq "${resolvedSubject.providerSubjectId}"`,
           );
-          const stillAssigned = freshAppUsers && freshAppUsers.length > 0;
-          if (stillAssigned) {
+          const appAssignment = appUsers && appUsers.length > 0 ? appUsers[0] : null;
+
+          if (!appAssignment) {
+            // Should not happen since verifyInternal said "present"
             return {
-              status: "succeeded",
-              mutated: true,
+              status: "failed",
+              mutated: false,
               provider: "okta",
               providerObjectId: mapping.value,
+              error: `Assignment disappeared before revoke`,
               correlationId,
             };
           }
-          return {
-            status: "succeeded",
-            mutated: false,
-            provider: "okta",
-            providerObjectId: mapping.value,
-            correlationId,
-          };
-        }
 
-        try {
           await this.oktaRequest(
-            `/apps/${mapping.value}/users/${assignment.id}`,
+            `/apps/${mapping.value}/users/${appAssignment.id}`,
             {
               method: "DELETE",
             },
           );
-          // Verify actual state after delete
-          const freshAppUsers = await this.oktaRequest<OktaAppUser[]>(
-            `/apps/${mapping.value}/users?filter=id eq "${resolvedSubject.providerSubjectId}"`,
-          );
-          const stillAssigned = freshAppUsers && freshAppUsers.length > 0;
-          if (stillAssigned) {
-            return {
-              status: "succeeded",
-              mutated: true,
-              provider: "okta",
-              providerObjectId: mapping.value,
-              correlationId,
-            };
-          }
+        } else {
           return {
-            status: "succeeded",
+            status: "failed",
+            mutated: false,
+            provider: "okta",
+            providerObjectId: undefined,
+            error: `Unsupported mapping type: ${mapping.type}`,
+            correlationId,
+          };
+        }
+
+        // Verify convergence after revoke
+        const afterState = await this.verifyInternal(permission, scope, resolvedSubject);
+        if (afterState.state !== "absent") {
+          return {
+            status: "succeeded", // API call succeeded but state not converged
             mutated: true,
             provider: "okta",
             providerObjectId: mapping.value,
             correlationId,
           };
-        } catch (error: any) {
-          // Handle "already absent" - Okta returns 404 if assignment doesn't exist
-          if (error.status === 404) {
-            // Double-check actual state
-            const freshAppUsers = await this.oktaRequest<OktaAppUser[]>(
-              `/apps/${mapping.value}/users?filter=id eq "${resolvedSubject.providerSubjectId}"`,
-            );
-            const stillAssigned = freshAppUsers && freshAppUsers.length > 0;
-            if (stillAssigned) {
-              return {
-                status: "succeeded",
-                mutated: true,
-                provider: "okta",
-                providerObjectId: mapping.value,
-                correlationId,
-              };
-            }
+        }
+
+        return {
+          status: "succeeded",
+          mutated: true,
+          provider: "okta",
+          providerObjectId: mapping.value,
+          correlationId,
+        };
+      } catch (error: any) {
+        // If revoke fails with 404, verify actual state
+        if (error.status === 404) {
+          const afterState = await this.verifyInternal(permission, scope, resolvedSubject);
+          if (afterState.state === "absent") {
             return {
               status: "succeeded",
               mutated: false,
@@ -613,18 +661,27 @@ export class OktaAdapter implements FulfillmentAdapter {
               correlationId,
             };
           }
-          throw error;
+          if (afterState.state === "subject-not-found" || afterState.state === "entitlement-not-found") {
+            return {
+              status: "failed",
+              mutated: false,
+              provider: "okta",
+              providerObjectId: undefined,
+              error: `Revoke 404 but target missing: ${afterState.state}`,
+              correlationId,
+            };
+          }
+          // Still present — state not converged
+          return {
+            status: "succeeded",
+            mutated: true,
+            provider: "okta",
+            providerObjectId: mapping.value,
+            correlationId,
+          };
         }
+        throw error;
       }
-
-      return {
-        status: "failed",
-        mutated: false,
-        provider: "okta",
-        providerObjectId: undefined,
-        error: `Unsupported mapping type: ${mapping.type}`,
-        correlationId,
-      };
     } catch (error: any) {
       return {
         status: "failed",
