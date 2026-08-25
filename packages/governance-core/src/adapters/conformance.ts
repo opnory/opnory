@@ -123,7 +123,7 @@ export async function runFulfillmentAdapterCertification(
 
   const maxAttempts = eventualConsistency.maxAttempts ?? 10;
   const delayMs = eventualConsistency.delayMs ?? 2000;
-  const interFixtureDelayMs = eventualConsistency.interFixtureDelayMs ?? 20000;
+  const interFixtureDelayMs = eventualConsistency.interFixtureDelayMs ?? 30000;
 
   const allFixtureResults: FixtureResult[] = [];
   let overallPassed = true;
