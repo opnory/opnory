@@ -1,21 +1,44 @@
 import { OktaAdapter, OktaAdapterConfig } from "@opnory/governance-core";
 import { SubjectRef, Permission, ResourceScope, RoleAssignment } from "@opnory/governance-core";
 import { getEnv, getEnvOptional, requireEnvVars } from "@opnory/governance-core";
+import { readFileSync } from "fs";
+import { join } from "path";
+
+function loadCertificationEnv() {
+  const envPath = join(process.cwd(), ".env.okta-certification");
+  try {
+    const content = readFileSync(envPath, "utf-8");
+    const config: Record<string, string> = {};
+    for (const line of content.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const match = trimmed.match(/^([A-Z_]+)="(.*)"$/);
+      if (match) {
+        const [, key, value] = match;
+        config[key] = value;
+      }
+    }
+    return config;
+  } catch {
+    return {};
+  }
+}
 
 async function main() {
   console.log("▶ Destroying Okta Model B sandbox primitives...\n");
 
+  // Load generated cert env (contains IDs from bootstrap)
+  const certEnv = loadCertificationEnv();
+  if (!certEnv.OPNORY_OKTA_TEST_SUBJECT_ID) {
+    throw new Error(".env.okta-certification not found or incomplete. Run bootstrap first.");
+  }
+
+  // Require auth env vars
   requireEnvVars([
     "OPNORY_OKTA_ORG_URL",
     "OPNORY_OKTA_CLIENT_ID",
     "OPNORY_OKTA_PRIVATE_KEY_PATH",
     "OPNORY_OKTA_TEST_USER_EMAIL",
-    "OPNORY_OKTA_FINANCE_GROUP_ID",
-    "OPNORY_OKTA_DATA_ANALYST_GROUP_ID",
-    "OPNORY_OKTA_AUDITOR_GROUP_ID",
-    "OPNORY_OKTA_FINANCE_APP_ID",
-    "OPNORY_OKTA_DATA_ANALYST_APP_ID",
-    "OPNORY_OKTA_AUDITOR_APP_ID",
   ]);
 
   const config: OktaAdapterConfig = {
@@ -35,24 +58,24 @@ async function main() {
       id: "finance.analyst",
       name: "Finance Analyst",
       mappings: [
-        { provider: "okta", type: "group", value: getEnv("OPNORY_OKTA_FINANCE_GROUP_ID") },
-        { provider: "okta", type: "application", value: getEnv("OPNORY_OKTA_FINANCE_APP_ID") },
+        { provider: "okta", type: "group", value: certEnv.OPNORY_OKTA_FINANCE_GROUP_ID },
+        { provider: "okta", type: "application", value: certEnv.OPNORY_OKTA_FINANCE_APP_ID },
       ],
     },
     {
       id: "data.analyst",
       name: "Data Analyst",
       mappings: [
-        { provider: "okta", type: "group", value: getEnv("OPNORY_OKTA_DATA_ANALYST_GROUP_ID") },
-        { provider: "okta", type: "application", value: getEnv("OPNORY_OKTA_DATA_ANALYST_APP_ID") },
+        { provider: "okta", type: "group", value: certEnv.OPNORY_OKTA_DATA_ANALYST_GROUP_ID },
+        { provider: "okta", type: "application", value: certEnv.OPNORY_OKTA_DATA_ANALYST_APP_ID },
       ],
     },
     {
       id: "auditor",
       name: "Auditor",
       mappings: [
-        { provider: "okta", type: "group", value: getEnv("OPNORY_OKTA_AUDITOR_GROUP_ID") },
-        { provider: "okta", type: "application", value: getEnv("OPNORY_OKTA_AUDITOR_APP_ID") },
+        { provider: "okta", type: "group", value: certEnv.OPNORY_OKTA_AUDITOR_GROUP_ID },
+        { provider: "okta", type: "application", value: certEnv.OPNORY_OKTA_AUDITOR_APP_ID },
       ],
     },
   ];

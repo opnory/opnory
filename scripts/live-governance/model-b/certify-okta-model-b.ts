@@ -8,10 +8,30 @@ import {
   ConformanceResult,
 } from "@opnory/governance-core";
 import { SubjectRef, Permission, ResourceScope, RoleAssignment } from "@opnory/governance-core";
-import { writeFileSync, mkdirSync } from "fs";
+import { writeFileSync, mkdirSync, readFileSync } from "fs";
 import { join } from "path";
 import { getEnv, getEnvOptional, requireEnvVars } from "@opnory/governance-core";
-import { EvidenceRecorder } from "../common";
+import { EvidenceRecorder, verifyCommitSha } from "../common";
+
+function loadCertificationEnv() {
+  const envPath = join(process.cwd(), ".env.okta-certification");
+  try {
+    const content = readFileSync(envPath, "utf-8");
+    const config: Record<string, string> = {};
+    for (const line of content.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const match = trimmed.match(/^([A-Z_]+)="(.*)"$/);
+      if (match) {
+        const [, key, value] = match;
+        config[key] = value;
+      }
+    }
+    return config;
+  } catch {
+    return {};
+  }
+}
 
 async function main() {
   console.log("═══════════════════════════════════════════════════════════════");
@@ -27,18 +47,18 @@ async function main() {
     throw new Error("OPNORY_OKTA_LIVE_TEST_CONFIRMED must be set to confirm Okta live test");
   }
 
+  // Load generated cert env (contains IDs from bootstrap)
+  const certEnv = loadCertificationEnv();
+  if (!certEnv.OPNORY_OKTA_TEST_SUBJECT_ID) {
+    throw new Error(".env.okta-certification not found or incomplete. Run bootstrap first.");
+  }
+
+  // Require auth env vars
   requireEnvVars([
     "OPNORY_OKTA_ORG_URL",
     "OPNORY_OKTA_CLIENT_ID",
     "OPNORY_OKTA_PRIVATE_KEY_PATH",
     "OPNORY_OKTA_TEST_USER_EMAIL",
-    "OPNORY_OKTA_TEST_SUBJECT_ID",
-    "OPNORY_OKTA_FINANCE_GROUP_ID",
-    "OPNORY_OKTA_DATA_ANALYST_GROUP_ID",
-    "OPNORY_OKTA_AUDITOR_GROUP_ID",
-    "OPNORY_OKTA_FINANCE_APP_ID",
-    "OPNORY_OKTA_DATA_ANALYST_APP_ID",
-    "OPNORY_OKTA_AUDITOR_APP_ID",
   ]);
 
   // Config
@@ -55,13 +75,13 @@ async function main() {
     identifier: getEnv("OPNORY_OKTA_TEST_USER_EMAIL"),
   };
 
-  // Permissions (Opnory permissions, not Okta operations)
+  // Permissions (Opnory permissions, not Okta operations) - IDs from bootstrap
   const financeAnalystPermission: Permission = {
     id: "finance.analyst",
     name: "Finance Analyst",
     mappings: [
-      { provider: "okta", type: "group", value: getEnv("OPNORY_OKTA_FINANCE_GROUP_ID") },
-      { provider: "okta", type: "application", value: getEnv("OPNORY_OKTA_FINANCE_APP_ID") },
+      { provider: "okta", type: "group", value: certEnv.OPNORY_OKTA_FINANCE_GROUP_ID },
+      { provider: "okta", type: "application", value: certEnv.OPNORY_OKTA_FINANCE_APP_ID },
     ],
   };
 
@@ -69,8 +89,8 @@ async function main() {
     id: "data.analyst",
     name: "Data Analyst",
     mappings: [
-      { provider: "okta", type: "group", value: getEnv("OPNORY_OKTA_DATA_ANALYST_GROUP_ID") },
-      { provider: "okta", type: "application", value: getEnv("OPNORY_OKTA_DATA_ANALYST_APP_ID") },
+      { provider: "okta", type: "group", value: certEnv.OPNORY_OKTA_DATA_ANALYST_GROUP_ID },
+      { provider: "okta", type: "application", value: certEnv.OPNORY_OKTA_DATA_ANALYST_APP_ID },
     ],
   };
 
@@ -78,8 +98,8 @@ async function main() {
     id: "auditor",
     name: "Auditor",
     mappings: [
-      { provider: "okta", type: "group", value: getEnv("OPNORY_OKTA_AUDITOR_GROUP_ID") },
-      { provider: "okta", type: "application", value: getEnv("OPNORY_OKTA_AUDITOR_APP_ID") },
+      { provider: "okta", type: "group", value: certEnv.OPNORY_OKTA_AUDITOR_GROUP_ID },
+      { provider: "okta", type: "application", value: certEnv.OPNORY_OKTA_AUDITOR_APP_ID },
     ],
   };
 
@@ -96,10 +116,10 @@ async function main() {
   const resolvedSubject = await adapter.resolveSubject(subjectRef);
   console.log(`✅ Resolved: ${resolvedSubject.providerSubjectId} (${resolvedSubject.provider})\n`);
 
-  // Verify subject matches expected
-  if (resolvedSubject.providerSubjectId !== getEnv("OPNORY_OKTA_TEST_SUBJECT_ID")) {
+  // Verify subject matches expected from bootstrap
+  if (resolvedSubject.providerSubjectId !== certEnv.OPNORY_OKTA_TEST_SUBJECT_ID) {
     throw new Error(
-      `Subject ID mismatch: expected ${getEnv("OPNORY_OKTA_TEST_SUBJECT_ID")}, got ${resolvedSubject.providerSubjectId}`,
+      `Subject ID mismatch: expected ${certEnv.OPNORY_OKTA_TEST_SUBJECT_ID}, got ${resolvedSubject.providerSubjectId}`,
     );
   }
 
@@ -124,8 +144,6 @@ async function main() {
 
   // Evidence probe (optional - for Okta System Log)
   const evidenceProbe: CertificationEvidenceProbe = async (fixtureName, step, assignment, permission, scope, resolvedSubject) => {
-    // Could query Okta System Log here for independent verification
-    // For now, return undefined (evidence kept outside adapter per ADR 0003)
     return undefined;
   };
 
@@ -137,6 +155,9 @@ async function main() {
     postVerifyDelayMs: 3000,
     preIdempotentVerify: true,
   };
+
+  // Verify commit SHA for evidence
+  const commitSha = verifyCommitSha();
 
   // Run conformance harness
   console.log("▶ Running conformance suite...\n");
@@ -151,9 +172,9 @@ async function main() {
   });
 
   // Generate evidence
-  const evidence = new EvidenceRecorder("okta-model-b-certification");
+  const evidence = new EvidenceRecorder("okta", commitSha, config.orgUrl);
   
-  evidence.recordStep("identity-resolution", "PASS", {
+  evidence.record("identity-resolution", "Identity resolution", "PASS", {
     provider: "okta",
     subjectId: resolvedSubject.providerSubjectId,
     subjectType: resolvedSubject.providerSubjectType,
@@ -161,54 +182,44 @@ async function main() {
 
   for (const fixtureResult of result.fixtures) {
     const prefix = fixtureResult.fixture.name;
-    evidence.recordStep(`${prefix}.grant`, fixtureResult.grant.passed ? "PASS" : "FAIL", {
+    evidence.record(`${prefix}.grant`, "Grant permission", fixtureResult.grant.passed ? "PASS" : "FAIL", {
       permission: fixtureResult.fixture.permission.id,
       mappings: fixtureResult.fixture.permission.mappings.map(m => `${m.type}:${m.value}`),
       mutated: fixtureResult.grant.mutated,
     });
-    evidence.recordStep(`${prefix}.verify`, fixtureResult.verify.passed ? "PASS" : "FAIL", {
+    evidence.record(`${prefix}.verify`, "Verify after grant", fixtureResult.verify.passed ? "PASS" : "FAIL", {
       status: fixtureResult.verify.status,
     });
-    evidence.recordStep(`${prefix}.grant-idempotent`, fixtureResult.grantIdempotent.passed ? "PASS" : "FAIL", {
+    evidence.record(`${prefix}.grant-idempotent`, "Idempotent grant", fixtureResult.grantIdempotent.passed ? "PASS" : "FAIL", {
       mutated: fixtureResult.grantIdempotent.mutated,
       expectedMutated: false,
     });
-    evidence.recordStep(`${prefix}.revoke`, fixtureResult.revoke.passed ? "PASS" : "FAIL", {
+    evidence.record(`${prefix}.revoke`, "Revoke permission", fixtureResult.revoke.passed ? "PASS" : "FAIL", {
       mutated: fixtureResult.revoke.mutated,
     });
-    evidence.recordStep(`${prefix}.verify-removal`, fixtureResult.verifyRemoval.passed ? "PASS" : "FAIL", {
+    evidence.record(`${prefix}.verify-removal`, "Verify removal", fixtureResult.verifyRemoval.passed ? "PASS" : "FAIL", {
       status: fixtureResult.verifyRemoval.status,
     });
-    evidence.recordStep(`${prefix}.revoke-idempotent`, fixtureResult.revokeIdempotent.passed ? "PASS" : "FAIL", {
+    evidence.record(`${prefix}.revoke-idempotent`, "Idempotent revoke", fixtureResult.revokeIdempotent.passed ? "PASS" : "FAIL", {
       mutated: fixtureResult.revokeIdempotent.mutated,
       expectedMutated: false,
     });
-    evidence.recordStep(`${prefix}.final-clean`, fixtureResult.finalClean.passed ? "PASS" : "FAIL", {
+    evidence.record(`${prefix}.final-clean`, "Final clean state", fixtureResult.finalClean.passed ? "PASS" : "FAIL", {
       status: fixtureResult.finalClean.status,
     });
   }
 
-  evidence.recordStep("conformance-overall", result.passed ? "PASS" : "FAIL", {
+  evidence.record("conformance-overall", "Overall conformance", result.passed ? "PASS" : "FAIL", {
     passedFixtures: result.fixtures.filter(f => f.passed).length,
     totalFixtures: result.fixtures.length,
   });
 
   // Write evidence artifacts
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const resultsDir = join(process.cwd(), ".live-results");
-  mkdirSync(resultsDir, { recursive: true });
-
-  const rawEvidencePath = join(resultsDir, `okta-certification-${timestamp}.json`);
-  const publicEvidencePath = join(resultsDir, `okta-certification-${timestamp}-public.json`);
-
-  writeFileSync(rawEvidencePath, JSON.stringify(evidence.getEvidence(), null, 2));
-  writeFileSync(publicEvidencePath, JSON.stringify(evidence.getPublicEvidence(), null, 2));
+  evidence.writeArtifacts();
 
   console.log("\n═══════════════════════════════════════════════════════════════");
   console.log(`   Certification: ${result.passed ? "PASSED ✅" : "FAILED ❌"}`);
   console.log(`   Fixtures: ${result.fixtures.filter(f => f.passed).length}/${result.fixtures.length} passed`);
-  console.log(`   Raw evidence: ${rawEvidencePath}`);
-  console.log(`   Public evidence: ${publicEvidencePath}`);
   console.log("═══════════════════════════════════════════════════════════════\n");
 
   if (!result.passed) {

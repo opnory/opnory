@@ -1,5 +1,7 @@
 import { getEnv, getEnvOptional, requireEnvVars } from "@opnory/governance-core";
 import { OktaAdapter, OktaAdapterConfig } from "@opnory/governance-core";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 export interface OktaSandboxConfig {
   orgUrl: string;
@@ -24,34 +26,59 @@ interface PreflightResult {
   detail?: string;
 }
 
+function loadCertificationEnv(): Partial<OktaSandboxConfig> {
+  const envPath = join(process.cwd(), ".env.okta-certification");
+  try {
+    const content = readFileSync(envPath, "utf-8");
+    const config: Partial<OktaSandboxConfig> = {};
+    for (const line of content.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const match = trimmed.match(/^([A-Z_]+)="(.*)"$/);
+      if (match) {
+        const [, key, value] = match;
+        if (key === "OPNORY_OKTA_TEST_SUBJECT_ID") (config as any).testSubjectId = value;
+        else if (key === "OPNORY_OKTA_FINANCE_GROUP_ID") config.financeGroupId = value;
+        else if (key === "OPNORY_OKTA_DATA_ANALYST_GROUP_ID") config.dataAnalystGroupId = value;
+        else if (key === "OPNORY_OKTA_AUDITOR_GROUP_ID") config.auditorGroupId = value;
+        else if (key === "OPNORY_OKTA_FINANCE_APP_ID") config.financeAppId = value;
+        else if (key === "OPNORY_OKTA_DATA_ANALYST_APP_ID") config.dataAnalystAppId = value;
+        else if (key === "OPNORY_OKTA_AUDITOR_APP_ID") config.auditorAppId = value;
+      }
+    }
+    return config;
+  } catch {
+    return {};
+  }
+}
+
 export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
   console.log("▶ Validating Okta Model B sandbox...\n");
 
+  // Load generated cert env if present
+  const certEnv = loadCertificationEnv();
+
+  // Required env vars (only auth + user - IDs come from bootstrap or env)
   requireEnvVars([
     "OPNORY_OKTA_ORG_URL",
     "OPNORY_OKTA_CLIENT_ID",
     "OPNORY_OKTA_PRIVATE_KEY_PATH",
     "OPNORY_OKTA_TEST_USER_EMAIL",
-    "OPNORY_OKTA_FINANCE_GROUP_ID",
-    "OPNORY_OKTA_DATA_ANALYST_GROUP_ID",
-    "OPNORY_OKTA_AUDITOR_GROUP_ID",
-    "OPNORY_OKTA_FINANCE_APP_ID",
-    "OPNORY_OKTA_DATA_ANALYST_APP_ID",
-    "OPNORY_OKTA_AUDITOR_APP_ID",
   ]);
 
+  // Combine env vars with cert file values
   const config: OktaSandboxConfig = {
     orgUrl: getEnv("OPNORY_OKTA_ORG_URL"),
     clientId: getEnv("OPNORY_OKTA_CLIENT_ID"),
     privateKeyPath: getEnv("OPNORY_OKTA_PRIVATE_KEY_PATH"),
     privateKeyPassphrase: getEnvOptional("OPNORY_OKTA_PRIVATE_KEY_PASSPHRASE"),
     testUserEmail: getEnv("OPNORY_OKTA_TEST_USER_EMAIL"),
-    financeGroupId: getEnv("OPNORY_OKTA_FINANCE_GROUP_ID"),
-    dataAnalystGroupId: getEnv("OPNORY_OKTA_DATA_ANALYST_GROUP_ID"),
-    auditorGroupId: getEnv("OPNORY_OKTA_AUDITOR_GROUP_ID"),
-    financeAppId: getEnv("OPNORY_OKTA_FINANCE_APP_ID"),
-    dataAnalystAppId: getEnv("OPNORY_OKTA_DATA_ANALYST_APP_ID"),
-    auditorAppId: getEnv("OPNORY_OKTA_AUDITOR_APP_ID"),
+    financeGroupId: certEnv.financeGroupId || getEnv("OPNORY_OKTA_FINANCE_GROUP_ID"),
+    dataAnalystGroupId: certEnv.dataAnalystGroupId || getEnv("OPNORY_OKTA_DATA_ANALYST_GROUP_ID"),
+    auditorGroupId: certEnv.auditorGroupId || getEnv("OPNORY_OKTA_AUDITOR_GROUP_ID"),
+    financeAppId: certEnv.financeAppId || getEnv("OPNORY_OKTA_FINANCE_APP_ID"),
+    dataAnalystAppId: certEnv.dataAnalystAppId || getEnv("OPNORY_OKTA_DATA_ANALYST_APP_ID"),
+    auditorAppId: certEnv.auditorAppId || getEnv("OPNORY_OKTA_AUDITOR_APP_ID"),
   };
 
   // Validate private key file exists
@@ -93,7 +120,6 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
   // 2. Service app scopes (OAuth token scopes)
   console.log("▶ Preflight 2/7: service app OAuth scopes...");
   try {
-    // Token request succeeds (already done in resolveSubject)
     results.push({ name: "service app OAuth scopes", passed: true, detail: "okta.groups.manage okta.apps.manage okta.users.read" });
     console.log("  ✅ PASS (okta.groups.manage, okta.apps.manage, okta.users.read)\n");
   } catch (error: any) {
@@ -108,7 +134,6 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
     const resolvedSubject = await adapter.resolveSubject({ type: "user", identifier: config.testUserEmail });
     
     // Use a dedicated preflight group for capability probe
-    // We'll use the finance group (it will be used in certification anyway)
     const probeGroupId = config.financeGroupId;
     
     // 3a. Read target group (prove okta.groups.read via manage)
@@ -124,13 +149,11 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
         { type: "tenant", identifier: config.orgUrl },
         { provider: "okta", providerSubjectId: resolvedSubject.providerSubjectId },
       );
-      // If we get "not-found" or "verified", read works. If "entitlement-not-found", group missing.
       console.log("      ✅ Read target group\n");
     } catch (e: any) {
       if (e.message?.includes("entitlement-not-found") || e.message?.includes("Target.*not found")) {
-        throw new Error(`Target group not found: ${probeGroupId}`);
+        throw new Error(`Target group not found: ${probeGroupId}`, { cause: e });
       }
-      // "subject-not-found" is expected (user not in group) — read succeeded
       console.log("      ✅ Read target group (membership absent as expected)\n");
     }
 
@@ -149,7 +172,7 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
       );
       console.log("      ✅ Add group membership\n");
     } catch (e: any) {
-      throw new Error(`Add group membership failed: ${e.message}`);
+      throw new Error(`Add group membership failed: ${e.message}`, { cause: e });
     }
 
     // 3c. Verify membership present
@@ -170,7 +193,7 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
       }
       console.log("      ✅ Membership verified present\n");
     } catch (e: any) {
-      throw new Error(`Verify membership failed: ${e.message}`);
+      throw new Error(`Verify membership failed: ${e.message}`, { cause: e });
     }
 
     // 3d. Remove test group membership (prove revoke works)
@@ -188,7 +211,7 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
       );
       console.log("      ✅ Remove group membership\n");
     } catch (e: any) {
-      throw new Error(`Remove group membership failed: ${e.message}`);
+      throw new Error(`Remove group membership failed: ${e.message}`, { cause: e });
     }
 
     // 3e. Verify membership absent (restored)
@@ -209,7 +232,7 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
       }
       console.log("      ✅ Membership verified absent (restored)\n");
     } catch (e: any) {
-      throw new Error(`Verify membership absent failed: ${e.message}`);
+      throw new Error(`Verify membership absent failed: ${e.message}`, { cause: e });
     }
 
     // 3f. Application assignment capability probe
@@ -231,7 +254,7 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
       console.log("      ✅ Read target application\n");
     } catch (e: any) {
       if (e.message?.includes("entitlement-not-found") || e.message?.includes("Target.*not found")) {
-        throw new Error(`Target application not found: ${probeAppId}`);
+        throw new Error(`Target application not found: ${probeAppId}`, { cause: e });
       }
       console.log("      ✅ Read target application (assignment absent as expected)\n");
     }
@@ -251,7 +274,7 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
       );
       console.log("      ✅ Assign application\n");
     } catch (e: any) {
-      throw new Error(`Assign application failed: ${e.message}`);
+      throw new Error(`Assign application failed: ${e.message}`, { cause: e });
     }
 
     // Verify assignment present
@@ -272,7 +295,7 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
       }
       console.log("      ✅ Assignment verified present\n");
     } catch (e: any) {
-      throw new Error(`Verify assignment failed: ${e.message}`);
+      throw new Error(`Verify assignment failed: ${e.message}`, { cause: e });
     }
 
     // Unassign application
@@ -290,7 +313,7 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
       );
       console.log("      ✅ Unassign application\n");
     } catch (e: any) {
-      throw new Error(`Unassign application failed: ${e.message}`);
+      throw new Error(`Unassign application failed: ${e.message}`, { cause: e });
     }
 
     // Verify assignment absent (restored)
@@ -311,7 +334,7 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
       }
       console.log("      ✅ Assignment verified absent (restored)\n");
     } catch (e: any) {
-      throw new Error(`Verify assignment absent failed: ${e.message}`);
+      throw new Error(`Verify assignment absent failed: ${e.message}`, { cause: e });
     }
 
     results.push({ 
@@ -325,7 +348,7 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
     console.log(`  ❌ FAIL: ${error.message}\n`);
   }
 
-  // 4. Test user resolution (already done in capability probe, but explicit)
+  // 4. Test user resolution
   console.log("▶ Preflight 4/7: test user resolution...");
   try {
     const resolved = await adapter.resolveSubject({ type: "user", identifier: config.testUserEmail });
@@ -340,7 +363,6 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
   console.log("▶ Preflight 5/7: target groups exist...");
   const groupIds = [config.financeGroupId, config.dataAnalystGroupId, config.auditorGroupId];
   const groupNames = ["finance", "dataAnalyst", "auditor"];
-  let allGroupsExist = true;
   for (let i = 0; i < groupIds.length; i++) {
     try {
       await adapter.verify(
@@ -357,11 +379,9 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
       console.log(`  ✅ PASS: ${groupNames[i]} (${groupIds[i]})\n`);
     } catch (error: any) {
       if (error.message?.includes("entitlement-not-found") || error.message?.includes("Target.*not found")) {
-        allGroupsExist = false;
         results.push({ name: `group exists (${groupNames[i]})`, passed: false, detail: `Group not found: ${groupIds[i]}` });
         console.log(`  ❌ FAIL: Group not found: ${groupIds[i]}\n`);
       } else {
-        // Other errors (subject-not-found) mean group exists
         results.push({ name: `group exists (${groupNames[i]})`, passed: true, detail: groupIds[i] });
         console.log(`  ✅ PASS: ${groupNames[i]} (${groupIds[i]})\n`);
       }
@@ -372,7 +392,6 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
   console.log("▶ Preflight 6/7: target applications exist...");
   const appIds = [config.financeAppId, config.dataAnalystAppId, config.auditorAppId];
   const appNames = ["finance", "dataAnalyst", "auditor"];
-  let allAppsExist = true;
   for (let i = 0; i < appIds.length; i++) {
     try {
       await adapter.verify(
@@ -389,7 +408,6 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
       console.log(`  ✅ PASS: ${appNames[i]} (${appIds[i]})\n`);
     } catch (error: any) {
       if (error.message?.includes("entitlement-not-found") || error.message?.includes("Target.*not found")) {
-        allAppsExist = false;
         results.push({ name: `application exists (${appNames[i]})`, passed: false, detail: `Application not found: ${appIds[i]}` });
         console.log(`  ❌ FAIL: Application not found: ${appIds[i]}\n`);
       } else {
@@ -429,7 +447,6 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
           console.log(`  ✅ PASS: ${perm.id} (${type}) - absent\n`);
         }
       } catch (error: any) {
-        // "subject-not-found" is expected (test user not resolved yet)
         if (error.message?.includes("subject-not-found")) {
           results.push({ name: `clean state (${perm.id}:${type})`, passed: true, detail: "Absent (subject not resolved in preflight)" });
           console.log(`  ✅ PASS: ${perm.id} (${type}) - absent (subject not resolved)\n`);

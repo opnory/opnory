@@ -1,15 +1,11 @@
 import {
   OktaAdapter,
   OktaAdapterConfig,
-  runFulfillmentAdapterCertification,
-  ConformanceFixture,
-  CertificationEvidenceProbe,
-  ConformanceTiming,
-  ConformanceResult,
 } from "@opnory/governance-core";
-import { SubjectRef, Permission, ResourceScope, RoleAssignment } from "@opnory/governance-core";
+import { SubjectRef, Permission, ResourceScope } from "@opnory/governance-core";
 import { writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
+import { getEnv, getEnvOptional, requireEnvVars } from "@opnory/governance-core";
 
 interface OktaBootstrapConfig {
   orgUrl: string;
@@ -17,12 +13,64 @@ interface OktaBootstrapConfig {
   privateKeyPath: string;
   privateKeyPassphrase?: string;
   testUserEmail: string;
-  financeGroupId: string;
-  dataAnalystGroupId: string;
-  auditorGroupId: string;
-  financeAppId: string;
-  dataAnalystAppId: string;
-  auditorAppId: string;
+}
+
+const DETERMINISTIC_NAMES = {
+  financeGroup: "Opnory-Finance-Analyst",
+  dataAnalystGroup: "Opnory-Data-Analyst",
+  auditorGroup: "Opnory-Auditor",
+  financeApp: "Opnory-Finance-App",
+  dataAnalystApp: "Opnory-Data-Analyst-App",
+  auditorApp: "Opnory-Auditor-App",
+} as const;
+
+async function findOrCreateGroup(adapter: OktaAdapter, name: string): Promise<string> {
+  // Try to find existing group by name
+  try {
+    const response = await adapter["client"].get(`/api/v1/groups?q=${encodeURIComponent(name)}&limit=1`);
+    if (response.data.length > 0) {
+      return response.data[0].id;
+    }
+  } catch {
+    // Ignore - we'll create
+  }
+  
+  // Create new group
+  const response = await adapter["client"].post("/api/v1/groups", {
+    profile: { name, description: `Opnory certification: ${name}` },
+  });
+  return response.data.id;
+}
+
+async function findOrCreateApplication(adapter: OktaAdapter, name: string): Promise<string> {
+  // Try to find existing app by label
+  try {
+    const response = await adapter["client"].get(`/api/v1/apps?q=${encodeURIComponent(name)}&limit=1`);
+    if (response.data.length > 0) {
+      return response.data[0].id;
+    }
+  } catch {
+    // Ignore - we'll create
+  }
+  
+  // Create new app (OIDC Web App)
+  const response = await adapter["client"].post("/api/v1/apps", {
+    name: "oidc_client",
+    label: name,
+    signOnMode: "OPENID_CONNECT",
+    settings: {
+      oauthClient: {
+        client_uri: "https://opnory.com",
+        logo_uri: "https://opnory.com/logo.png",
+        redirect_uris: ["https://opnory.com/callback"],
+        grant_types: ["authorization_code", "refresh_token"],
+        response_types: ["code"],
+        application_type: "web",
+        token_endpoint_auth_method: "client_secret_basic",
+      },
+    },
+  });
+  return response.data.id;
 }
 
 async function main() {
@@ -33,12 +81,6 @@ async function main() {
     "OPNORY_OKTA_CLIENT_ID",
     "OPNORY_OKTA_PRIVATE_KEY_PATH",
     "OPNORY_OKTA_TEST_USER_EMAIL",
-    "OPNORY_OKTA_FINANCE_GROUP_ID",
-    "OPNORY_OKTA_DATA_ANALYST_GROUP_ID",
-    "OPNORY_OKTA_AUDITOR_GROUP_ID",
-    "OPNORY_OKTA_FINANCE_APP_ID",
-    "OPNORY_OKTA_DATA_ANALYST_APP_ID",
-    "OPNORY_OKTA_AUDITOR_APP_ID",
   ]);
 
   const config: OktaBootstrapConfig = {
@@ -47,15 +89,8 @@ async function main() {
     privateKeyPath: getEnv("OPNORY_OKTA_PRIVATE_KEY_PATH"),
     privateKeyPassphrase: getEnvOptional("OPNORY_OKTA_PRIVATE_KEY_PASSPHRASE"),
     testUserEmail: getEnv("OPNORY_OKTA_TEST_USER_EMAIL"),
-    financeGroupId: getEnv("OPNORY_OKTA_FINANCE_GROUP_ID"),
-    dataAnalystGroupId: getEnv("OPNORY_OKTA_DATA_ANALYST_GROUP_ID"),
-    auditorGroupId: getEnv("OPNORY_OKTA_AUDITOR_GROUP_ID"),
-    financeAppId: getEnv("OPNORY_OKTA_FINANCE_APP_ID"),
-    dataAnalystAppId: getEnv("OPNORY_OKTA_DATA_ANALYST_APP_ID"),
-    auditorAppId: getEnv("OPNORY_OKTA_AUDITOR_APP_ID"),
   };
 
-  // Create Okta adapter
   const adapter = new OktaAdapter(config as OktaAdapterConfig);
 
   // Resolve test subject
@@ -67,32 +102,54 @@ async function main() {
   const resolvedSubject = await adapter.resolveSubject(subjectRef);
   console.log(`✅ Resolved test subject: ${resolvedSubject.providerSubjectId}\n`);
 
-  // Verify clean state - no pre-existing memberships/assignments
-  console.log("▶ Verifying clean initial state...\n");
+  // Create/find groups
+  console.log("▶ Creating/finding groups...");
+  const financeGroupId = await findOrCreateGroup(adapter, DETERMINISTIC_NAMES.financeGroup);
+  console.log(`  ✅ Finance group: ${financeGroupId}`);
   
+  const dataAnalystGroupId = await findOrCreateGroup(adapter, DETERMINISTIC_NAMES.dataAnalystGroup);
+  console.log(`  ✅ Data Analyst group: ${dataAnalystGroupId}`);
+  
+  const auditorGroupId = await findOrCreateGroup(adapter, DETERMINISTIC_NAMES.auditorGroup);
+  console.log(`  ✅ Auditor group: ${auditorGroupId}`);
+
+  // Create/find applications
+  console.log("\n▶ Creating/finding applications...");
+  const financeAppId = await findOrCreateApplication(adapter, DETERMINISTIC_NAMES.financeApp);
+  console.log(`  ✅ Finance app: ${financeAppId}`);
+  
+  const dataAnalystAppId = await findOrCreateApplication(adapter, DETERMINISTIC_NAMES.dataAnalystApp);
+  console.log(`  ✅ Data Analyst app: ${dataAnalystAppId}`);
+  
+  const auditorAppId = await findOrCreateApplication(adapter, DETERMINISTIC_NAMES.auditorApp);
+  console.log(`  ✅ Auditor app: ${auditorAppId}`);
+
+  // Verify clean state - no pre-existing memberships/assignments
+  console.log("\n▶ Verifying clean initial state...");
+
   const permissions: Permission[] = [
     {
       id: "finance.analyst",
       name: "Finance Analyst",
       mappings: [
-        { provider: "okta", type: "group", value: config.financeGroupId },
-        { provider: "okta", type: "application", value: config.financeAppId },
+        { provider: "okta", type: "group", value: financeGroupId },
+        { provider: "okta", type: "application", value: financeAppId },
       ],
     },
     {
       id: "data.analyst",
       name: "Data Analyst",
       mappings: [
-        { provider: "okta", type: "group", value: config.dataAnalystGroupId },
-        { provider: "okta", type: "application", value: config.dataAnalystAppId },
+        { provider: "okta", type: "group", value: dataAnalystGroupId },
+        { provider: "okta", type: "application", value: dataAnalystAppId },
       ],
     },
     {
       id: "auditor",
       name: "Auditor",
       mappings: [
-        { provider: "okta", type: "group", value: config.auditorGroupId },
-        { provider: "okta", type: "application", value: config.auditorAppId },
+        { provider: "okta", type: "group", value: auditorGroupId },
+        { provider: "okta", type: "application", value: auditorAppId },
       ],
     },
   ];
@@ -102,14 +159,12 @@ async function main() {
     identifier: config.orgUrl,
   };
 
-  // Check each permission is clean
   for (const perm of permissions) {
     for (const mapping of perm.mappings) {
       if (mapping.type === "group") {
         try {
-          // Check if user is in group
           const result = await adapter.verify(
-            { permissionId: perm.id, scope } as RoleAssignment,
+            { permissionId: perm.id, scope } as any,
             perm,
             scope,
             resolvedSubject,
@@ -121,12 +176,11 @@ async function main() {
           }
         } catch (error: any) {
           if (error.message.includes("Pre-existing")) throw error;
-          // 404/not-found is expected
         }
       } else if (mapping.type === "application") {
         try {
           const result = await adapter.verify(
-            { permissionId: perm.id, scope } as RoleAssignment,
+            { permissionId: perm.id, scope } as any,
             perm,
             scope,
             resolvedSubject,
@@ -145,24 +199,44 @@ async function main() {
 
   console.log("✅ All permissions verified clean\n");
 
-  // Output environment variables for certification script
+  // Write .env.okta-certification file
+  const envContent = `# .env.okta-certification
+# Generated by bootstrap-okta-primitives.ts
+# Source this file before running validate/certify/destroy
+
+OPNORY_OKTA_TEST_SUBJECT_ID="${resolvedSubject.providerSubjectId}"
+
+OPNORY_OKTA_FINANCE_GROUP_ID="${financeGroupId}"
+OPNORY_OKTA_DATA_ANALYST_GROUP_ID="${dataAnalystGroupId}"
+OPNORY_OKTA_AUDITOR_GROUP_ID="${auditorGroupId}"
+
+OPNORY_OKTA_FINANCE_APP_ID="${financeAppId}"
+OPNORY_OKTA_DATA_ANALYST_APP_ID="${dataAnalystAppId}"
+OPNORY_OKTA_AUDITOR_APP_ID="${auditorAppId}"
+`;
+
+  const envPath = join(process.cwd(), ".env.okta-certification");
+  writeFileSync(envPath, envContent);
+  console.log(`✅ Written .env.okta-certification to ${envPath}\n`);
+
+  // Output summary
   console.log("┌─────────────────────────────────────────────────────────────┐");
   console.log("│ Okta Model B Bootstrap Complete                             │");
   console.log("├─────────────────────────────────────────────────────────────┤");
   console.log(`│ Test Subject ID: ${resolvedSubject.providerSubjectId}`);
-  console.log(`│ Finance Group:   ${config.financeGroupId}`);
-  console.log(`│ Data Analyst Gp: ${config.dataAnalystGroupId}`);
-  console.log(`│ Auditor Group:   ${config.auditorGroupId}`);
-  console.log(`│ Finance App:     ${config.financeAppId}`);
-  console.log(`│ Data Analyst App:${config.dataAnalystAppId}`);
-  console.log(`│ Auditor App:     ${config.auditorAppId}`);
+  console.log(`│ Finance Group:   ${financeGroupId}`);
+  console.log(`│ Data Analyst Gp: ${dataAnalystGroupId}`);
+  console.log(`│ Auditor Group:   ${auditorGroupId}`);
+  console.log(`│ Finance App:     ${financeAppId}`);
+  console.log(`│ Data Analyst App:${dataAnalystAppId}`);
+  console.log(`│ Auditor App:     ${auditorAppId}`);
   console.log("└─────────────────────────────────────────────────────────────┘");
-  console.log("\nSet these for certification:");
-  console.log(`export OPNORY_OKTA_TEST_SUBJECT_ID=${resolvedSubject.providerSubjectId}`);
+  console.log("\nNext steps:");
+  console.log(`  source .env.okta-certification`);
+  console.log(`  bun run okta:validate`);
+  console.log(`  bun run okta:certify:model-b`);
+  console.log(`  bun run okta:destroy:model-b`);
 }
-
-// Import helpers
-import { getEnv, getEnvOptional, requireEnvVars } from "@opnory/governance-core";
 
 main().catch((error) => {
   console.error("❌ Bootstrap failed:", error.message);
