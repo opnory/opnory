@@ -316,12 +316,23 @@ async function createEnterpriseApp(
 
   logger.info({ displayName, appId: app.appId }, "Service principal created");
 
-  // Fetch the service principal ID
-  const sp = await graphRequest<{ value: Array<{ id: string }> }>(
-    token,
-    `/servicePrincipals?$filter=appId eq '${app.appId}'`,
-  );
-  const servicePrincipalId = sp.value[0].id;
+  // Fetch the service principal ID with retry (propagation can take time)
+  let servicePrincipalId: string | undefined;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const sp = await graphRequest<{ value: Array<{ id: string }> }>(
+      token,
+      `/servicePrincipals?$filter=appId eq '${app.appId}'`,
+    );
+    if (sp.value.length > 0) {
+      servicePrincipalId = sp.value[0].id;
+      break;
+    }
+    await sleep(1000);
+  }
+  
+  if (!servicePrincipalId) {
+    throw new Error("Service principal not found after creation");
+  }
 
   return { appId: app.appId, objectId: app.id, servicePrincipalId };
 }

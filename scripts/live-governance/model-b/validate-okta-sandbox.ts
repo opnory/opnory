@@ -1,4 +1,4 @@
-import { getEnv, getEnvOptional, requireEnvVars } from "@opnory/governance-core";
+import { getEnv, getEnvOptional, requireEnvVars } from "../common";
 import { OktaAdapter, OktaAdapterConfig } from "@opnory/governance-core";
 import { readFileSync } from "fs";
 import { join } from "path";
@@ -8,6 +8,7 @@ export interface OktaSandboxConfig {
   clientId: string;
   privateKeyPath: string;
   privateKeyPassphrase?: string;
+  keyId: string; // KID registered in the API Services app's Public Keys
   // Test subject (user to grant permissions to)
   testUserEmail: string;
   // Okta group IDs for permissions
@@ -62,6 +63,7 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
   requireEnvVars([
     "OPNORY_OKTA_ORG_URL",
     "OPNORY_OKTA_CLIENT_ID",
+    "OPNORY_OKTA_KEY_ID",
     "OPNORY_OKTA_PRIVATE_KEY_PATH",
     "OPNORY_OKTA_TEST_USER_EMAIL",
   ]);
@@ -70,6 +72,7 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
   const config: OktaSandboxConfig = {
     orgUrl: getEnv("OPNORY_OKTA_ORG_URL"),
     clientId: getEnv("OPNORY_OKTA_CLIENT_ID"),
+    keyId: getEnv("OPNORY_OKTA_KEY_ID"),
     privateKeyPath: getEnv("OPNORY_OKTA_PRIVATE_KEY_PATH"),
     privateKeyPassphrase: getEnvOptional("OPNORY_OKTA_PRIVATE_KEY_PASSPHRASE"),
     testUserEmail: getEnv("OPNORY_OKTA_TEST_USER_EMAIL"),
@@ -100,6 +103,7 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
     clientId: config.clientId,
     privateKeyPath: config.privateKeyPath,
     privateKeyPassphrase: config.privateKeyPassphrase,
+    keyId: config.keyId,
   };
 
   const adapter = new OktaAdapter(adapterConfig);
@@ -486,4 +490,12 @@ export async function validateOktaSandbox(): Promise<OktaSandboxConfig> {
 
   console.log("✅ All sandbox validation checks passed\n");
   return config;
+}
+
+// Run if executed directly
+if (import.meta.main) {
+  validateOktaSandbox().catch((error) => {
+    console.error("Validation failed:", error.message);
+    process.exit(1);
+  });
 }

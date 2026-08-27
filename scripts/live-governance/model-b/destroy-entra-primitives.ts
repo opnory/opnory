@@ -93,15 +93,30 @@ async function graphRequest<T>(
 
 async function deleteEnterpriseApp(
   token: string,
-  enterpriseAppId: string,
+  enterpriseAppClientId: string,
 ): Promise<void> {
   console.log("Deleting enterprise application...");
 
   try {
+    // Find application by appId (clientId)
+    const apps = await graphRequest<{
+      value: Array<{ id: string; appId: string; displayName: string }>;
+    }>(token, `/applications?$filter=appId eq '${enterpriseAppClientId}'`);
+
+    if (apps.value.length === 0) {
+      console.log(
+        `  ⚠️ Enterprise application with appId ${enterpriseAppClientId} not found`,
+      );
+      return;
+    }
+
+    const app = apps.value[0];
+    const applicationObjectId = app.id;
+
     // Delete service principal first
     const sp = await graphRequest<{ value: Array<{ id: string }> }>(
       token,
-      `/servicePrincipals?$filter=appId eq '${enterpriseAppId}'`,
+      `/servicePrincipals?$filter=appId eq '${enterpriseAppClientId}'`,
     );
 
     for (const spItem of sp.value) {
@@ -117,15 +132,15 @@ async function deleteEnterpriseApp(
       }
     }
 
-    // Delete application
+    // Delete application using its object ID
     try {
-      await graphRequest(token, `/applications/${enterpriseAppId}`, {
+      await graphRequest(token, `/applications/${applicationObjectId}`, {
         method: "DELETE",
       });
-      console.log(`  ✅ Deleted application: ${enterpriseAppId}`);
+      console.log(`  ✅ Deleted application: ${applicationObjectId}`);
     } catch (error) {
       console.log(
-        `  ⚠️ Failed to delete application ${enterpriseAppId}: ${error}`,
+        `  ⚠️ Failed to delete application ${applicationObjectId}: ${error}`,
       );
     }
   } catch (error) {
@@ -203,7 +218,7 @@ async function main(): Promise<void> {
     clientSecret: getEnv("OPNORY_ENTRA_CLIENT_SECRET"),
   };
 
-  const enterpriseAppId = getEnvOptional("OPNORY_ENTRA_ENTERPRISE_APP_ID");
+  const enterpriseAppClientId = getEnvOptional("OPNORY_ENTRA_ENTERPRISE_APP_CLIENT_ID");
   const adminGroupId = getEnvOptional("OPNORY_ENTRA_ADMIN_GROUP_ID");
   const usersGroupId = getEnvOptional("OPNORY_ENTRA_USERS_GROUP_ID");
   const testUserEmail =
@@ -226,8 +241,8 @@ async function main(): Promise<void> {
   console.log("Starting cleanup...\n");
 
   // Delete in reverse order of creation
-  if (enterpriseAppId) {
-    await deleteEnterpriseApp(token, enterpriseAppId);
+  if (enterpriseAppClientId) {
+    await deleteEnterpriseApp(token, enterpriseAppClientId);
   }
 
   if (adminGroupId) {

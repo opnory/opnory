@@ -25,6 +25,54 @@ import {
 const log = getLogger("certification:entra-adapter");
 
 // ============================================================================
+// Graph API Helpers
+// ============================================================================
+
+async function graphRequest<T>(token: string, path: string): Promise<T> {
+  const response = await fetch(`https://graph.microsoft.com/v1.0${path}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Graph request failed: ${response.status} ${body}`);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+async function fetchGraphToken(
+  tenantId: string,
+  clientId: string,
+  clientSecret: string
+): Promise<string> {
+  const response = await fetch(
+    `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: "client_credentials",
+        scope: "https://graph.microsoft.com/.default",
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Token request failed: ${response.status} ${body}`);
+  }
+
+  const data = await response.json();
+  return data.access_token;
+}
+
+// ============================================================================
 // Configuration
 // ============================================================================
 
@@ -37,9 +85,7 @@ interface CertConfig {
   usersGroupId: string;
   servicePrincipalId: string;
   enterpriseAppObjectId: string;
-  financeAnalystRoleId: string;
-  dataAnalystRoleId: string;
-  auditorRoleId: string;
+  // App role IDs are now fetched dynamically
 }
 
 function getEnv(name: string): string {
@@ -116,45 +162,70 @@ class EntraEvidenceProbe implements CertificationEvidenceProbe {
 // Main
 // ============================================================================
 
+async function fetchAppRoleIds(
+  token: string,
+  enterpriseAppObjectId: string
+): Promise<{ financeAnalyst: string; dataAnalyst: string; auditor: string }> {
+  const app = await graphRequest<{
+    appRoles: Array<{ id: string; value: string; displayName: string }>;
+  }>(token, `/applications/${enterpriseAppObjectId}`);
+  
+  const roles = app.appRoles;
+  const financeAnalyst = roles.find(r => r.value === "FinanceAnalyst")?.id;
+  const dataAnalyst = roles.find(r => r.value === "DataAnalyst")?.id;
+  const auditor = roles.find(r => r.value === "Auditor")?.id;
+  
+  if (!financeAnalyst || !dataAnalyst || !auditor) {
+    throw new Error("Could not find all required app roles (FinanceAnalyst, DataAnalyst, Auditor)");
+  }
+  
+  return { financeAnalyst, dataAnalyst, auditor };
+}
+
 async function runCertification() {
   const startTime = Date.now();
   console.log("🔍 Entra Model B Certification via FulfillmentAdapter Conformance Harness");
   console.log("=".repeat(70));
 
   // Load config from environment
-  const config: CertConfig = {
-    tenantId: getEnv("OPNORY_ENTRA_TENANT_ID"),
-    clientId: getEnv("OPNORY_ENTRA_CLIENT_ID"),
-    clientSecret: getEnv("OPNORY_ENTRA_CLIENT_SECRET"),
-    testSubjectEmail: getEnv("OPNORY_ENTRA_TEST_SUBJECT_EMAIL"),
-    adminGroupId: getEnv("OPNORY_ENTRA_ADMIN_GROUP_ID"),
-    usersGroupId: getEnv("OPNORY_ENTRA_USERS_GROUP_ID"),
-    servicePrincipalId: getEnv("OPNORY_ENTRA_SERVICE_PRINCIPAL_ID"),
-    enterpriseAppObjectId: getEnv("OPNORY_ENTRA_ENTERPRISE_APP_OBJECT_ID"),
-    financeAnalystRoleId: getEnv("OPNORY_ENTRA_FINANCE_ANALYST_ROLE_ID"),
-    dataAnalystRoleId: getEnv("OPNORY_ENTRA_DATA_ANALYST_ROLE_ID"),
-    auditorRoleId: getEnv("OPNORY_ENTRA_AUDITOR_ROLE_ID"),
-  };
+  const tenantId = getEnv("OPNORY_ENTRA_TENANT_ID");
+  const clientId = getEnv("OPNORY_ENTRA_CLIENT_ID");
+  const clientSecret = getEnv("OPNORY_ENTRA_CLIENT_SECRET");
+  const testSubjectEmail = getEnv("OPNORY_ENTRA_TEST_SUBJECT_EMAIL");
+  const adminGroupId = getEnv("OPNORY_ENTRA_ADMIN_GROUP_ID");
+  const usersGroupId = getEnv("OPNORY_ENTRA_USERS_GROUP_ID");
+  const servicePrincipalId = getEnv("OPNORY_ENTRA_SERVICE_PRINCIPAL_ID");
+  const enterpriseAppObjectId = getEnv("OPNORY_ENTRA_ENTERPRISE_APP_OBJECT_ID");
+
+  // Get Graph token to fetch app role IDs
+  const token = await fetchGraphToken(tenantId, clientId, clientSecret);
+  
+  // Fetch app role IDs dynamically from the enterprise application
+  console.log("\n📋 Fetching app role IDs from enterprise application...");
+  const { financeAnalyst, dataAnalyst, auditor } = await fetchAppRoleIds(token, enterpriseAppObjectId);
+  console.log(`   FinanceAnalyst: ${financeAnalyst}`);
+  console.log(`   DataAnalyst: ${dataAnalyst}`);
+  console.log(`   Auditor: ${auditor}`);
 
   // Fill permission mappings at runtime (provider-specific values)
-  ADMIN_GROUP_PERMISSION.mappings.find((m) => m.type === "group")!.value =
-    config.adminGroupId;
-  USERS_GROUP_PERMISSION.mappings.find((m) => m.type === "group")!.value =
-    config.usersGroupId;
-  FINANCE_ANALYST_PERMISSION.mappings.find((m) => m.type === "appRole")!.value =
-    config.financeAnalystRoleId;
-  DATA_ANALYST_PERMISSION.mappings.find((m) => m.type === "appRole")!.value =
-    config.dataAnalystRoleId;
-  AUDITOR_PERMISSION.mappings.find((m) => m.type === "appRole")!.value =
-    config.auditorRoleId;
+  ADMIN_GROUP_PERMISSION.mappings.find((m: any) => m.type === "group")!.value =
+    adminGroupId;
+  USERS_GROUP_PERMISSION.mappings.find((m: any) => m.type === "group")!.value =
+    usersGroupId;
+  FINANCE_ANALYST_PERMISSION.mappings.find((m: any) => m.type === "appRole")!.value =
+    financeAnalyst;
+  DATA_ANALYST_PERMISSION.mappings.find((m: any) => m.type === "appRole")!.value =
+    dataAnalyst;
+  AUDITOR_PERMISSION.mappings.find((m: any) => m.type === "appRole")!.value =
+    auditor;
 
   // Create adapter
   const adapterConfig: EntraAdapterConfig = {
-    tenantId: config.tenantId,
-    clientId: config.clientId,
-    clientSecret: config.clientSecret,
-    servicePrincipalId: config.servicePrincipalId,
-    enterpriseAppObjectId: config.enterpriseAppObjectId,
+    tenantId,
+    clientId,
+    clientSecret,
+    servicePrincipalId,
+    enterpriseAppObjectId,
   };
 
   const adapter = new EntraAdapter(adapterConfig);
@@ -162,13 +233,13 @@ async function runCertification() {
   // Create subject reference
   const subjectRef: SubjectRef = {
     type: "user",
-    identifier: config.testSubjectEmail,
-    tenantId: config.tenantId,
+    identifier: testSubjectEmail,
+    tenantId,
   };
 
   // Common scope
   const scope: ResourceScope = {
-    tenantId: config.tenantId,
+    tenantId,
   };
 
   // Fixtures — each permission + its RoleAssignment.roleId
@@ -188,10 +259,10 @@ async function runCertification() {
 
   // Provider-specific timing (Entra Model B)
   const entraTiming: ConformanceTiming = {
-    verifyAttempts: 30,
-    verifyIntervalMs: 3000,
-    interFixtureDelayMs: 30000,
-    postVerifyDelayMs: 10000,
+    verifyAttempts: 50,
+    verifyIntervalMs: 5000,
+    interFixtureDelayMs: 60000,
+    postVerifyDelayMs: 15000,
   };
 
   const result = await runFulfillmentAdapterCertification({

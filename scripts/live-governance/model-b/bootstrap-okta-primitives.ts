@@ -5,7 +5,7 @@ import {
 import { SubjectRef, Permission, ResourceScope } from "@opnory/governance-core";
 import { writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
-import { getEnv, getEnvOptional, requireEnvVars } from "@opnory/governance-core";
+import { getEnv, getEnvOptional, requireEnvVars } from "../common";
 
 interface OktaBootstrapConfig {
   orgUrl: string;
@@ -27,50 +27,56 @@ const DETERMINISTIC_NAMES = {
 async function findOrCreateGroup(adapter: OktaAdapter, name: string): Promise<string> {
   // Try to find existing group by name
   try {
-    const response = await adapter["client"].get(`/api/v1/groups?q=${encodeURIComponent(name)}&limit=1`);
-    if (response.data.length > 0) {
-      return response.data[0].id;
+    const response = await adapter.rawRequest<any>(`/groups?q=${encodeURIComponent(name)}&limit=1`);
+    if (response && response.length > 0) {
+      return response[0].id;
     }
   } catch {
     // Ignore - we'll create
   }
   
   // Create new group
-  const response = await adapter["client"].post("/api/v1/groups", {
-    profile: { name, description: `Opnory certification: ${name}` },
+  const response = await adapter.rawRequest<any>("/groups", {
+    method: "POST",
+    body: JSON.stringify({ profile: { name, description: `Opnory certification: ${name}` } }),
   });
-  return response.data.id;
+  return response.id;
 }
 
 async function findOrCreateApplication(adapter: OktaAdapter, name: string): Promise<string> {
   // Try to find existing app by label
   try {
-    const response = await adapter["client"].get(`/api/v1/apps?q=${encodeURIComponent(name)}&limit=1`);
-    if (response.data.length > 0) {
-      return response.data[0].id;
+    const response = await adapter.rawRequest<any>(`/apps?q=${encodeURIComponent(name)}&limit=1`);
+    if (response && response.length > 0) {
+      return response[0].id;
     }
   } catch {
     // Ignore - we'll create
   }
   
   // Create new app (OIDC Web App)
-  const response = await adapter["client"].post("/api/v1/apps", {
-    name: "oidc_client",
-    label: name,
-    signOnMode: "OPENID_CONNECT",
-    settings: {
-      oauthClient: {
-        client_uri: "https://opnory.com",
-        logo_uri: "https://opnory.com/logo.png",
-        redirect_uris: ["https://opnory.com/callback"],
-        grant_types: ["authorization_code", "refresh_token"],
-        response_types: ["code"],
-        application_type: "web",
-        token_endpoint_auth_method: "client_secret_basic",
+  const response = await adapter.rawRequest<any>("/apps", {
+    method: "POST",
+    body: JSON.stringify({
+      name: "oidc_client",
+      label: name,
+      signOnMode: "OPENID_CONNECT",
+      credentials: {
+        oauthClient: {
+          token_endpoint_auth_method: "client_secret_basic",
+        },
       },
-    },
+      settings: {
+        oauthClient: {
+          redirect_uris: ["https://opnory.com/callback"],
+          response_types: ["code"],
+          grant_types: ["authorization_code", "refresh_token"],
+          application_type: "web",
+        },
+      },
+    }),
   });
-  return response.data.id;
+  return response.id;
 }
 
 async function main() {
@@ -79,6 +85,7 @@ async function main() {
   requireEnvVars([
     "OPNORY_OKTA_ORG_URL",
     "OPNORY_OKTA_CLIENT_ID",
+    "OPNORY_OKTA_KEY_ID",
     "OPNORY_OKTA_PRIVATE_KEY_PATH",
     "OPNORY_OKTA_TEST_USER_EMAIL",
   ]);
@@ -91,7 +98,10 @@ async function main() {
     testUserEmail: getEnv("OPNORY_OKTA_TEST_USER_EMAIL"),
   };
 
-  const adapter = new OktaAdapter(config as OktaAdapterConfig);
+  const adapter = new OktaAdapter({
+    ...config,
+    keyId: getEnv("OPNORY_OKTA_KEY_ID"),
+  } as OktaAdapterConfig);
 
   // Resolve test subject
   const subjectRef: SubjectRef = {

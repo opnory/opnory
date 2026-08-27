@@ -1,6 +1,6 @@
 import { OktaAdapter, OktaAdapterConfig } from "@opnory/governance-core";
 import { SubjectRef, Permission, ResourceScope, RoleAssignment } from "@opnory/governance-core";
-import { getEnv, getEnvOptional, requireEnvVars } from "@opnory/governance-core";
+import { getEnv, getEnvOptional, requireEnvVars } from "../common";
 import { readFileSync } from "fs";
 import { join } from "path";
 
@@ -37,6 +37,7 @@ async function main() {
   requireEnvVars([
     "OPNORY_OKTA_ORG_URL",
     "OPNORY_OKTA_CLIENT_ID",
+    "OPNORY_OKTA_KEY_ID",
     "OPNORY_OKTA_PRIVATE_KEY_PATH",
     "OPNORY_OKTA_TEST_USER_EMAIL",
   ]);
@@ -44,6 +45,7 @@ async function main() {
   const config: OktaAdapterConfig = {
     orgUrl: getEnv("OPNORY_OKTA_ORG_URL"),
     clientId: getEnv("OPNORY_OKTA_CLIENT_ID"),
+    keyId: getEnv("OPNORY_OKTA_KEY_ID"),
     privateKeyPath: getEnv("OPNORY_OKTA_PRIVATE_KEY_PATH"),
     privateKeyPassphrase: getEnvOptional("OPNORY_OKTA_PRIVATE_KEY_PASSPHRASE"),
   };

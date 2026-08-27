@@ -190,10 +190,13 @@ export class EntraAdapter implements FulfillmentAdapter {
       };
     } catch (error: any) {
       // Handle idempotent "already exists" cases (400, 409)
+      // NOTE: "Request_BadRequest" is too generic - many 400 errors use this code.
+      // Only treat as "already exists" if we have specific evidence:
+      // - Request_MultipleObjectsWithSameKeyValue (specific conflict code)
+      // - Message contains "already exists" or "already exist"
       const isAlreadyExists =
         (error.status === 400 || error.status === 409) &&
-        (error.code === "Request_BadRequest" ||
-          error.code === "Request_MultipleObjectsWithSameKeyValue" ||
+        (error.code === "Request_MultipleObjectsWithSameKeyValue" ||
           error.message?.includes("already exists") ||
           error.message?.includes("already exist"));
       const isPermissionAlreadyAssigned =

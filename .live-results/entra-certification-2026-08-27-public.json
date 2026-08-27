@@ -1,0 +1,92 @@
+{
+  "provider": "entra",
+  "commit": "26e0aefe364890bd47d2bbce906179c82c152edd",
+  "authMethod": "client_secret (app-only)",
+  "conformanceHarness": "runFulfillmentAdapterCertification (shared with Okta)",
+  "timestamp": "2026-08-27T03:47:28.893Z",
+  "durationMs": 487513,
+  "fixtures": {
+    "total": 5,
+    "passed": 5,
+    "details": [
+      {
+        "permissionId": "entra-admin-group",
+        "type": "group",
+        "checks": 6,
+        "passed": 6,
+        "checksDetail": {
+          "grant": { "status": "succeeded", "mutated": true },
+          "verifyAfterGrant": { "status": "verified" },
+          "grantIdempotent": { "status": "succeeded", "mutated": false },
+          "revoke": { "status": "succeeded", "mutated": true },
+          "verifyAfterRevoke": { "status": "not-found" },
+          "revokeIdempotent": { "status": "succeeded", "mutated": false }
+        }
+      },
+      {
+        "permissionId": "entra-users-group",
+        "type": "group",
+        "checks": 6,
+        "passed": 6,
+        "checksDetail": {
+          "grant": { "status": "succeeded", "mutated": true },
+          "verifyAfterGrant": { "status": "verified" },
+          "grantIdempotent": { "status": "succeeded", "mutated": false },
+          "revoke": { "status": "succeeded", "mutated": true },
+          "verifyAfterRevoke": { "status": "not-found" },
+          "revokeIdempotent": { "status": "succeeded", "mutated": false }
+        }
+      },
+      {
+        "permissionId": "entra-finance-analyst",
+        "type": "appRole",
+        "checks": 6,
+        "passed": 6,
+        "checksDetail": {
+          "grant": { "status": "succeeded", "mutated": true },
+          "verifyAfterGrant": { "status": "verified" },
+          "grantIdempotent": { "status": "succeeded", "mutated": false },
+          "revoke": { "status": "succeeded", "mutated": true },
+          "verifyAfterRevoke": { "status": "not-found" },
+          "revokeIdempotent": { "status": "succeeded", "mutated": false }
+        }
+      },
+      {
+        "permissionId": "entra-data-analyst",
+        "type": "appRole",
+        "checks": 6,
+        "passed": 6,
+        "checksDetail": {
+          "grant": { "status": "succeeded", "mutated": true },
+          "verifyAfterGrant": { "status": "verified" },
+          "grantIdempotent": { "status": "succeeded", "mutated": false },
+          "revoke": { "status": "succeeded", "mutated": true },
+          "verifyAfterRevoke": { "status": "not-found" },
+          "revokeIdempotent": { "status": "succeeded", "mutated": false }
+        }
+      },
+      {
+        "permissionId": "entra-auditor",
+        "type": "appRole",
+        "checks": 6,
+        "passed": 6,
+        "checksDetail": {
+          "grant": { "status": "succeeded", "mutated": true },
+          "verifyAfterGrant": { "status": "verified" },
+          "grantIdempotent": { "status": "succeeded", "mutated": false },
+          "revoke": { "status": "succeeded", "mutated": true },
+          "verifyAfterRevoke": { "status": "not-found" },
+          "revokeIdempotent": { "status": "succeeded", "mutated": false }
+        }
+      }
+    ]
+  },
+  "timingConfig": {
+    "verifyAttempts": 50,
+    "verifyIntervalMs": 5000,
+    "interFixtureDelayMs": 60000,
+    "postVerifyDelayMs": 15000
+  },
+  "finalState": "clean (all assignments revoked, revoke idempotent verified)",
+  "schemaVersion": "1"
+}

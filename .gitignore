@@ -12,6 +12,8 @@ node_modules/
 .env
 .env.local
 .env.*.local
+.env.okta-certification
+.env.entra-certification
 
 # Logs
 *.log

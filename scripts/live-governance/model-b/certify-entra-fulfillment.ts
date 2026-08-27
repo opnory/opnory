@@ -429,8 +429,8 @@ async function testGroupFulfillment(
 
     // Verify grant with retry for Graph eventual consistency
     let verified = false;
-    for (let attempt = 0; attempt < 10; attempt++) {
-      await sleep(2000);
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await sleep(3000);
       verified = await adapter.verify(
         subjectId,
         groupPermission,
@@ -438,10 +438,10 @@ async function testGroupFulfillment(
         grantResult.providerObjectId || "",
       );
       if (verified) {
-        console.log(`[VERIFY GRANT] Attempt ${attempt + 1}/10: success`);
+        console.log(`[VERIFY GRANT] Attempt ${attempt + 1}/20: success`);
         break;
       }
-      console.log(`[VERIFY GRANT] Attempt ${attempt + 1}/10: not yet visible`);
+      console.log(`[VERIFY GRANT] Attempt ${attempt + 1}/20: not yet visible`);
     }
 
     if (!verified) {
@@ -465,8 +465,8 @@ async function testGroupFulfillment(
 
     // Verify revoke
     let revokeVerified = false;
-    for (let attempt = 0; attempt < 10; attempt++) {
-      await sleep(2000);
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await sleep(3000);
       const stillHas = await adapter.verify(
         subjectId,
         groupPermission,
@@ -474,11 +474,11 @@ async function testGroupFulfillment(
         grantResult.providerObjectId || "",
       );
       if (!stillHas) {
-        console.log(`[VERIFY REVOKE] Attempt ${attempt + 1}/10: removed`);
+        console.log(`[VERIFY REVOKE] Attempt ${attempt + 1}/20: removed`);
         revokeVerified = true;
         break;
       }
-      console.log(`[VERIFY REVOKE] Attempt ${attempt + 1}/10: still present`);
+      console.log(`[VERIFY REVOKE] Attempt ${attempt + 1}/20: still present`);
     }
 
     if (!revokeVerified) {
@@ -563,8 +563,8 @@ async function testAppRoleFulfillment(
 
     // Verify grant with retry
     let verified = false;
-    for (let attempt = 0; attempt < 10; attempt++) {
-      await sleep(2000);
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await sleep(3000);
       verified = await adapter.verify(
         subjectId,
         appRolePermission,
@@ -572,10 +572,10 @@ async function testAppRoleFulfillment(
         grantResult.providerObjectId || "",
       );
       if (verified) {
-        console.log(`[VERIFY GRANT] Attempt ${attempt + 1}/10: success`);
+        console.log(`[VERIFY GRANT] Attempt ${attempt + 1}/20: success`);
         break;
       }
-      console.log(`[VERIFY GRANT] Attempt ${attempt + 1}/10: not yet visible`);
+      console.log(`[VERIFY GRANT] Attempt ${attempt + 1}/20: not yet visible`);
     }
 
     if (!verified) {
@@ -599,8 +599,8 @@ async function testAppRoleFulfillment(
 
     // Verify revoke
     let revokeVerified = false;
-    for (let attempt = 0; attempt < 10; attempt++) {
-      await sleep(2000);
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await sleep(3000);
       const stillHas = await adapter.verify(
         subjectId,
         appRolePermission,
@@ -608,11 +608,11 @@ async function testAppRoleFulfillment(
         grantResult.providerObjectId || "",
       );
       if (!stillHas) {
-        console.log(`[VERIFY REVOKE] Attempt ${attempt + 1}/10: removed`);
+        console.log(`[VERIFY REVOKE] Attempt ${attempt + 1}/20: removed`);
         revokeVerified = true;
         break;
       }
-      console.log(`[VERIFY REVOKE] Attempt ${attempt + 1}/10: still present`);
+      console.log(`[VERIFY REVOKE] Attempt ${attempt + 1}/20: still present`);
     }
 
     if (!revokeVerified) {

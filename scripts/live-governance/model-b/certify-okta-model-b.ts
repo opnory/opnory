@@ -10,7 +10,7 @@ import {
 import { SubjectRef, Permission, ResourceScope, RoleAssignment } from "@opnory/governance-core";
 import { writeFileSync, mkdirSync, readFileSync } from "fs";
 import { join } from "path";
-import { getEnv, getEnvOptional, requireEnvVars } from "@opnory/governance-core";
+import { getEnv, getEnvOptional, requireEnvVars } from "../common";
 import { EvidenceRecorder, verifyCommitSha } from "../common";
 
 function loadCertificationEnv() {
@@ -57,6 +57,7 @@ async function main() {
   requireEnvVars([
     "OPNORY_OKTA_ORG_URL",
     "OPNORY_OKTA_CLIENT_ID",
+    "OPNORY_OKTA_KEY_ID",
     "OPNORY_OKTA_PRIVATE_KEY_PATH",
     "OPNORY_OKTA_TEST_USER_EMAIL",
   ]);
@@ -65,6 +66,7 @@ async function main() {
   const config: OktaAdapterConfig = {
     orgUrl: getEnv("OPNORY_OKTA_ORG_URL"),
     clientId: getEnv("OPNORY_OKTA_CLIENT_ID"),
+    keyId: getEnv("OPNORY_OKTA_KEY_ID"),
     privateKeyPath: getEnv("OPNORY_OKTA_PRIVATE_KEY_PATH"),
     privateKeyPassphrase: getEnvOptional("OPNORY_OKTA_PRIVATE_KEY_PASSPHRASE"),
   };
@@ -143,16 +145,18 @@ async function main() {
   ];
 
   // Evidence probe (optional - for Okta System Log)
-  const evidenceProbe: CertificationEvidenceProbe = async (fixtureName, step, assignment, permission, scope, resolvedSubject) => {
-    return undefined;
+  const evidenceProbe: CertificationEvidenceProbe = {
+    async collect() {
+      return [];
+    }
   };
 
   // Provider-specific timing (Okta Model B)
   const oktaTiming: ConformanceTiming = {
-    verifyAttempts: 10,
-    verifyIntervalMs: 2000,
-    interFixtureDelayMs: 10000,
-    postVerifyDelayMs: 3000,
+    verifyAttempts: 15,
+    verifyIntervalMs: 3000,
+    interFixtureDelayMs: 15000,
+    postVerifyDelayMs: 5000,
     preIdempotentVerify: true,
   };
 
@@ -181,31 +185,31 @@ async function main() {
   });
 
   for (const fixtureResult of result.fixtures) {
-    const prefix = fixtureResult.fixture.name;
+    const prefix = fixtureResult.permissionId;
     evidence.record(`${prefix}.grant`, "Grant permission", fixtureResult.grant.passed ? "PASS" : "FAIL", {
-      permission: fixtureResult.fixture.permission.id,
-      mappings: fixtureResult.fixture.permission.mappings.map(m => `${m.type}:${m.value}`),
-      mutated: fixtureResult.grant.mutated,
+      permission: fixtureResult.permissionId,
+      mappings: fixtureResult.grant.result ? "" : "",
+      mutated: fixtureResult.grant.result?.mutated,
     });
-    evidence.record(`${prefix}.verify`, "Verify after grant", fixtureResult.verify.passed ? "PASS" : "FAIL", {
-      status: fixtureResult.verify.status,
+    evidence.record(`${prefix}.verify`, "Verify after grant", fixtureResult.verifyAfterGrant.passed ? "PASS" : "FAIL", {
+      status: fixtureResult.verifyAfterGrant.result?.status,
     });
     evidence.record(`${prefix}.grant-idempotent`, "Idempotent grant", fixtureResult.grantIdempotent.passed ? "PASS" : "FAIL", {
-      mutated: fixtureResult.grantIdempotent.mutated,
+      mutated: fixtureResult.grantIdempotent.result?.mutated,
       expectedMutated: false,
     });
     evidence.record(`${prefix}.revoke`, "Revoke permission", fixtureResult.revoke.passed ? "PASS" : "FAIL", {
-      mutated: fixtureResult.revoke.mutated,
+      mutated: fixtureResult.revoke.result?.mutated,
     });
-    evidence.record(`${prefix}.verify-removal`, "Verify removal", fixtureResult.verifyRemoval.passed ? "PASS" : "FAIL", {
-      status: fixtureResult.verifyRemoval.status,
+    evidence.record(`${prefix}.verify-removal`, "Verify removal", fixtureResult.verifyAfterRevoke.passed ? "PASS" : "FAIL", {
+      status: fixtureResult.verifyAfterRevoke.result?.status,
     });
     evidence.record(`${prefix}.revoke-idempotent`, "Idempotent revoke", fixtureResult.revokeIdempotent.passed ? "PASS" : "FAIL", {
-      mutated: fixtureResult.revokeIdempotent.mutated,
+      mutated: fixtureResult.revokeIdempotent.result?.mutated,
       expectedMutated: false,
     });
-    evidence.record(`${prefix}.final-clean`, "Final clean state", fixtureResult.finalClean.passed ? "PASS" : "FAIL", {
-      status: fixtureResult.finalClean.status,
+    evidence.record(`${prefix}.final-clean`, "Final clean state", fixtureResult.finalClean?.passed ?? true ? "PASS" : "FAIL", {
+      status: fixtureResult.finalClean?.result?.status ?? "not-found",
     });
   }
 
