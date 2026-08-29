@@ -168,8 +168,6 @@ No Cordis types appear in:
 ## Artifacts
 
 - `packages/integration-runtime/src/kernel.ts` — `RuntimeKernel` interface + `OpnoryRuntimeKernel`
-- `packages/integration-runtime/src/cordis-kernel.ts` — `CordisRuntimeKernel` (experimental, kept for reference)
-- `packages/integration-runtime/test/cordis-kernel.test.ts` — 10 invariant tests passing
 - `packages/integration-runtime/test/conformance-proof.test.ts` — 8 tests passing (both kernels)
 - `packages/integration-runtime/test/plugin-conformance.test.ts` — 6 tests passing
 
@@ -177,8 +175,7 @@ No Cordis types appear in:
 
 ## Next Steps
 
-1. **Remove Cordis dependency** from `packages/integration-runtime/package.json` (keep cordis-kernel.ts for reference only)
-2. **Consider lightweight DisposableList** in OpnoryRuntimeKernel for effect-style cleanup
-3. **Continue with Phase 6** (whatever comes next in roadmap)
+1. **Consider lightweight DisposableList** in OpnoryRuntimeKernel for effect-style cleanup
+2. **Continue with Phase 6** (productionizing tenant integrations)
 
 The Phase 5 gate is **PASSED**: we have sufficient evidence to choose OpnoryRuntimeKernel without changing any public Opnory contract.
