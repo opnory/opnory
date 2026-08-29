@@ -1,0 +1,30 @@
+{
+  "name": "@opnory/integration-runtime",
+  "version": "0.1.0-spike",
+  "description": "Capability runtime spike for provider-neutral extensibility",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "test:conformance": "bun test test/conformance-proof.test.ts"
+  },
+  "dependencies": {
+    "@opnory/governance-core": "workspace:*",
+    "@opnory/access-types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,6 +1,17 @@
 import { defineConfig } from "oxlint";
 
 export default defineConfig({
+  categories: {
+    correctness: "error",
+    suspicious: "error",
+    perf: "warn",
+    pedantic: "off",
+    style: "off",
+    restriction: "off",
+  },
+  options: {
+    reportUnusedDisableDirectives: "error",
+  },
   ignorePatterns: [
     "dist/**",
     "coverage/**",
@@ -18,6 +29,17 @@ export default defineConfig({
     { name: "opnory", specifier: "./tools/oxlint/opnory/index.ts" },
   ],
   rules: {
+    "eslint/no-unused-vars": "warn",
+    "unicorn/no-empty-file": "off",
+    "unicorn/no-array-sort": "off",
+    "unicorn/require-post-message-target-origin": "off",
+    "eslint/no-underscore-dangle": "off",
+    "eslint/no-dupe-else-if": "warn",
+    "unicorn/consistent-function-scoping": "warn",
+    "eslint/no-await-in-loop": "warn",
+    "eslint/no-useless-catch": "warn",
+    "eslint/preserve-caught-error": "warn",
+    "eslint/no-shadow": "warn",
     "anti-slop/no-chained-type-assertions": "warn",
     "anti-slop/no-conditional-empty-object-spread": "warn",
     "anti-slop/no-known-value-widening": "warn",
@@ -157,6 +179,21 @@ export default defineConfig({
         "anti-slop/no-runtime-typeof": ["warn", { allowInTypeGuards: true }],
         "anti-slop/require-safety-comment-for-type-assertion": "warn",
         "anti-slop/no-unsafe-dictionary-type": "warn",
+      },
+    },
+    {
+      // All test files: keep anti-slop rules at warn (tests use type assertions and mocks)
+      files: ["**/*.test.ts", "**/*.test.js", "**/*.spec.ts"],
+      rules: {
+        "anti-slop/no-chained-type-assertions": "warn",
+        "anti-slop/no-known-value-widening": "warn",
+        "anti-slop/no-object-parameters": "warn",
+        "anti-slop/no-runtime-typeof": ["warn", { allowInTypeGuards: true }],
+        "anti-slop/no-unsafe-dictionary-type": "warn",
+        "anti-slop/require-safety-comment-for-type-assertion": "warn",
+        "anti-slop/no-widen-then-assert": "warn",
+        "anti-slop/no-unknown-returns": "warn",
+        "anti-slop/no-unknown-type-aliases": "warn",
       },
     },
   ],

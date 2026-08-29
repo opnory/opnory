@@ -36,6 +36,7 @@
     { "path": "./packages/access-service" },
     { "path": "./packages/access-store-pg" },
     { "path": "./packages/governance-core" },
+    { "path": "./packages/integration-runtime" },
     { "path": "./apps/api" },
     { "path": "./apps/slack" }
   ]
