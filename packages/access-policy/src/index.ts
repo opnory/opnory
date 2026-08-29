@@ -22,6 +22,7 @@ export interface PolicyContext {
   requesterRoles?: string[];
   requesterDepartment?: string;
   entitlement: EntitlementRef;
+  // SAFETY: PolicyContext.metadata is an intentionally open schema boundary for customer policy extensions; validation occurs at consumption in policy rules
   metadata?: Record<string, unknown>;
 }
 

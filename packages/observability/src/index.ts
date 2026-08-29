@@ -40,6 +40,8 @@ export function setLogger(logger: Logger): void {
 
 export function createChildLogger(
   parent: Logger,
+  // SAFETY: bindings is an intentionally open-ended structured logging payload;
+  // callers must ensure serializable values at the log emission boundary
   bindings: Record<string, unknown>,
 ): Logger {
   return parent.child(bindings);

@@ -195,6 +195,7 @@ export class PgAccessRequestStore {
         governance: row.metadata?.governance,
       },
       reason: row.reason,
+      // SAFETY: database schema enforces valid AccessRequestStatus enum values
       status: row.status as AccessRequestStatus,
       version: row.version,
       approvedAt: row.approved_at?.toISOString(),
@@ -469,6 +470,7 @@ export class PgAuditEventStore implements AuditEventStore {
       correlationId: row.correlation_id,
       actor: row.actor,
       timestamp: row.timestamp.toISOString(),
+      // SAFETY: database schema enforces valid AuditEventType enum values
       type: row.type as AuditEventType,
       metadata: row.metadata || {},
     }));
@@ -484,6 +486,7 @@ export class PgAuditEventStore implements AuditEventStore {
       correlationId: row.correlation_id,
       actor: row.actor,
       timestamp: row.timestamp.toISOString(),
+      // SAFETY: database schema enforces valid AuditEventType enum values
       type: row.type as AuditEventType,
       metadata: row.metadata || {},
     }));

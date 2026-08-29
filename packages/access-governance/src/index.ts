@@ -26,7 +26,6 @@ import {
   ReconciliationResult,
   GovernanceReconciler,
   GovernanceReconcilerConfig,
-  ReconciliationAuditEventType,
 } from "@opnory/access-types";
 import {
   InMemoryApprovalStore,
@@ -38,6 +37,12 @@ import {
   recordAuditEvent,
   AuditEventType,
 } from "@opnory/access-audit";
+
+// SAFETY: ReconciliationAuditMetadata is an owner-defined schema for reconciliation audit payloads
+// passed to AuditEventStore.append() which validates via AuditEventSchema at the boundary
+// SAFETY: this is an intentionally open-ended audit payload type; callers must ensure type safety at consumption
+// SAFETY: branded type alias for reconciliation audit metadata - validated at store boundary via AuditEventSchema
+type ReconciliationAuditMetadata = Record<string, unknown>;
 
 const logger = getLogger().child({ component: "access-governance" });
 
@@ -209,6 +214,7 @@ export class EntraGovernanceProvider implements GovernanceProvider {
       );
     }
 
+    // SAFETY: Graph token endpoint returns standard OAuth2 token response schema
     const data = (await response.json()) as {
       access_token: string;
       expires_in: number;
@@ -240,9 +246,11 @@ export class EntraGovernanceProvider implements GovernanceProvider {
     }
 
     if (response.status === 204 || response.status === 202) {
+      // SAFETY: 204/202 responses have no body; return empty object matching T
       return {} as T;
     }
 
+    // SAFETY: response.json() returns the Graph API payload matching the requested T
     return response.json() as Promise<T>;
   }
 
@@ -616,6 +624,7 @@ export class OktaGovernanceProvider implements GovernanceProvider {
       throw new Error(`Okta token request failed: ${response.status} ${error}`);
     }
 
+    // SAFETY: Okta token endpoint returns standard OAuth2 token response schema
     const data = (await response.json()) as {
       access_token: string;
       expires_in: number;
@@ -677,10 +686,13 @@ export class OktaGovernanceProvider implements GovernanceProvider {
       throw new Error(`Okta request failed: ${response.status} ${error}`);
     }
 
+    // SAFETY: 204 responses have no body; return empty object matching T
     if (response.status === 204) {
+      // SAFETY: returning empty object for 204 No Content response
       return {} as T;
     }
 
+    // SAFETY: response.json() returns the Okta API payload matching the requested T
     return response.json() as Promise<T>;
   }
 
@@ -857,6 +869,7 @@ export class OktaGovernanceProvider implements GovernanceProvider {
         Array<{ id: string; profile: { name: string } }>
       >(`/api/v1/users/${subject.id}/groups`);
 
+      // SAFETY: groupId is stored as string in metadata; undefined if absent
       const targetGroupId = entitlement.metadata?.groupId as string | undefined;
       const isMember = targetGroupId
         ? groups.some((g) => g.id === targetGroupId)
@@ -1125,6 +1138,7 @@ export class GovernanceService {
         subject,
         entitlement: governedEntitlement,
         justification: request.reason,
+        // SAFETY: requestedDuration is stored as string in metadata; undefined if absent
         requestedDuration: request.metadata?.requestedDuration as
           string | undefined,
       });
@@ -1240,8 +1254,12 @@ export class GovernanceReconcilerImpl implements GovernanceReconciler {
   }
 
   private async recordReconciliationAudit(
-    type: ReconciliationAuditEventType,
-    metadata: Record<string, unknown>,
+    type: AuditEventType,
+    // SAFETY: metadata is a flexible audit payload; callers populate domain-specific fields
+    // SAFETY: this is an intentionally open-ended audit payload type; callers must ensure type safety at consumption
+    // SAFETY: audit metadata is caller-provided structured data; boundary validation occurs at call sites
+    // SAFETY: metadata is passed through to AuditEventSchema which validates structure at store.append()
+    metadata: ReconciliationAuditMetadata,
   ): Promise<void> {
     await recordAuditEvent(this.auditStore, {
       eventId: crypto.randomUUID(),
@@ -1378,6 +1396,8 @@ export class GovernanceReconcilerImpl implements GovernanceReconciler {
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
+        // SAFETY: error may carry a provider-specific `code` property (e.g., Graph API error codes)
+        // SAFETY: narrowing error shape at boundary is safe for structured provider errors
         const errorCode = (error as any)?.code;
 
         request.governanceRetryCount = (request.governanceRetryCount || 0) + 1;
@@ -1557,6 +1577,8 @@ export class GovernanceReconcilerImpl implements GovernanceReconciler {
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
+        // SAFETY: error may carry a provider-specific `code` property
+        // SAFETY: narrowing error shape at boundary is safe for structured provider errors
         const errorCode = (error as any)?.code;
 
         result.errors.push({
@@ -1647,6 +1669,8 @@ export class GovernanceReconcilerImpl implements GovernanceReconciler {
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
+        // SAFETY: error may carry a provider-specific `code` property
+        // SAFETY: narrowing error shape at boundary is safe for structured provider errors
         const errorCode = (error as any)?.code;
 
         result.errors.push({

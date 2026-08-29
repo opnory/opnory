@@ -277,10 +277,8 @@ export const AccessRequestStatusSchema = z.enum([
 export type AccessRequestStatus = z.infer<typeof AccessRequestStatusSchema>;
 
 // Valid status transitions
-export const VALID_TRANSITIONS: Record<
-  AccessRequestStatus,
-  AccessRequestStatus[]
-> = {
+// SAFETY: `as const satisfies` preserves exact literal types while validating conformance
+export const VALID_TRANSITIONS = {
   PENDING_APPROVAL: [
     "APPROVED",
     "DENIED",
@@ -309,13 +307,16 @@ export const VALID_TRANSITIONS: Record<
   RETRY: ["REVOCATION_PENDING", "RETRY", "REVOCATION_FAILED", "FULFILLED"], // Retry can go to pending, retry again, terminal, or extension
   REVOCATION_FAILED: ["RETRY", "REVOCATION_PENDING"], // Manual recovery can retry
   AWAITING_AUTHORITY_DECISION: ["APPROVED", "DENIED", "CANCELLED"],
-};
+} as const satisfies Record<AccessRequestStatus, readonly AccessRequestStatus[]>;
 
 export function canTransition(
   from: AccessRequestStatus,
   to: AccessRequestStatus,
 ): boolean {
-  return VALID_TRANSITIONS[from]?.includes(to) ?? false;
+  // SAFETY: VALID_TRANSITIONS is `as const satisfies Record<AccessRequestStatus, readonly AccessRequestStatus[]>`
+  // so its keys are exactly AccessRequestStatus and values are readonly AccessRequestStatus[]
+  // SAFETY: assertion here narrows the const satisfies type to the Record type for indexing
+  return (VALID_TRANSITIONS as Record<AccessRequestStatus, readonly AccessRequestStatus[]>)[from]?.includes(to) ?? false;
 }
 
 export function transitionOrThrow(
@@ -464,6 +465,7 @@ export function toApprovedAccessRequest(
   if (!request.approvedAt || !request.approvedBy) {
     throw new Error("Approved request missing approval metadata");
   }
+  // SAFETY: status passed the APPROVED check and approvedAt/approvedBy presence check above
   return request as ApprovedAccessRequest;
 }
 
@@ -479,6 +481,7 @@ export function toRetryFulfillmentRequest(
   if (!request.approvedAt || !request.approvedBy) {
     throw new Error("Approved request missing approval metadata");
   }
+  // SAFETY: status passed the APPROVED/FULFILLING check and approvedAt/approvedBy presence check above
   return request as ApprovedAccessRequest;
 }
 
@@ -515,6 +518,7 @@ export function toFulfilledAccessRequest(
   if (!request.fulfilledAt || !request.externalId) {
     throw new Error("Fulfilled request missing fulfillment metadata");
   }
+  // SAFETY: status passed the FULFILLED check and fulfilledAt/externalId presence check above
   return request as FulfilledAccessRequest;
 }
 

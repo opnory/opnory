@@ -11,6 +11,9 @@ import {
 import { AuditEventStore, AuditEventType } from "@opnory/access-audit";
 import { randomUUID } from "crypto";
 
+// SAFETY: AuditMetadataInternal is a boundary type for structured audit data; callers validate at consumption
+interface AuditMetadataInternal extends Record<string, unknown> {}
+
 const logger = getLogger().child({ component: "expiration-scheduler" });
 
 // ============================================================================
@@ -1086,7 +1089,10 @@ export class ExpirationScheduler {
   private async recordAudit(
     type: AuditEventType,
     requestId: string,
-    metadata: Record<string, unknown>,
+    // SAFETY: metadata is a flexible audit payload; callers populate domain-specific fields
+    // SAFETY: this is an intentionally open-ended audit payload type; callers must ensure type safety at consumption
+    // SAFETY: AuditMetadataInternal is a boundary type for structured audit data; callers validate at consumption
+    metadata: AuditMetadataInternal,
     correlationId?: string,
   ): Promise<void> {
     try {

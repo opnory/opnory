@@ -54,7 +54,7 @@ export class EntitlementCatalog {
 
   register(entitlement: Entitlement): void {
     const validated = EntitlementSchema.parse(entitlement);
-    const system = validated.system as string;
+    const system = validated.system;
     this.entitlements.set(validated.id, validated);
 
     const systemEntitlements = this.entitlementsBySystem.get(system);
@@ -84,7 +84,7 @@ export class EntitlementCatalog {
 
   findByName(name: string): Entitlement | undefined {
     for (const entitlement of this.entitlements.values()) {
-      if ((entitlement.name as string).toLowerCase() === name.toLowerCase()) {
+      if (entitlement.name.toLowerCase() === name.toLowerCase()) {
         return entitlement;
       }
     }
@@ -97,9 +97,9 @@ export class EntitlementCatalog {
 
     return candidates.filter(
       (e) =>
-        (e.name as string).toLowerCase().includes(lowerQuery) ||
-        (e.description as string).toLowerCase().includes(lowerQuery) ||
-        (e.id as string).toLowerCase().includes(lowerQuery),
+        e.name.toLowerCase().includes(lowerQuery) ||
+        e.description.toLowerCase().includes(lowerQuery) ||
+        e.id.toLowerCase().includes(lowerQuery),
     );
   }
 }

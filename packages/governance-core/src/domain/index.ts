@@ -179,6 +179,62 @@ export const VerificationResultSchema = z.object({
 
 export type VerificationResult = z.infer<typeof VerificationResultSchema>;
 
+// ============================================================================
+// FulfillmentResult Construction
+// ============================================================================
+//
+// A `FulfillmentResult` with `status: "succeeded"` MUST be backed by a
+// verification that established the desired subject + entitlement state.
+// Constructing one ad-hoc (object literal) is prohibited by the
+// `opnory/no-unchecked-fulfillment-success` lint rule; every success result
+// must flow through one of the factory functions below.
+
+/** The mutation that the fulfillment operation actually performed. */
+export type FulfillmentMutation = "performed" | "already-desired";
+
+/**
+ * Build a success `FulfillmentResult` from a verification that established the
+ * desired state is present. Refuses to construct a success result when the
+ * verification did not observe the desired state.
+ */
+export function fulfilledAfterVerification(
+  verification: VerificationResult,
+  mutation: FulfillmentMutation,
+): FulfillmentResult {
+  if (verification.status !== "verified") {
+    throw new Error(
+      `Cannot construct success without verified desired state (verification status: ${verification.status})`,
+    );
+  }
+
+  return {
+    status: "succeeded",
+    mutated: mutation === "performed",
+    provider: verification.provider,
+    providerObjectId: verification.providerObjectId,
+    correlationId: verification.correlationId,
+  };
+}
+
+/**
+ * Build a failure `FulfillmentResult`. Failures do not carry a desired-state
+ * guarantee and may be constructed directly.
+ */
+export function failedFulfillment(
+  provider: string,
+  error: string,
+  extra?: { providerObjectId?: string; correlationId?: string },
+): FulfillmentResult {
+  return {
+    status: "failed",
+    mutated: false,
+    provider,
+    providerObjectId: extra?.providerObjectId,
+    correlationId: extra?.correlationId,
+    error,
+  };
+}
+
 export interface FulfillmentAdapter {
   readonly provider: string;
 

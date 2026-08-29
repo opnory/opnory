@@ -18,11 +18,17 @@ const logger = getLogger().child({ component: "slack" });
 // Deterministic Manager Relationships (seeded for hardening slice)
 // ============================================================================
 
-const MANAGER_MAP: Record<string, string> = {
+type ManagerMap = Record<string, string> & {
+  "employee-a": "manager-a";
+  "employee-b": "manager-a";
+  "employee-c": "manager-b";
+};
+
+const MANAGER_MAP: ManagerMap = {
   "employee-a": "manager-a",
   "employee-b": "manager-a",
   "employee-c": "manager-b",
-};
+} as const;
 
 function getManagerFor(employeeId: string): string | undefined {
   return MANAGER_MAP[employeeId];
@@ -36,13 +42,21 @@ function isManagerOf(managerId: string, employeeId: string): boolean {
 // Slack User ID -> Opnory Identity Mapping
 // ============================================================================
 
-const SLACK_TO_OPNORY: Record<string, { userId: string; email: string }> = {
+type SlackIdentityMap = Record<string, { userId: string; email: string }> & {
+  U1111111111: { userId: "employee-a"; email: "employee-a@opnory.com" };
+  U2222222222: { userId: "manager-a"; email: "manager-a@opnory.com" };
+  U3333333333: { userId: "employee-b"; email: "employee-b@opnory.com" };
+  U4444444444: { userId: "manager-b"; email: "manager-b@opnory.com" };
+  U5555555555: { userId: "employee-c"; email: "employee-c@opnory.com" };
+};
+
+const SLACK_TO_OPNORY: SlackIdentityMap = {
   U1111111111: { userId: "employee-a", email: "employee-a@opnory.com" },
   U2222222222: { userId: "manager-a", email: "manager-a@opnory.com" },
   U3333333333: { userId: "employee-b", email: "employee-b@opnory.com" },
   U4444444444: { userId: "manager-b", email: "manager-b@opnory.com" },
   U5555555555: { userId: "employee-c", email: "employee-c@opnory.com" },
-};
+} as const;
 
 function resolveOpnoryIdentity(
   slackUserId: string,

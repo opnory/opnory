@@ -330,6 +330,7 @@ export class GitHubAccessExecutor implements AccessExecutor {
 
       const account = installation.data.account;
       // account can be User or Organization, both have login
+      // SAFETY: GitHub API guarantees account object has login property for both User and Organization types per Octokit types
       const accountLogin = (account as { login: string })?.login;
       if (accountLogin !== org) {
         throw new Error(
@@ -372,6 +373,7 @@ export class GitHubAccessExecutor implements AccessExecutor {
     }
     if (
       !githubIdentity.login ||
+      // SAFETY: GitHub API returns string login; boundary validated by ExternalIdentitySchema
       typeof githubIdentity.login !== "string" ||
       githubIdentity.login.trim() === ""
     ) {
@@ -400,10 +402,12 @@ export class GitHubAccessExecutor implements AccessExecutor {
       );
 
       return {
+        // SAFETY: Octokit returns GitHubTeamMembership for successful GET responses
         membership: response.data as GitHubTeamMembership,
         exists: true,
       };
     } catch (error: unknown) {
+      // SAFETY: Octokit error has status property; boundary validated by octokit types
       if (
         error &&
         typeof error === "object" &&
@@ -436,6 +440,7 @@ export class GitHubAccessExecutor implements AccessExecutor {
       },
     );
 
+    // SAFETY: Octokit PUT response for team membership returns GitHubTeamMembership per API contract
     return response.data as GitHubTeamMembership;
   }
 

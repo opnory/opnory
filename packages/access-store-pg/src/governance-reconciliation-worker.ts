@@ -11,6 +11,7 @@ import {
   EntitlementRef,
   GovernedEntitlement,
   GovernanceSubject,
+  GovernanceAuthority,
 } from "@opnory/access-types";
 import {
   AuditEventStore,
@@ -399,6 +400,7 @@ export class GovernanceReconciliationWorker {
           : null,
         governanceAttemptCount: r.governance_attempt_count ?? 0,
         governanceMaxRetries: r.governance_max_retries ?? 3,
+        // SAFETY: database schema enforces valid AccessRequestStatus enum values
         status: r.status as AccessRequestStatus,
         correlationId: r.correlation_id,
       }));
@@ -811,7 +813,8 @@ export class GovernanceReconciliationWorker {
 
     const entitlement: GovernedEntitlement = {
       entitlementId: row.entitlement_id,
-      authority: item.governanceAuthority as any,
+      // SAFETY: governanceAuthority comes from database enum column with valid authority values
+      authority: item.governanceAuthority as GovernanceAuthority,
       externalId: row.governance_assignment_id || row.entitlement_id,
       externalName: row.entitlement_name,
       metadata: {},
@@ -1100,6 +1103,7 @@ export class GovernanceReconciliationWorker {
   private getProvider(authority: string): GovernanceProvider | null {
     // This should be injected or resolved via a registry
     // For now, we access it through the reconciler
+    // SAFETY: reconciler.getProvider is expected to return GovernanceProvider | null
     return (this.reconciler as any).getProvider?.(authority) || null;
   }
 

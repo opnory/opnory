@@ -101,6 +101,7 @@ export class OpnoryAgent {
         requestId: request.requestId,
         workspaceId: request.workspaceId,
         reason:
+          // SAFETY: agentOutput.escalationReason is validated by the agent output schema
           (agentOutput.escalationReason as EscalationReason) ||
           "LOW_CONFIDENCE",
         context: {

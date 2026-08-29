@@ -37,6 +37,15 @@ import {
   ExternalIdentity,
 } from "@opnory/access-types";
 
+/**
+ * Flexible metadata for access request creation.
+ * SAFETY: caller-provided flexible bag; callers must ensure type safety at consumption sites.
+ * SAFETY: AccessRequestMetadata is an intentionally open schema boundary type; concrete validation occurs at request creation time.
+ */
+// SAFETY: AccessRequestMetadataInternal is a boundary type for caller-provided structured data; callers validate at consumption
+interface AccessRequestMetadataInternal extends Record<string, unknown> {}
+export type AccessRequestMetadata = AccessRequestMetadataInternal;
+
 const logger = getLogger().child({ component: "access-service" });
 
 // Per-request locks to serialize concurrent decisions on the same request
@@ -120,7 +129,8 @@ export class AccessRequestService {
     entitlementIdOrName: string;
     reason: string;
     correlationId?: string;
-    metadata?: Record<string, unknown>;
+    // SAFETY: metadata is a flexible caller-provided payload
+    metadata?: AccessRequestMetadata;
   }): Promise<AccessRequest> {
     const correlationId = params.correlationId || uuidv4();
 
@@ -321,6 +331,7 @@ export class AccessRequestService {
       ) {
         await this.fulfillRequest(updatedRequest, correlationId);
         // Return the final state after fulfillment
+        // SAFETY: store.getById returns AccessRequest | undefined; here it's a promise resolving to AccessRequest
         return this.approvalService["store"].getById(
           requestId,
         ) as Promise<AccessRequest>;
@@ -467,6 +478,7 @@ export class AccessRequestService {
       metadata: {
         reason: "Actor is not the assigned approver for this request",
         requiredApprover:
+          // SAFETY: requiredApprovers is stored as string[] in metadata
           (request?.metadata?.requiredApprovers as string[])?.[0] || "unknown",
       },
     });

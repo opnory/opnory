@@ -127,6 +127,7 @@ export async function createApiServer(): Promise<FastifyInstance> {
       } catch (error) {
         traceLogger.error({ error }, "Error processing API request");
         reply.code(500);
+        // SAFETY: error response structurally matches AgentResponse schema
         return {
           requestId,
           answer: "An error occurred processing your request.",
@@ -226,6 +227,7 @@ export async function createApiServer(): Promise<FastifyInstance> {
       } catch (error) {
         traceLogger.error({ error }, "Error processing Slack request");
         reply.code(500);
+        // SAFETY: error response structurally matches AgentResponse schema
         return {
           requestId: finalRequestId,
           answer: "An error occurred processing your request.",
@@ -251,9 +253,10 @@ export async function createApiServer(): Promise<FastifyInstance> {
       requesterEmail: string;
       entitlementIdOrName: string;
       reason: string;
+      // SAFETY: metadata is a flexible caller-provided payload at API boundary; validated by schema at consumption
       metadata?: Record<string, unknown>;
     };
-    Reply: AccessRequest;
+    Reply: AccessRequest | { error: string };
   }>(
     "/v1/access/requests",
     {
@@ -302,12 +305,14 @@ export async function createApiServer(): Promise<FastifyInstance> {
         traceLogger.error({ error }, "Error creating access request");
         if (error instanceof Error && error.message.includes("not found")) {
           reply.code(404);
-          return { error: error.message } as any;
+          // SAFETY: error response matches { error: string } which is in Reply union
+          return { error: error.message };
         }
         reply.code(400);
+        // SAFETY: error response matches { error: string } which is in Reply union
         return {
           error: error instanceof Error ? error.message : "Invalid request",
-        } as any;
+        };
       }
     },
   );
@@ -402,20 +407,23 @@ export async function createApiServer(): Promise<FastifyInstance> {
         if (error instanceof Error) {
           if (error.message.includes("not found")) {
             reply.code(404);
-            return { error: error.message } as any;
+            // SAFETY: error response matches { error: string } which is in Reply union
+            return { error: error.message };
           }
           if (
             error.message.includes("cannot approve") ||
             error.message.includes("transition")
           ) {
             reply.code(409);
-            return { error: error.message } as any;
+            // SAFETY: error response matches { error: string } which is in Reply union
+            return { error: error.message };
           }
         }
         reply.code(400);
+        // SAFETY: error response matches { error: string } which is in Reply union
         return {
           error: error instanceof Error ? error.message : "Invalid decision",
-        } as any;
+        };
       }
     },
   );
@@ -482,20 +490,23 @@ export async function createApiServer(): Promise<FastifyInstance> {
         if (error instanceof Error) {
           if (error.message.includes("not found")) {
             reply.code(404);
-            return { error: error.message } as any;
+            // SAFETY: error response matches { error: string } which is in Reply union
+            return { error: error.message };
           }
           if (
             error.message.includes("cannot approve") ||
             error.message.includes("transition")
           ) {
             reply.code(409);
-            return { error: error.message } as any;
+            // SAFETY: error response matches { error: string } which is in Reply union
+            return { error: error.message };
           }
         }
         reply.code(400);
+        // SAFETY: error response matches { error: string } which is in Reply union
         return {
           error: error instanceof Error ? error.message : "Invalid decision",
-        } as any;
+        };
       }
     },
   );
