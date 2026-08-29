@@ -3,10 +3,12 @@
 
 import type { Capability, CapabilityMetadata, ProviderRef, ResolutionContext } from "./capability.js";
 import type { EntitlementRef, Permission } from "./types.js"; // local types for spike
+import type { PluginId } from "./plugin.js";
 
 /** Internal representation of a registered capability */
 interface RegisteredCapability {
   capability: Capability;
+  pluginId: PluginId | null; // track which plugin provided this capability
   instances: Map<string, CapabilityInstance>; // tenantId -> instance
 }
 
@@ -38,7 +40,7 @@ export type InstanceState = "activating" | "active" | "degraded" | "suspended" |
  */
 export interface CapabilityRegistry {
   /** Register a new capability (called at startup / plugin load) */
-  register(capability: Capability): void;
+  register(capability: Capability, pluginId?: PluginId | null): void;
   
   /** Unregister a capability (cleanup) */
   unregister(capabilityName: string): void;
@@ -58,7 +60,10 @@ export interface CapabilityRegistry {
   
   /** Get a specific capability by name */
   getCapability(name: string): Capability | undefined;
-  
+
+  /** Get capabilities provided by a specific plugin */
+  getCapabilitiesByPlugin(pluginId: PluginId): readonly Capability[];
+
   // Lifecycle operations (runtime owns these)
   activate(tenantId: string, capabilityName: string, credentials: CapabilityCredentials): Promise<CapabilityInstance>;
   degrade(tenantId: string, capabilityName: string): Promise<void>;
@@ -80,12 +85,13 @@ export class InMemoryCapabilityRegistry implements CapabilityRegistry {
     this.resolutionStrategy = resolutionStrategy;
   }
 
-  register(capability: Capability): void {
+  register(capability: Capability, pluginId: PluginId | null = null): void {
     if (this.capabilities.has(capability.name)) {
       throw new Error(`Capability already registered: ${capability.name}`);
     }
     this.capabilities.set(capability.name, {
       capability,
+      pluginId,
       instances: new Map(),
     });
   }
@@ -181,6 +187,16 @@ export class InMemoryCapabilityRegistry implements CapabilityRegistry {
 
   getCapability(name: string): Capability | undefined {
     return this.capabilities.get(name)?.capability;
+  }
+
+  getCapabilitiesByPlugin(pluginId: PluginId): readonly Capability[] {
+    const result: Capability[] = [];
+    for (const { capability, pluginId: pId } of this.capabilities.values()) {
+      if (pId === pluginId) {
+        result.push(capability);
+      }
+    }
+    return result;
   }
 
   async activate(

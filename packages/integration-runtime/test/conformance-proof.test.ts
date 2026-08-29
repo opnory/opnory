@@ -8,10 +8,11 @@ import { runFulfillmentAdapterCertification } from "@opnory/governance-core";
 import type { FulfillmentAdapter, Permission, ResourceScope, SubjectRef, ResolvedSubject, EvidenceEvent } from "@opnory/governance-core";
 import { CapabilityRegistry, InMemoryCapabilityRegistry } from "../src/registry";
 import type { Capability } from "../src/capability";
+import type { EntitlementRef } from "../src/types";
 
 describe("Conformance Proof: Runtime-loaded adapters pass unchanged harness", () => {
   let registry: CapabilityRegistry;
-  
+
   beforeAll(() => {
     registry = new InMemoryCapabilityRegistry("policy-preferred");
   });
@@ -37,13 +38,13 @@ describe("Conformance Proof: Runtime-loaded adapters pass unchanged harness", ()
         console.log("Skipping live Entra conformance - no credentials");
         return;
       }
-      
+
       const adapter = new EntraAdapter({
         tenantId: process.env.OPNORY_ENTRA_TENANT_ID!,
         clientId: process.env.OPNORY_ENTRA_CLIENT_ID!,
         clientSecret: process.env.OPNORY_ENTRA_CLIENT_SECRET!,
       });
-      
+
       const result = await runFulfillmentAdapterCertification({
         provider: "entra",
         adapter,
@@ -51,7 +52,7 @@ describe("Conformance Proof: Runtime-loaded adapters pass unchanged harness", ()
         fixtures: [{ permission: { id: "test", name: "Test", description: "", mappings: [] }, roleId: "test-role" }],
         scope: { tenantId: process.env.OPNORY_ENTRA_TENANT_ID! },
       });
-      
+
       expect(result.passed).toBe(true);
       expect(result.fixtures.length).toBeGreaterThan(0);
     });
@@ -62,12 +63,12 @@ describe("Conformance Proof: Runtime-loaded adapters pass unchanged harness", ()
         console.log("Skipping live Okta conformance - no credentials");
         return;
       }
-      
+
       const adapter = new OktaAdapter({
         orgUrl: process.env.OPNORY_OKTA_ORG_URL!,
         apiToken: process.env.OPNORY_OKTA_API_TOKEN!,
       });
-      
+
       const result = await runFulfillmentAdapterCertification({
         provider: "okta",
         adapter,
@@ -75,7 +76,7 @@ describe("Conformance Proof: Runtime-loaded adapters pass unchanged harness", ()
         fixtures: [{ permission: { id: "test", name: "Test", description: "", mappings: [] }, roleId: "test-role" }],
         scope: { tenantId: process.env.OPNORY_OKTA_ORG_URL! },
       });
-      
+
       expect(result.passed).toBe(true);
       expect(result.fixtures.length).toBeGreaterThan(0);
     });
@@ -110,20 +111,20 @@ describe("Conformance Proof: Runtime-loaded adapters pass unchanged harness", ()
       };
 
       registry.register(entraCapability);
-      
+
       // Policy resolves provider (simulating core policy choosing Entra)
       const providerRef = registry.resolveProvider(
-        { id: "test-entitlement" },
+        { id: "test-entitlement", name: "test", system: "test" } as EntitlementRef,
         { subject: { type: "user", identifier: "test" }, requestedPermissions: [] }
       );
-      
+
       expect(providerRef).not.toBeNull();
       expect(providerRef!.capabilityName).toBe("identity.governance.entra");
 
       // Activate instance
       const instance = await registry.activate("test-tenant", "identity.governance.entra", {
         secrets: new Map([
-          ["entra-client-secret", process.env.OPNORY_ENTRA_CLIENT_SECRET!],
+            ["entra-client-secret", process.env.OPNORY_ENTRA_CLIENT_SECRET!],
         ]),
       });
 
@@ -138,7 +139,7 @@ describe("Conformance Proof: Runtime-loaded adapters pass unchanged harness", ()
         fixtures: [{ permission: { id: "test", name: "Test", description: "", mappings: [] }, roleId: "test-role" }],
         scope: { tenantId: process.env.OPNORY_ENTRA_TENANT_ID! },
       });
-      
+
       expect(result.passed).toBe(true);
       expect(result.fixtures.length).toBeGreaterThan(0);
 
@@ -173,24 +174,24 @@ describe("Conformance Proof: Runtime-loaded adapters pass unchanged harness", ()
       };
 
       registry.register(oktaCapability);
-      
+
       // Policy resolves provider (simulating core policy choosing Okta)
       const providerRef = registry.resolveProvider(
-        { id: "test-entitlement" },
-        { 
-          subject: { type: "user", identifier: "test" }, 
+        { id: "test-entitlement", name: "test", system: "test" } as EntitlementRef,
+        {
+          subject: { type: "user", identifier: "test" },
           requestedPermissions: [],
           policyPreferences: { preferredProviders: ["okta"] }
         }
       );
-      
+
       expect(providerRef).not.toBeNull();
       expect(providerRef!.capabilityName).toBe("identity.governance.okta");
 
       // Activate instance
       const instance = await registry.activate("test-tenant", "identity.governance.okta", {
         secrets: new Map([
-          ["okta-api-token", process.env.OPNORY_OKTA_API_TOKEN!],
+            ["okta-api-token", process.env.OPNORY_OKTA_API_TOKEN!],
         ]),
       });
 
@@ -205,7 +206,7 @@ describe("Conformance Proof: Runtime-loaded adapters pass unchanged harness", ()
         fixtures: [{ permission: { id: "test", name: "Test", description: "", mappings: [] }, roleId: "test-role" }],
         scope: { tenantId: process.env.OPNORY_OKTA_ORG_URL! },
       });
-      
+
       expect(result.passed).toBe(true);
       expect(result.fixtures.length).toBeGreaterThan(0);
 
@@ -244,27 +245,27 @@ describe("Conformance Proof: Runtime-loaded adapters pass unchanged harness", ()
 
       // Policy prefers Okta - registry should honor this
       const providerRef = registry.resolveProvider(
-        { id: "test-entitlement" },
-        { 
-          subject: { type: "user", identifier: "test" }, 
+        { id: "test-entitlement", name: "test", system: "test" } as EntitlementRef,
+        {
+          subject: { type: "user", identifier: "test" },
           requestedPermissions: [],
           policyPreferences: { preferredProviders: ["okta"] }
         }
       );
-      
+
       expect(providerRef!.capabilityName).toBe("identity.governance.okta");
       expect(providerRef!.capabilityName).not.toBe("identity.governance.entra");
 
       // Policy prefers Entra - registry should honor this
       const providerRef2 = registry.resolveProvider(
-        { id: "test-entitlement" },
-        { 
-          subject: { type: "user", identifier: "test" }, 
+        { id: "test-entitlement", name: "test", system: "test" } as EntitlementRef,
+        {
+          subject: { type: "user", identifier: "test" },
           requestedPermissions: [],
           policyPreferences: { preferredProviders: ["entra"] }
         }
       );
-      
+
       expect(providerRef2!.capabilityName).toBe("identity.governance.entra");
     });
 
@@ -287,7 +288,7 @@ describe("Conformance Proof: Runtime-loaded adapters pass unchanged harness", ()
 
       // Registry returns a provider reference - NOT an authorization decision
       const providerRef = registry.resolveProvider(
-        { id: "some-entitlement" },
+        { id: "some-entitlement", name: "test", system: "test" } as EntitlementRef,
         { subject: { type: "user", identifier: "test" }, requestedPermissions: [] }
       );
 
