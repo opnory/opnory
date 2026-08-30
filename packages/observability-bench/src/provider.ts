@@ -105,9 +105,38 @@ export interface CandidateProvider {
   readonly providerName: string;
   readonly writer: TraceWriter;
   readonly reader: TraceReader;
+  /**
+   * What the read API can actually do. Different backends expose different
+   * query primitives — that is useful data, not a reason to fake parity.
+   * A benchmark must report `unsupported` for a capability the backend lacks,
+   * never emulate it client-side and call it server-side performance.
+   */
+  readonly capabilities: ProviderCapabilities;
   /** Auth friction note (e.g. "read-scoped API key required", "OAuth client-credentials"). */
   readonly authDescription: string;
 }
+
+/**
+ * Declared read-API capabilities. Each flag governs whether the corresponding
+ * probe is run at all (false → reported `unsupported`, not a zero score).
+ */
+export interface ProviderCapabilities {
+  traceLookup: boolean;
+  attributeFiltering: boolean;
+  aggregation: boolean;
+  fullExport: boolean;
+  pagination: boolean;
+  correlationLookup: boolean;
+}
+
+export const NO_CAPABILITIES: ProviderCapabilities = {
+  traceLookup: false,
+  attributeFiltering: false,
+  aggregation: false,
+  fullExport: false,
+  pagination: false,
+  correlationLookup: false,
+};
 
 // ============================================================================
 // Provider registry

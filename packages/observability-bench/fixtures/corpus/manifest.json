@@ -1,0 +1,38 @@
+{
+  "seed": 12345,
+  "anchorEpochMs": 1725000000000,
+  "spanCount": 55,
+  "traceCount": 5,
+  "tenantIds": [
+    "tenant-a",
+    "tenant-b"
+  ],
+  "spanNameCounts": {
+    "opnory.request": 5,
+    "identity.resolve": 5,
+    "retrieval.search": 5,
+    "gen_ai.inference": 5,
+    "policy.evaluate": 5,
+    "fulfillment": 5,
+    "subject.resolve": 5,
+    "provider.grant": 5,
+    "provider.verify": 5,
+    "evidence.record": 5,
+    "reconciliation": 5
+  },
+  "spanNameDurationNanos": {
+    "opnory.request": "130239904",
+    "identity.resolve": "105193686",
+    "retrieval.search": "122273619",
+    "gen_ai.inference": "142026791",
+    "policy.evaluate": "207074018",
+    "fulfillment": "114848932",
+    "subject.resolve": "153161226",
+    "provider.grant": "100626406",
+    "provider.verify": "119355134",
+    "evidence.record": "117843098",
+    "reconciliation": "101949724"
+  },
+  "serializedBytes": 32385,
+  "sha256": "ce9cde15173fc23ef49614e4a94dd2e3c29c8c9457ade5b2b4708025f812193f"
+}

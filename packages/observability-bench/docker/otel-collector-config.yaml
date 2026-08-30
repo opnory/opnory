@@ -1,0 +1,29 @@
+# OpenTelemetry Collector config for the local benchmark baseline.
+# Receives OTLP and fans out to Jaeger, Tempo, and Phoenix.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  otlp/phoenix:
+    endpoint: phoenix:4317
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [otlp/jaeger, otlp/tempo, otlp/phoenix]

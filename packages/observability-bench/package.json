@@ -14,15 +14,10 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "generate": "bun run dataset/generate.ts",
-    "send": "bun run dataset/send.ts",
-    "verify-parity": "bun run dataset/verify-parity.ts",
-    "bench": "bun run report.ts"
+    "generate": "bun run src/cli.ts generate",
+    "bench": "bun run src/cli.ts bench"
   },
-  "dependencies": {
-    "@opnory/observability": "workspace:*",
-    "@opnory/types": "workspace:*"
-  },
+  "dependencies": {},
   "devDependencies": {
     "typescript": "^5.5.0",
     "@types/bun": "^1.2.0"

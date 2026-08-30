@@ -285,6 +285,9 @@ function buildManifest(corpus: TraceCorpus, serializedBytes: number, sha256: str
 export function serializeCorpus(corpus: TraceCorpus): string {
   // Canonical JSON: stable key order, no timestamps from runtime. This is the
   // byte-identity anchor — replay the SAME string to every backend.
+  // BigInts (startEpochNanos / durationEpochNanos) are emitted as decimal
+  // strings, matching the manifest's string convention for durations, because
+  // JSON cannot represent `bigint`.
   const ordered = corpus.traces
     .map((t) => t)
     .sort((a, b) => a.traceId.localeCompare(b.traceId));
@@ -297,7 +300,18 @@ export function serializeCorpus(corpus: TraceCorpus): string {
       workflowType: t.workflowType,
       spans: t.spans
         .map((s) => s)
-        .sort((a, b) => (a.startEpochNanos < b.startEpochNanos ? -1 : 1)),
+        .sort((a, b) => (a.startEpochNanos < b.startEpochNanos ? -1 : 1))
+        .map((s) => ({
+          traceId: s.traceId,
+          spanId: s.spanId,
+          parentSpanId: s.parentSpanId,
+          name: s.name,
+          startEpochNanos: s.startEpochNanos.toString(),
+          durationEpochNanos: s.durationEpochNanos.toString(),
+          kind: s.kind,
+          attributes: s.attributes,
+          tenantId: s.tenantId,
+        })),
     })),
   );
 }
@@ -326,9 +340,6 @@ export function generateCorpus(opts: GenerateOptions): TraceCorpus {
     const traceId = randomHex(rng, 16);
     traces.push(buildTraceTree(rng, tenantId, workflowType, traceId, anchorEpochNs));
   }
-
-  const serialized = serializeCorpus({ seed: opts.seed, anchorEpochMs: opts.anchorEpochMs, traces });
-  const sha256 = createHash("sha256").update(serialized, "utf8").digest("hex");
 
   return {
     seed: opts.seed,

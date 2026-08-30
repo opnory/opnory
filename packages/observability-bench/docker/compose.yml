@@ -1,0 +1,46 @@
+# Local observability benchmark baseline.
+# Collector + Jaeger + Tempo + Phoenix. The observability-bench harness itself
+# is backend-neutral and talks only to these read APIs over HTTP.
+#
+# Start:  docker compose -f docker/compose.yml up -d
+# Stop:   docker compose -f docker/compose.yml down
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.110.0
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4318:4318"   # OTLP/HTTP
+      - "4317:4317"   # OTLP/gRPC
+    depends_on:
+      - jaeger
+      - tempo
+      - phoenix
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.60
+    ports:
+      - "16686:16686" # UI
+      - "14250:14250" # gRPC ingest
+      - "4317:0"      # (no OTLP here; collector fans out)
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+
+  tempo:
+    image: grafana/tempo:2.5.0
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml:ro
+    ports:
+      - "3200:3200"   # query API (read)
+      - "4317:0"      # OTLP gRPC ingest (direct)
+
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    ports:
+      - "6006:6006"   # UI + REST API (read)
+      - "4317:0"
+
+volumes: {}
