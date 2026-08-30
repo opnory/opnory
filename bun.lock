@@ -303,9 +303,13 @@
       "version": "0.1.0-spike",
       "dependencies": {
         "@opnory/access-types": "workspace:*",
+        "@opnory/config": "workspace:*",
         "@opnory/governance-core": "workspace:*",
+        "@opnory/observability": "workspace:*",
+        "pg": "^8.23.0",
       },
       "devDependencies": {
+        "@types/pg": "^8.10.9",
         "typescript": "^5.4.0",
       },
     },
@@ -335,6 +339,18 @@
       "devDependencies": {
         "@types/bun": "^1.2.0",
         "eslint": "^9.0.0",
+        "typescript": "^5.5.0",
+      },
+    },
+    "packages/observability-bench": {
+      "name": "@opnory/observability-bench",
+      "version": "0.1.0",
+      "dependencies": {
+        "@opnory/observability": "workspace:*",
+        "@opnory/types": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.2.0",
         "typescript": "^5.5.0",
       },
     },
@@ -514,6 +530,8 @@
     "@opnory/knowledge": ["@opnory/knowledge@workspace:packages/knowledge"],
 
     "@opnory/observability": ["@opnory/observability@workspace:packages/observability"],
+
+    "@opnory/observability-bench": ["@opnory/observability-bench@workspace:packages/observability-bench"],
 
     "@opnory/slack": ["@opnory/slack@workspace:apps/slack"],
 

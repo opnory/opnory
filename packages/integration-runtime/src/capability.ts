@@ -71,3 +71,25 @@ export interface PolicyPreferences {
   /** Whether the policy requires eventual consistency handling */
   readonly requireEventualConsistencyHandling?: boolean;
 }
+
+/** Runtime state of a capability instance */
+export interface CapabilityInstance {
+  readonly capability: Capability;
+  readonly tenantId: string;
+  readonly credentials: CapabilityCredentials;
+  readonly state: InstanceState;
+  readonly activatedAt: Date;
+  readonly updatedAt: Date;
+}
+
+/** Credentials resolved at activation time */
+export interface CapabilityCredentials {
+  readonly secrets: Map<string, string>;
+  readonly expiresAt?: Date;
+}
+
+/** Instance lifecycle state */
+export type InstanceState = "activating" | "active" | "degraded" | "suspended" | "disposed";
+
+/** Resolution strategy for when multiple capabilities can fulfill */
+export type ResolutionStrategy = "first-match" | "policy-preferred";

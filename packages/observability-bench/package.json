@@ -1,0 +1,30 @@
+{
+  "name": "@opnory/observability-bench",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./scenarios/*": "./dist/scenarios/*.js",
+    "./bench/*": "./dist/bench/*.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "generate": "bun run dataset/generate.ts",
+    "send": "bun run dataset/send.ts",
+    "verify-parity": "bun run dataset/verify-parity.ts",
+    "bench": "bun run report.ts"
+  },
+  "dependencies": {
+    "@opnory/observability": "workspace:*",
+    "@opnory/types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/bun": "^1.2.0"
+  }
+}

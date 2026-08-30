@@ -19,9 +19,13 @@
   },
   "dependencies": {
     "@opnory/governance-core": "workspace:*",
-    "@opnory/access-types": "workspace:*"
+    "@opnory/access-types": "workspace:*",
+    "@opnory/observability": "workspace:*",
+    "@opnory/config": "workspace:*",
+    "pg": "^8.23.0"
   },
   "devDependencies": {
+    "@types/pg": "^8.10.9",
     "typescript": "^5.4.0"
   },
   "engines": {
