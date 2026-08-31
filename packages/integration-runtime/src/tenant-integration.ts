@@ -27,6 +27,7 @@ export interface IntegrationLease {
 /** Failure codes for deterministic recovery policy */
 export type IntegrationFailureCode =
   | "credential_invalid"
+  | "credential_backend_unavailable" // secret backend down — distinct from provider_unreachable (ADR 0006)
   | "provider_unreachable"
   | "provider_rate_limited"
   | "configuration_invalid"

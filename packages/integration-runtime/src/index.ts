@@ -80,3 +80,22 @@ export type {
   ScopedCredentialHandle,
   IntegrationReconciliationWorker,
 } from "./tenant-integration.js";
+
+// Secret store + scoped credential provider (Phase 6 credential control plane)
+export type {
+  SecretRef,
+  SecretScope,
+  SecretMaterial,
+  ScopedCredential,
+  SecretStore,
+  SecretStoreErrorCode,
+  ScopedCredentialProvider,
+  ResolveResult,
+} from "./secret-store.js";
+export {
+  SecretStoreError,
+  InMemorySecretStore,
+  DefaultScopedCredentialProvider,
+  SECRET_SENTINEL,
+  scanForSecretLeak,
+} from "./secret-store.js";
