@@ -118,6 +118,11 @@ export interface OtlpHttpWriterOptions {
   providerName: string;
 }
 
+/** The OTLP/JSON envelope for an entire corpus, exposed for single-send paths. */
+export function buildOtlpPayload(corpus: TraceCorpus): { resourceSpans: unknown[] } {
+  return { resourceSpans: corpusToResourceSpans(corpus) };
+}
+
 /**
  * A TraceWriter that POSTs the corpus to an OTLP/HTTP collector.
  */
@@ -138,9 +143,7 @@ export class OtlpHttpWriter implements TraceWriter {
   }
 
   async writeCorpus(corpus: TraceCorpus): Promise<void> {
-    const payload = JSON.stringify({
-      resourceSpans: corpusToResourceSpans(corpus),
-    });
+    const payload = JSON.stringify(buildOtlpPayload(corpus));
 
     const res = await fetch(`${this.endpoint}/v1/traces`, {
       method: "POST",

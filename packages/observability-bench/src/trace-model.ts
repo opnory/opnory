@@ -191,4 +191,6 @@ export interface CorpusManifest {
   serializedBytes: number;
   /** SHA-256 of the canonical serialized OTLP payload (for byte-identity) */
   sha256: string;
+  /** Deterministic trace IDs (for findTrace-based parity on trace-centric backends) */
+  traceIds: string[];
 }

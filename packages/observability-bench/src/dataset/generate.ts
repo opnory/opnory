@@ -275,6 +275,7 @@ function buildManifest(corpus: TraceCorpus, serializedBytes: number, sha256: str
     spanNameDurationNanos,
     serializedBytes,
     sha256,
+    traceIds: corpus.traces.map((t) => t.traceId).sort(),
   };
 }
 

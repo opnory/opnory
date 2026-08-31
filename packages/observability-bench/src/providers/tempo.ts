@@ -43,12 +43,22 @@ interface TempoSearchTrace {
   rootTraceName?: string;
   startTimeUnixNano?: string;
   durationMs?: number;
+  /* Tempo 2.5 emits `spanSet` (singular); newer releases emit `spanSets`. */
   spanSets?: Array<{ spans: TempoSearchSpan[]; matched: number }>;
+  spanSet?: { spans: TempoSearchSpan[]; matched: number };
 }
 
 interface TempoSearchResponse {
   traces: TempoSearchTrace[];
   metrics?: unknown;
+}
+
+/** Extract span-sets regardless of the singular/plural key Tempo emits. */
+export function spansFromSearchTrace(trace: TempoSearchTrace): TempoSearchSpan[] {
+  const sets = trace.spanSets ?? (trace.spanSet ? [trace.spanSet] : []);
+  const out: TempoSearchSpan[] = [];
+  for (const set of sets) for (const span of set.spans) out.push(span);
+  return out;
 }
 
 function attrValueToString(v: TempoAttrValue): string {
@@ -75,6 +85,23 @@ function searchSpanToRetrieved(span: TempoSearchSpan, traceId: string): Retrieve
 
 function quoteTraceQL(value: string): string {
   return `"${value.replace(/"/g, '\\"')}"`;
+}
+
+/** TraceQL span-attribute reference: dotted names need a leading dot. */
+function spanAttr(name: string): string {
+  return `.${name}`;
+}
+
+/**
+ * Normalize a backend ID to the canonical 32-hex(trace)/16-hex(span) form.
+ * Tempo's v1 trace endpoint emits IDs as base64 (e.g. "TaBJtP9g…==") while its
+ * search path emits hex. Decode base64 → hex when the value is not already hex.
+ */
+function normalizeId(id: string): string {
+  if (/^[0-9a-f]{16}$/.test(id) || /^[0-9a-f]{32}$/.test(id)) return id;
+  // base64 → bytes → hex. Fixed-width (8 or 16 bytes) after decode.
+  const bytes = Buffer.from(id, "base64");
+  return bytes.toString("hex");
 }
 
 export class TempoReader implements TraceReader {
@@ -104,18 +131,18 @@ export class TempoReader implements TraceReader {
     const q = encodeURIComponent(
       `{ resource.opnory.tenant_id = ${quoteTraceQL(params.tenantId)} && ${expr} }`,
     );
-    const startNs = BigInt(params.windowStartEpochMs) * 1_000_000n;
-    const endNs = BigInt(params.windowEndEpochMs) * 1_000_000n;
+    // NOTE: Tempo 2.5's /api/search `start`/`end` nano epoch params overflow
+    // (int parsing rejects iOS-scale ns values); the time-windowed variant is
+    // omitted for the local baseline. TraceQL span filtering is fully exercised
+    // by the `{}` predicate; the window is only a prune for large corpora.
     const { body, bytes, ms, rateLimited } = await this.get(
-      `/api/search?q=${q}&start=${startNs}&end=${endNs}&limit=1000`,
+      `/api/search?q=${q}&limit=1000`,
     );
     const resp = body as TempoSearchResponse;
     const rows: RetrievedSpan[] = [];
     for (const trace of resp.traces ?? []) {
-      for (const spanSet of trace.spanSets ?? []) {
-        for (const span of spanSet.spans ?? []) {
-          rows.push(searchSpanToRetrieved(span, trace.traceID));
-        }
+      for (const span of spansFromSearchTrace(trace)) {
+        rows.push(searchSpanToRetrieved(span, trace.traceID));
       }
     }
     return {
@@ -140,24 +167,22 @@ export class TempoReader implements TraceReader {
   }): Promise<QueryResult> {
     const outcomeValue = params.outcome === "failed" ? "failed" : "fulfilled";
     const expr =
-      `opnory.provider = ${quoteTraceQL(params.provider)} && ` +
-      `opnory.final_outcome = ${quoteTraceQL(outcomeValue)}`;
+      `${spanAttr("opnory.provider")} = ${quoteTraceQL(params.provider)} && ` +
+      `${spanAttr("opnory.final_outcome")} = ${quoteTraceQL(outcomeValue)}`;
     return this.traceQLSpanQuery(expr, params);
   }
 
   async governanceLookup(params: { correlationId: string }): Promise<QueryResult> {
     // Find spans carrying the correlation id, then group by trace id.
     const q = encodeURIComponent(
-      `{ opnory.correlation_id = ${quoteTraceQL(params.correlationId)} }`,
+      `{ ${spanAttr("opnory.correlation_id")} = ${quoteTraceQL(params.correlationId)} }`,
     );
     const { body, bytes, ms, rateLimited } = await this.get(`/api/search?q=${q}&limit=1000`);
     const resp = body as TempoSearchResponse;
     const rows: RetrievedSpan[] = [];
     for (const trace of resp.traces ?? []) {
-      for (const spanSet of trace.spanSets ?? []) {
-        for (const span of spanSet.spans ?? []) {
-          rows.push(searchSpanToRetrieved(span, trace.traceID));
-        }
+      for (const span of spansFromSearchTrace(trace)) {
+        rows.push(searchSpanToRetrieved(span, trace.traceID));
       }
     }
     return {
@@ -193,10 +218,14 @@ export class TempoReader implements TraceReader {
           for (const a of span.attributes ?? []) attrs[a.key] = attrValueToString(a.value);
           const start = BigInt(span.startTimeUnixNano ?? "0");
           const end = BigInt(span.endTimeUnixNano ?? "0");
+          // Tempo's v1 trace endpoint returns IDs base64-encoded while its
+          // search path returns hex. Normalize to hex (the canonical corpus
+          // form) so findTrace parity is comparable — this is ID normalization,
+          // not emulation of a query primitive.
           rows.push({
-            spanId: span.spanId,
-            traceId: span.traceId ?? traceId,
-            parentSpanId: span.parentSpanId ?? null,
+            spanId: normalizeId(span.spanId),
+            traceId: span.traceId ? normalizeId(span.traceId) : traceId,
+            parentSpanId: span.parentSpanId ? normalizeId(span.parentSpanId) : null,
             name: span.name ?? "",
             startEpochNanos: start,
             durationEpochNanos: end - start,
@@ -243,7 +272,7 @@ export class TempoReader implements TraceReader {
   }
 
   async reconciliationLookup(params: { tenantId: string; minRetryCount: number }): Promise<QueryResult> {
-    const expr = `opnory.retry_count >= ${params.minRetryCount}`;
+    const expr = `${spanAttr("opnory.retry_count")} >= ${params.minRetryCount}`;
     return this.traceQLSpanQuery(expr, { tenantId: params.tenantId, windowStartEpochMs: 0, windowEndEpochMs: 0 });
   }
 
@@ -258,18 +287,16 @@ export class TempoReader implements TraceReader {
     const q = encodeURIComponent(
       `{ resource.opnory.tenant_id = ${quoteTraceQL(params.tenantId)} }`,
     );
-    const startNs = BigInt(params.windowStartEpochMs) * 1_000_000n;
-    const endNs = BigInt(params.windowEndEpochMs) * 1_000_000n;
+    // Omit start/end (Tempo 2.5 nano-epoch overflow); the `{}` predicate
+    // scopes to the tenant.
     const { body, bytes, ms, rateLimited } = await this.get(
-      `/api/search?q=${q}&start=${startNs}&end=${endNs}&limit=1000`,
+      `/api/search?q=${q}&limit=1000`,
     );
     const resp = body as TempoSearchResponse;
     const rows: RetrievedSpan[] = [];
     for (const trace of resp.traces ?? []) {
-      for (const spanSet of trace.spanSets ?? []) {
-        for (const span of spanSet.spans ?? []) {
-          rows.push(searchSpanToRetrieved(span, trace.traceID));
-        }
+      for (const span of spansFromSearchTrace(trace)) {
+        rows.push(searchSpanToRetrieved(span, trace.traceID));
       }
     }
     return {

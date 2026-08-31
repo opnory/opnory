@@ -87,6 +87,15 @@ export interface TraceReader {
   /** Reconstruct the complete trace for one access request. */
   governanceLookup(params: { correlationId: string }): Promise<QueryResult>;
 
+  /**
+   * Fetch one trace by trace ID — the universal native read primitive for
+   * trace-centric backends. Used for corpus parity when the backend exposes no
+   * governed full-export (e.g. Jaeger): enumerate known manifest trace IDs and
+   * reconstruct the corpus. This is NOT a scored query capability; it is the
+   * parity mechanism.
+   */
+  findTrace(traceId: string): Promise<RetrievedSpan[]>;
+
   /** Find requests where the model invoked entitlement tools. */
   agentLookup(params: { tenantId: string; toolName: string }): Promise<QueryResult>;
 

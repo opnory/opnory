@@ -29,20 +29,20 @@ const jaegerCapabilities: ProviderCapabilities = {
 
 const tempoCapabilities: ProviderCapabilities = {
   traceLookup: true,
-  attributeFiltering: true, // TraceQL {} operator
+  attributeFiltering: true, // TraceQL {} operator (span match, not full export)
   aggregation: true, // TraceQL metrics / count() by
-  fullExport: true, // broad TraceQL span search
+  fullExport: false, // no governed bulk export; search returns MATCHED spans, not a corpus
   pagination: false, // single-binary search does not expose a governed cursor
   correlationLookup: true, // span attribute filter on correlation id
 };
 
 const phoenixCapabilities: ProviderCapabilities = {
-  traceLookup: true,
-  attributeFiltering: true, // dot-path filter=key:value
+  traceLookup: true, // trace_id filter verified working (positive control)
+  attributeFiltering: false, // LIVE EVIDENCE: filter=key:value silently ignored (returned all spans)
   aggregation: false, // no first-class REST aggregation (SQL overlay out of scope)
-  fullExport: true, // cursor-paginated span list
+  fullExport: true, // cursor-paginated span list (NOT tenant-scoped — filter ignored)
   pagination: true, // cursor-based
-  correlationLookup: true, // attribute filter on correlation id
+  correlationLookup: false, // attribute filter ignored → correlation lookup unreliable
 };
 
 export function registerLocalProviders(): void {
