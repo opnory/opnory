@@ -1,14 +1,17 @@
 // packages/integration-runtime/src/plugin.ts
 // Plugin contract — provider-neutral, frozen interface for first-party integration plugins
 
-import type { Capability, CapabilityMetadata, ProviderRef, ResolutionContext } from "./capability.js";
-import type { EntitlementRef, Permission, SubjectRef } from "./types.js";
+import type { Capability, ProviderRef, ResolutionContext } from "./capability.js";
+import type { EntitlementRef } from "./types.js";
 
 /** Unique identifier for a plugin */
 export type PluginId = string & { readonly __brand: unique symbol };
 
 /** Helper to create a branded PluginId */
 export function pluginId(id: string): PluginId {
+  // SAFETY: branded nominal type over a plain string — the cast is the entire
+  // point of the factory; callers pass an untyped identifier and receive the
+  // typed token, establishing ownership of the brand at this single boundary.
   return id as PluginId;
 }
 
@@ -17,6 +20,8 @@ export type CapabilityContractId = string & { readonly __brand: unique symbol };
 
 /** Helper to create a branded CapabilityContractId */
 export function capabilityContractId(id: string): CapabilityContractId {
+  // SAFETY: branded nominal type factory — establishes the CapabilityContractId
+  // brand over a plain string at this single ownership boundary.
   return id as CapabilityContractId;
 }
 
@@ -25,6 +30,8 @@ export type CoreServiceId = string & { readonly __brand: unique symbol };
 
 /** Helper to create a branded CoreServiceId */
 export function coreServiceId(id: string): CoreServiceId {
+  // SAFETY: branded nominal type factory — establishes the CoreServiceId brand
+  // over a plain string at this single ownership boundary.
   return id as CoreServiceId;
 }
 
@@ -33,6 +40,8 @@ export type TenantId = string & { readonly __brand: unique symbol };
 
 /** Helper to create a branded TenantId */
 export function tenantId(id: string): TenantId {
+  // SAFETY: branded nominal type factory — establishes the TenantId brand over
+  // a plain string at this single ownership boundary.
   return id as TenantId;
 }
 

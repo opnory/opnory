@@ -1,8 +1,8 @@
 // packages/integration-runtime/src/registry.ts
 // Capability registry - core-owned, policy-driven provider resolution
 
-import type { Capability, CapabilityMetadata, ProviderRef, ResolutionContext } from "./capability.js";
-import type { EntitlementRef, Permission } from "./types.js"; // local types for spike
+import type { Capability, ProviderRef, ResolutionContext } from "./capability.js";
+import type { EntitlementRef } from "./types.js"; // local type for spike
 import type { PluginId } from "./plugin.js";
 
 /** Internal representation of a registered capability */
@@ -149,9 +149,9 @@ export class InMemoryCapabilityRegistry implements CapabilityRegistry {
   }
 
   private canFulfill(
-    capability: Capability,
-    entitlement: EntitlementRef,
-    context: ResolutionContext
+    _capability: Capability,
+    _entitlement: EntitlementRef,
+    _context: ResolutionContext
   ): boolean {
     // For spike: simple provider match
     // Real implementation would check capability.metadata.supports,
@@ -239,7 +239,7 @@ export class InMemoryCapabilityRegistry implements CapabilityRegistry {
     return updated;
   }
 
-  private async simulateActivation(instance: CapabilityInstance): Promise<void> {
+  private async simulateActivation(_instance: CapabilityInstance): Promise<void> {
     // In real implementation: validate credentials, establish connections, etc.
     // For spike: just a small delay
     await new Promise(resolve => setTimeout(resolve, 10));

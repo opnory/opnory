@@ -5,15 +5,12 @@
 
 import type {
   Plugin,
-  PluginManifest,
   PluginActivationContext,
   PluginActivationResult,
   PluginInstanceState,
   PluginId,
   TenantId,
   CoreServices,
-  LoadedPlugin,
-  ValidationResult,
 } from "./plugin.js";
 import type { Capability } from "./capability.js";
 
@@ -102,6 +99,10 @@ export class OpnoryRuntimeKernel implements RuntimeKernel {
     };
 
     // Update state: activating
+    // SAFETY: these casts establish the well-formed initial placeholder before
+    // real activation fills them — "activating" is a declared PluginInstanceState
+    // member, [] is a valid readonly Capability[], and { capabilities: [] } is the
+    // minimal PluginActivationResult (its other field `state` is optional).
     let loadedPlugin = {
       plugin,
       state: "activating" as PluginInstanceState,
@@ -158,7 +159,7 @@ export class OpnoryRuntimeKernel implements RuntimeKernel {
       pluginId,
       manifest: loadedPlugin.plugin.manifest,
       services,
-      config: loadedPlugin.activationResult.state as Record<string, unknown> || {},
+      config: loadedPlugin.activationResult.state ?? {},
     };
 
     loadedPlugin.state = "degraded";
@@ -186,7 +187,7 @@ export class OpnoryRuntimeKernel implements RuntimeKernel {
       pluginId,
       manifest: loadedPlugin.plugin.manifest,
       services,
-      config: loadedPlugin.activationResult.state as Record<string, unknown> || {},
+      config: loadedPlugin.activationResult.state ?? {},
     };
 
     loadedPlugin.state = "suspending";
@@ -222,7 +223,7 @@ export class OpnoryRuntimeKernel implements RuntimeKernel {
       pluginId,
       manifest: loadedPlugin.plugin.manifest,
       services,
-      config: loadedPlugin.activationResult.state as Record<string, unknown> || {},
+      config: loadedPlugin.activationResult.state ?? {},
     };
 
     // Update state: activating
@@ -275,7 +276,7 @@ export class OpnoryRuntimeKernel implements RuntimeKernel {
       pluginId,
       manifest: loadedPlugin.plugin.manifest,
       services,
-      config: loadedPlugin.activationResult.state as Record<string, unknown> || {},
+      config: loadedPlugin.activationResult.state ?? {},
     };
 
     loadedPlugin.state = "disposing";

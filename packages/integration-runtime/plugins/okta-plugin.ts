@@ -7,11 +7,7 @@ import type {
   PluginActivationContext,
   PluginActivationResult,
   Capability,
-  CredentialHandle,
-  TenantId,
-  PluginId,
 } from "../src/plugin.js";
-import type { FulfillmentAdapter } from "../src/types.js";
 import { OktaAdapter } from "@opnory/governance-core/adapters";
 
 export const oktaPluginManifest: PluginManifest = {

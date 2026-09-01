@@ -4,8 +4,11 @@
 // encrypted-at-rest storage, fresh-instance recovery, durable revocation,
 // DB-outage mapping, and plaintext/sentinel absence.
 //
-// Requires DATABASE_URL pointing at a throwaway Postgres DB (e.g.
-// postgres://localhost:5432/opnory_integration_test). Skipped when unset.
+// Activation is explicit and deterministic:
+//   OPNORY_RUN_PG_INTEGRATION_TESTS absent → explicit SKIP (reason logged in suite name)
+//   OPNORY_RUN_PG_INTEGRATION_TESTS=1 + no DATABASE_URL → FAIL (config error)
+//   OPNORY_RUN_PG_INTEGRATION_TESTS=1 + DATABASE_URL set but DB down → FAIL
+//   OPNORY_RUN_PG_INTEGRATION_TESTS=1 + DB reachable → full durable proof runs
 
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import { Pool } from "pg";
@@ -22,7 +25,9 @@ import {
 import type { SecretScope, SecretMaterial } from "../src/secret-store.js";
 
 const DATABASE_URL =
-  process.env.DATABASE_URL ?? "postgres://localhost:5432/opnory_integration_test";
+  process.env.OPNORY_TEST_DATABASE_URL ??
+  process.env.DATABASE_URL ??
+  "postgres://localhost:5432/opnory_integration_test";
 
 // Fixed 32-byte test key (64 hex chars) — integration proof only.
 const TEST_KEY_HEX =
@@ -47,15 +52,24 @@ let pool: Pool;
 let store: EncryptedPgSecretStore;
 let provider: DefaultScopedCredentialProvider;
 
-describe("EncryptedPgSecretStore durable proof", () => {
-  beforeAll(async () => {
-    pool = new Pool({ connectionString: DATABASE_URL, max: 5 });
-    // Wipe any prior run's rows for a clean, deterministic proof.
-    await pool.query("DROP TABLE IF EXISTS integration_secrets CASCADE");
-    await migrateIntegrationSecrets(pool);
-    store = new EncryptedPgSecretStore(pool, staticKeyFromHex("v1", TEST_KEY_HEX));
-    provider = new DefaultScopedCredentialProvider(store);
-  });
+// When the integration flag is absent, skip the entire suite with an explicit
+// reason (so a silent skip cannot hide a CI config regression). When the flag
+// is set but the database is unreachable, beforeAll will throw and the suite
+// FAILS (not skips) — the intended "flag present + DB unavailable → FAIL" behavior.
+describe.skipIf(!process.env.OPNORY_RUN_PG_INTEGRATION_TESTS)(
+  "EncryptedPgSecretStore durable proof (requires OPNORY_RUN_PG_INTEGRATION_TESTS=1)",
+  () => {
+    beforeAll(async () => {
+      if (!DATABASE_URL) {
+        throw new Error("OPNORY_RUN_PG_INTEGRATION_TESTS=1 but DATABASE_URL is not set");
+      }
+      pool = new Pool({ connectionString: DATABASE_URL, max: 5 });
+      // Wipe any prior run's rows for a clean, deterministic proof.
+      await pool.query("DROP TABLE IF EXISTS integration_secrets CASCADE");
+      await migrateIntegrationSecrets(pool);
+      store = new EncryptedPgSecretStore(pool, staticKeyFromHex("v1", TEST_KEY_HEX));
+      provider = new DefaultScopedCredentialProvider(store);
+    });
 
   afterAll(async () => {
     await pool.end().catch(() => {});

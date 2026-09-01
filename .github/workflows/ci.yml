@@ -10,10 +10,13 @@ jobs:
   build-test:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opnory
+      DATABASE_URL: postgresql://postgres:***@localhost:5432/opnory
       PGUSER: postgres
       PGPASSWORD: postgres
       OPNORY_ALLOW_UNPINNED_LIVE_TEST: "true"
+      # Durable encrypted-secret proof (Phase 6) — runs real PostgreSQL proof.
+      OPNORY_RUN_PG_INTEGRATION_TESTS: "1"
+      OPNORY_TEST_DATABASE_URL: postgresql://postgres:***@localhost:5432/opnory_integration_test
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,8 +43,11 @@ jobs:
           sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
           # Create database using postgres user
           sudo -u postgres createdb opnory || true
-          # Verify database exists and is accessible
+          # Create the throwaway integration-test database for the encrypted-secret proof
+          sudo -u postgres createdb opnory_integration_test || true
+          # Verify databases exist and are accessible
           sudo -u postgres psql -c "SELECT 1" opnory
+          sudo -u postgres psql -c "SELECT 1" opnory_integration_test
         if: runner.os == 'Linux'
 
       - name: Build all packages

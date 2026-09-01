@@ -2,9 +2,8 @@
 // PostgreSQL implementation of TenantIntegrationRepository
 // Uses the same patterns as access-store-pg for lease/worker machinery
 
-import { Pool, PoolClient } from "pg";
+import { Pool } from "pg";
 import { getLogger } from "@opnory/observability";
-import { loadConfig } from "@opnory/config";
 import type {
   TenantIntegration,
   CreateTenantIntegrationInput,
@@ -14,7 +13,6 @@ import type {
   TenantId,
   PluginId,
 } from "./tenant-integration.js";
-import type { IntegrationLease } from "./tenant-integration.js";
 import { randomUUID } from "crypto";
 
 const logger = getLogger().child({ component: "tenant-integration-pg" });

@@ -1,7 +1,7 @@
 // packages/integration-runtime/src/capability.ts
 // Provider-neutral capability contracts for the integration runtime spike
 
-import type { FulfillmentAdapter, SubjectRef, ResourceScope, Permission, EntitlementRef } from "./types.js";
+import type { FulfillmentAdapter, SubjectRef, Permission } from "./types.js";
 
 /**
  * Capability metadata describing provider-neutral properties

@@ -665,7 +665,6 @@ export class IntegrationReconciliationWorkerImpl implements IntegrationReconcili
         attemptCount,
       };
     } catch (error) {
-      const failureCode = this.classifyError(error);
       await this.repository.updateActualStatus(
         integration.id,
         "uninstalling",
@@ -691,7 +690,7 @@ export class IntegrationReconciliationWorkerImpl implements IntegrationReconcili
   private async recoverIntegration(
     integration: TenantIntegration,
     attemptCount: number,
-    needsHealthCheck: boolean
+    _needsHealthCheck: boolean
   ): Promise<ReconciliationResult> {
     const now = new Date();
 

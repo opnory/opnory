@@ -4,15 +4,11 @@
 
 import type {
   Plugin,
-  PluginManifest,
   PluginLoader,
   ValidationResult,
   ValidationError,
   ValidationWarning,
   LoadedPlugin,
-  PluginInstanceState,
-  PluginActivationContext,
-  PluginActivationResult,
   CapabilityRegistry,
   CoreServices,
   TenantId,
@@ -26,10 +22,6 @@ import type {
   RequestOptions,
   Logger,
 } from "./plugin.js";
-import { pluginId, tenantId } from "./plugin.js";
-import type { Capability } from "./capability.js";
-import type { FulfillmentAdapter } from "./types.js";
-import { InMemoryCapabilityRegistry } from "./registry.js";
 import type { RuntimeKernel } from "./kernel.js";
 import { OpnoryRuntimeKernel } from "./kernel.js";
 
@@ -146,7 +138,7 @@ export class DefaultPluginLoader implements PluginLoader {
     await this.kernel.dispose(tenantId, pluginId, this.coreServices);
   }
 
-  getLoaded(tenantId: TenantId): readonly LoadedPlugin[] {
+  getLoaded(_tenantId: TenantId): readonly LoadedPlugin[] {
     // This is a simplified implementation - kernel doesn't expose loaded plugins directly
     // In a full implementation, kernel would provide this
     return [];
@@ -177,9 +169,14 @@ export class InMemoryRuntimeEventBus implements RuntimeEventBus {
     if (!this.handlers.has(type)) {
       this.handlers.set(type, new Set());
     }
+    // SAFETY: the bus stores handlers keyed by their string `type`; the generic
+    // `T` is erased at the storage boundary, so the specific handler is widened
+    // to the stored RuntimeEvent shape and re-narrowed by the caller on receipt.
     this.handlers.get(type)!.add(handler as (event: RuntimeEvent) => void | Promise<void>);
     
     return () => {
+      // SAFETY: same erased-generic widening as the add() path above; the stored
+      // handler shape is identical, so the cast is identity at runtime.
       this.handlers.get(type)?.delete(handler as (event: RuntimeEvent) => void | Promise<void>);
     };
   }
@@ -253,6 +250,9 @@ class DefaultHttpClient implements HttpClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
+      // SAFETY: fetch's response.json() returns `any`; the cast to Promise<T> is
+      // the HTTP I/O boundary where the caller-supplied T is the parse contract —
+      // this is the point at which an untyped wire payload becomes a domain value.
       return response.json() as Promise<T>;
     } catch (error) {
       if (timeoutId) clearTimeout(timeoutId);

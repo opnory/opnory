@@ -7,12 +7,7 @@ import type {
   PluginActivationContext,
   PluginActivationResult,
   Capability,
-  CredentialHandle,
-  TenantId,
-  PluginId,
 } from "../src/plugin.js";
-import { pluginId, capabilityContractId, coreServiceId } from "../src/plugin.js";
-import type { FulfillmentAdapter } from "../src/types.js";
 import { EntraAdapter } from "@opnory/governance-core/adapters";
 
 export const entraPluginManifest: PluginManifest = {
