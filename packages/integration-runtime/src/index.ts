@@ -99,3 +99,12 @@ export {
   SECRET_SENTINEL,
   scanForSecretLeak,
 } from "./secret-store.js";
+
+// Encrypted PostgreSQL secret store (durable production backend)
+export type { EncryptionKey, EncryptionKeyProvider } from "./encrypted-pg-secret-store.js";
+export {
+  EncryptedPgSecretStore,
+  StaticTestKeyProvider,
+  staticKeyFromHex,
+  migrateIntegrationSecrets,
+} from "./encrypted-pg-secret-store.js";
