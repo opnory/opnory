@@ -4,6 +4,10 @@
 import type { Capability, ProviderRef, ResolutionContext } from "./capability.js";
 import type { EntitlementRef } from "./types.js";
 
+// Re-export Capability so first-party plugins can import it from this module
+// (they construct Capability[] in their activate() results).
+export type { Capability };
+
 /** Unique identifier for a plugin */
 export type PluginId = string & { readonly __brand: unique symbol };
 

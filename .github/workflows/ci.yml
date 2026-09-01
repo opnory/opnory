@@ -10,13 +10,27 @@ jobs:
   build-test:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: postgresql://postgres:***@localhost:5432/opnory
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opnory
       PGUSER: postgres
       PGPASSWORD: postgres
       OPNORY_ALLOW_UNPINNED_LIVE_TEST: "true"
       # Durable encrypted-secret proof (Phase 6) — runs real PostgreSQL proof.
       OPNORY_RUN_PG_INTEGRATION_TESTS: "1"
-      OPNORY_TEST_DATABASE_URL: postgresql://postgres:***@localhost:5432/opnory_integration_test
+      OPNORY_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opnory_integration_test
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: opnory
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,26 +43,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Start PostgreSQL
+      - name: Create integration-test database
         run: |
-          sudo systemctl start postgresql
-          # Wait for PostgreSQL to be ready
-          for i in {1..30}; do
-            if pg_isready -q; then
-              break
-            fi
-            sleep 1
-          done
-          # Set password for postgres user
-          sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
-          # Create database using postgres user
-          sudo -u postgres createdb opnory || true
-          # Create the throwaway integration-test database for the encrypted-secret proof
-          sudo -u postgres createdb opnory_integration_test || true
-          # Verify databases exist and are accessible
-          sudo -u postgres psql -c "SELECT 1" opnory
-          sudo -u postgres psql -c "SELECT 1" opnory_integration_test
-        if: runner.os == 'Linux'
+          PGPASSWORD=postgres psql -h localhost -U postgres -d opnory -c "CREATE DATABASE opnory_integration_test;" || true
 
       - name: Build all packages
         run: bun run build
@@ -58,7 +55,6 @@ jobs:
 
       - name: Run database migrations
         run: bun -e "import { migrate } from './packages/access-store-pg/src/index.js'; await migrate();"
-        if: runner.os == 'Linux'
 
       - name: Type check
         run: bun run typecheck

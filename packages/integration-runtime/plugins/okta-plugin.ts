@@ -8,32 +8,33 @@ import type {
   PluginActivationResult,
   Capability,
 } from "../src/plugin.js";
+import { pluginId, capabilityContractId, coreServiceId } from "../src/plugin.js";
 import { OktaAdapter } from "@opnory/governance-core/adapters";
 
 export const oktaPluginManifest: PluginManifest = {
-  name: "okta",
+  name: pluginId("okta"),
   version: "1.0.0",
   description: "Okta integration for identity governance",
   provides: [
     {
-      id: "identity.resolve@v1",
+      id: capabilityContractId("identity.resolve@v1"),
       version: "1.0.0",
       description: "Resolves subjects in Okta (users, groups)",
     },
     {
-      id: "fulfillment.access@v1",
+      id: capabilityContractId("fulfillment.access@v1"),
       version: "1.0.0",
       description: "Grants/revokes Okta group memberships and app assignments",
     },
   ],
   requires: [
     {
-      id: "core.secrets@v1",
+      id: coreServiceId("core.secrets@v1"),
       version: "^1.0.0",
       required: true,
     },
     {
-      id: "core.http@v1",
+      id: coreServiceId("core.http@v1"),
       version: "^1.0.0",
       required: true,
     },
@@ -88,12 +89,13 @@ export const oktaPlugin: Plugin = {
     const { tenantId, services } = ctx;
 
     // Resolve credentials from core credential provider
+    const oktaPluginIdVal = pluginId("okta");
     const [orgUrlHandle, clientIdHandle, privateKeyPathHandle, keyIdHandle, passphraseHandle] = await Promise.all([
-      services.credentials.resolve(tenantId, "okta", "okta-org-url"),
-      services.credentials.resolve(tenantId, "okta", "okta-client-id"),
-      services.credentials.resolve(tenantId, "okta", "okta-private-key-path"),
-      services.credentials.resolve(tenantId, "okta", "okta-key-id"),
-      services.credentials.resolve(tenantId, "okta", "okta-private-key-passphrase"),
+      services.credentials.resolve(tenantId, oktaPluginIdVal, "okta-org-url"),
+      services.credentials.resolve(tenantId, oktaPluginIdVal, "okta-client-id"),
+      services.credentials.resolve(tenantId, oktaPluginIdVal, "okta-private-key-path"),
+      services.credentials.resolve(tenantId, oktaPluginIdVal, "okta-key-id"),
+      services.credentials.resolve(tenantId, oktaPluginIdVal, "okta-private-key-passphrase"),
     ]);
 
     if (!orgUrlHandle || !clientIdHandle || !privateKeyPathHandle || !keyIdHandle) {

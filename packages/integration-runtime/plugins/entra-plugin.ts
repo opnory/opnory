@@ -8,32 +8,33 @@ import type {
   PluginActivationResult,
   Capability,
 } from "../src/plugin.js";
+import { pluginId, capabilityContractId, coreServiceId } from "../src/plugin.js";
 import { EntraAdapter } from "@opnory/governance-core/adapters";
 
 export const entraPluginManifest: PluginManifest = {
-  name: "entra",
+  name: pluginId("entra"),
   version: "1.0.0",
   description: "Microsoft Entra ID (Azure AD) integration for identity governance",
   provides: [
     {
-      id: "identity.resolve@v1",
+      id: capabilityContractId("identity.resolve@v1"),
       version: "1.0.0",
       description: "Resolves subjects in Entra ID (users, groups, service principals)",
     },
     {
-      id: "fulfillment.access@v1",
+      id: capabilityContractId("fulfillment.access@v1"),
       version: "1.0.0",
       description: "Grants/revokes Entra ID group memberships and app role assignments",
     },
   ],
   requires: [
     {
-      id: "core.secrets@v1",
+      id: coreServiceId("core.secrets@v1"),
       version: "^1.0.0",
       required: true,
     },
     {
-      id: "core.http@v1",
+      id: coreServiceId("core.http@v1"),
       version: "^1.0.0",
       required: true,
     },
@@ -88,12 +89,13 @@ export const entraPlugin: Plugin = {
     const { tenantId, services } = ctx;
 
     // Resolve credentials from core credential provider
+    const entraPluginId = pluginId("entra");
     const [clientSecretHandle, tenantIdHandle, clientIdHandle, servicePrincipalIdHandle, enterpriseAppObjectIdHandle] = await Promise.all([
-      services.credentials.resolve(tenantId, "entra", "entra-client-secret"),
-      services.credentials.resolve(tenantId, "entra", "entra-tenant-id"),
-      services.credentials.resolve(tenantId, "entra", "entra-client-id"),
-      services.credentials.resolve(tenantId, "entra", "entra-service-principal-id"),
-      services.credentials.resolve(tenantId, "entra", "entra-enterprise-app-object-id"),
+      services.credentials.resolve(tenantId, entraPluginId, "entra-client-secret"),
+      services.credentials.resolve(tenantId, entraPluginId, "entra-tenant-id"),
+      services.credentials.resolve(tenantId, entraPluginId, "entra-client-id"),
+      services.credentials.resolve(tenantId, entraPluginId, "entra-service-principal-id"),
+      services.credentials.resolve(tenantId, entraPluginId, "entra-enterprise-app-object-id"),
     ]);
 
     if (!clientSecretHandle || !tenantIdHandle || !clientIdHandle || !servicePrincipalIdHandle || !enterpriseAppObjectIdHandle) {
