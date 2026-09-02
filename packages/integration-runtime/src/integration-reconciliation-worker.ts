@@ -1034,6 +1034,18 @@ export class IntegrationReconciliationWorkerImpl implements IntegrationReconcili
   }
 
   private classifyError(error: unknown): IntegrationFailureCode {
+    // Secret-backend outage carries the structured SecretStoreError code —
+    // classify it explicitly before any string heuristic can mis-label it as
+    // credential_invalid or provider_unreachable (ADR 0006 taxonomy).
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      (error as { name?: unknown; code?: unknown }).name === "SecretStoreError" &&
+      (error as { code?: unknown }).code === "backend_unavailable"
+    ) {
+      return "credential_backend_unavailable";
+    }
+
     const message = String(error).toLowerCase();
 
     if (message.includes("credential") || message.includes("auth") || message.includes("unauthorized") || message.includes("401")) {

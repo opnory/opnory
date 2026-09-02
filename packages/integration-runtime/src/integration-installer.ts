@@ -202,6 +202,18 @@ export class IntegrationInstallerImpl implements IntegrationInstaller {
   }
 
   private classifyError(error: unknown): IntegrationFailureCode {
+    // Secret-backend outage is a distinct taxonomy from credential-invalid and
+    // provider-unreachable (ADR 0006): recognize the structured error before
+    // falling through to string heuristics.
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      (error as { name?: unknown; code?: unknown }).name === "SecretStoreError" &&
+      (error as { code?: unknown }).code === "backend_unavailable"
+    ) {
+      return "credential_backend_unavailable";
+    }
+
     const message = String(error).toLowerCase();
 
     if (message.includes("credential") || message.includes("auth") || message.includes("unauthorized") || message.includes("401")) {
