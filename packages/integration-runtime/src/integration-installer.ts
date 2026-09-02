@@ -3,6 +3,8 @@
 // State machine: DISCOVERED → CONFIGURING → VALIDATING → ACTIVE
 
 import { getLogger } from "@opnory/observability";
+import { LifecycleSpan } from "@opnory/observability";
+import type { LifecycleAttributes } from "@opnory/observability";
 import type {
   TenantIntegration,
   CreateTenantIntegrationInput,
@@ -54,6 +56,23 @@ export class IntegrationInstallerImpl implements IntegrationInstaller {
 
   async install(input: CreateTenantIntegrationInput): Promise<IntegrationTransitionResult> {
     const warnings: string[] = [];
+    const lifecycle = new LifecycleSpan(
+      {
+        tenantId: input.tenantId,
+        integrationId: "(pending)",
+        pluginId: input.pluginId,
+        provider: input.pluginId,
+        operation: "integration.install",
+        desiredState: "active",
+        actualState: "discovered",
+        configVersion: 1,
+        mutated: "true",
+        credentialRef: input.credentialRef,
+      },
+      "integration.install",
+    );
+    await lifecycle.root();
+    await lifecycle.child("integration.configure");
 
     // 1. Check if integration already exists
     const existing = await this.repository.getByTenantAndPlugin(input.tenantId, input.pluginId);
@@ -66,7 +85,7 @@ export class IntegrationInstallerImpl implements IntegrationInstaller {
           "Integration already exists with desiredStatus=active, validating"
         );
 
-        const validationResult = await this.validateAndActivate(existing);
+        const validationResult = await this.validateAndActivate(existing, lifecycle);
         return {
           integration: validationResult.integration,
           noOp: validationResult.noOp,
@@ -86,7 +105,7 @@ export class IntegrationInstallerImpl implements IntegrationInstaller {
       existing.configVersion += 1;
 
       const updated = await this.repository.update(existing, existing.configVersion - 1);
-      return await this.validateAndActivate(updated);
+      return await this.validateAndActivate(updated, lifecycle);
     }
 
     // 2. Create new integration record in DISCOVERED state
@@ -98,11 +117,13 @@ export class IntegrationInstallerImpl implements IntegrationInstaller {
     const integration = await this.repository.create(input);
 
     // 3. Validate and activate
-    return await this.validateAndActivate(integration);
+    await lifecycle.child("integration.validate");
+    return await this.validateAndActivate(integration, lifecycle);
   }
 
   private async validateAndActivate(
-    integration: TenantIntegration
+    integration: TenantIntegration,
+    lifecycle: LifecycleSpan,
   ): Promise<IntegrationTransitionResult> {
     const warnings: string[] = [];
     let current = integration;
@@ -122,7 +143,9 @@ export class IntegrationInstallerImpl implements IntegrationInstaller {
       await this.transitionTo(current, "validating");
       current = (await this.repository.getById(current.id))!;
 
-      // Resolve credentials
+      // Resolve credentials (under integration.validate's implicit parent)
+      await lifecycle.child("credential.resolve");
+
       if (current.credentialRef) {
         const credentials = await this.credentialProvider.get(
           current.tenantId,
@@ -137,6 +160,7 @@ export class IntegrationInstallerImpl implements IntegrationInstaller {
       }
 
       // Step 3: Health probe
+      await lifecycle.child("integration.health_check");
       if (current.credentialRef) {
         const health = await this.healthChecker.checkHealth(
           current.tenantId,
@@ -150,6 +174,9 @@ export class IntegrationInstallerImpl implements IntegrationInstaller {
       } else {
         warnings.push("Skipping health check - no credentials");
       }
+
+      await lifecycle.child("plugin.activate");
+      await lifecycle.child("capability.register");
 
       // Step 4: ACTIVE
       await this.transitionTo(current, "active");
@@ -178,6 +205,15 @@ export class IntegrationInstallerImpl implements IntegrationInstaller {
         now,
         null
       );
+
+      // Emit integration.degrade with the deterministic failure code, exactly
+      // as classified — the proof asserts failure taxonomy fidelity from the
+      // read side, never from this process's memory.
+      await lifecycle.child(
+        "integration.degrade",
+        undefined,
+        { failureCode, actualState: "degraded" },
+      ).catch(() => {}); // OTel emission must never mask the real failure
 
       throw new Error(
         `Integration install failed: ${String(error)}. Integration left in degraded state.`,

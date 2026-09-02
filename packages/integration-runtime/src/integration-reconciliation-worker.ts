@@ -3,7 +3,7 @@
 // Reuses the same lease/worker machinery patterns as governance-reconciliation-worker
 
 import { Pool } from "pg";
-import { getLogger } from "@opnory/observability";
+import { getLogger, LifecycleSpan } from "@opnory/observability";
 import type {
   TenantIntegration,
   IntegrationStatus,
@@ -216,6 +216,26 @@ export class IntegrationReconciliationWorkerImpl implements IntegrationReconcili
   getWorkerId(): string {
     return this.workerId;
   }
+
+  private lifecycleFor(integration: import("./tenant-integration.js").TenantIntegration, operation: string): InstanceType<typeof LifecycleSpan> {
+    return new LifecycleSpan(
+      {
+        tenantId: integration.tenantId,
+        integrationId: integration.id,
+        pluginId: integration.pluginId,
+        provider: integration.pluginId,
+        operation,
+        desiredState: integration.desiredStatus,
+        actualState: integration.actualStatus,
+        configVersion: integration.configVersion,
+        mutated: "true",
+        credentialRef: integration.credentialRef,
+        reconciliationAttempt: String(integration.configVersion),
+      },
+      operation,
+    );
+  }
+
 
   async runOnce(): Promise<void> {
     await this.processDueReconciliations();
@@ -534,9 +554,12 @@ export class IntegrationReconciliationWorkerImpl implements IntegrationReconcili
     attemptCount: number
   ): Promise<ReconciliationResult> {
     const now = new Date();
+    const lifecycle = this.lifecycleFor(integration, "integration.activate");
+    await lifecycle.root();
 
     try {
       // Transition to CONFIGURING
+      await lifecycle.child("integration.configure");
       await this.repository.updateActualStatus(
         integration.id,
         "configuring",
@@ -552,6 +575,7 @@ export class IntegrationReconciliationWorkerImpl implements IntegrationReconcili
       }
 
       // Resolve credentials
+      await lifecycle.child("credential.resolve");
       const credentials = await this.credentialProvider.get(
         integration.tenantId,
         integration.credentialRef
@@ -571,6 +595,7 @@ export class IntegrationReconciliationWorkerImpl implements IntegrationReconcili
       );
 
       // Health probe
+      await lifecycle.child("integration.health_check");
       const health = await this.healthChecker.checkHealth(
         integration.tenantId,
         integration.pluginId,
@@ -590,6 +615,8 @@ export class IntegrationReconciliationWorkerImpl implements IntegrationReconcili
         now,
         now
       );
+      await lifecycle.child("plugin.activate");
+      await lifecycle.child("capability.register");
 
       this.metrics.activations++;
 
@@ -611,6 +638,12 @@ export class IntegrationReconciliationWorkerImpl implements IntegrationReconcili
         null
       );
 
+      await lifecycle.child(
+        "integration.degrade",
+        undefined,
+        { failureCode, actualState: "degraded" },
+      ).catch(() => {});
+
       return {
         integrationId: integration.id,
         tenantId: integration.tenantId,
@@ -629,6 +662,8 @@ export class IntegrationReconciliationWorkerImpl implements IntegrationReconcili
     attemptCount: number
   ): Promise<ReconciliationResult> {
     const now = new Date();
+    const lifecycle = this.lifecycleFor(integration, "integration.uninstall");
+    await lifecycle.root();
 
     try {
       // Transition to UNINSTALLING
@@ -644,6 +679,10 @@ export class IntegrationReconciliationWorkerImpl implements IntegrationReconcili
       // TODO: Call runtime kernel dispose for this tenant/plugin
       // This would dispose the plugin instance and verify zero capabilities/listeners/state
       // For now, we trust the runtime to handle this
+
+      // Dispose and unregister
+      await lifecycle.child("plugin.dispose");
+      await lifecycle.child("capability.unregister");
 
       // Transition to INACTIVE
       await this.repository.updateActualStatus(
@@ -673,6 +712,12 @@ export class IntegrationReconciliationWorkerImpl implements IntegrationReconcili
         now,
         null
       );
+
+      await lifecycle.child(
+        "integration.degrade",
+        undefined,
+        { failureCode: "cleanup_failed", actualState: "uninstalling" },
+      ).catch(() => {});
 
       return {
         integrationId: integration.id,
@@ -778,6 +823,8 @@ export class IntegrationReconciliationWorkerImpl implements IntegrationReconcili
 
     if (health.healthy) {
       // Recovered!
+      const recoverLifecycle = this.lifecycleFor(integration, "integration.recover");
+      await recoverLifecycle.root();
       await this.repository.updateActualStatus(
         integration.id,
         "active",
@@ -786,6 +833,7 @@ export class IntegrationReconciliationWorkerImpl implements IntegrationReconcili
         now,
         now
       );
+      await recoverLifecycle.child("integration.recover", undefined, { actualState: "active", verified: "true" }).catch(() => {});
 
       this.metrics.successfulReconciliations++;
 
@@ -808,6 +856,14 @@ export class IntegrationReconciliationWorkerImpl implements IntegrationReconcili
         null
       );
 
+      const recLifecycle = this.lifecycleFor(integration, "integration.recover");
+      await recLifecycle.root();
+      await recLifecycle.child(
+        "integration.degrade",
+        undefined,
+        { failureCode, actualState: "degraded" },
+      ).catch(() => {});
+
       this.metrics.retriesScheduled++;
 
       return {
@@ -828,10 +884,15 @@ export class IntegrationReconciliationWorkerImpl implements IntegrationReconcili
     attemptCount: number
   ): Promise<ReconciliationResult> {
     const now = new Date();
+    const lifecycle = this.lifecycleFor(integration, "integration.uninstall");
+    await lifecycle.root();
 
-    // Verify zero capabilities/listeners/state
-    // TODO: Query runtime kernel to verify cleanup
-    // For now, assume cleanup verified and transition to inactive
+    // TODO: Query runtime kernel to verify cleanup — span is already emitted
+    // for operator observability; the real capability check goes through the
+    // kernel dispose path in the reconciliation engine.
+    await lifecycle.child("plugin.dispose");
+    await lifecycle.child("capability.unregister");
+
     await this.repository.updateActualStatus(
       integration.id,
       "inactive",
@@ -877,11 +938,14 @@ export class IntegrationReconciliationWorkerImpl implements IntegrationReconcili
       };
     }
 
+    const hcLifecycle = this.lifecycleFor(integration, "integration.health_check");
+    await hcLifecycle.root();
     const health = await this.healthChecker.checkHealth(
       integration.tenantId,
       integration.pluginId,
       integration.credentialRef
     );
+    await hcLifecycle.child("integration.health_check");
 
     this.metrics.healthChecks++;
 

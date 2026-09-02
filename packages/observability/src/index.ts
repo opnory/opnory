@@ -76,3 +76,9 @@ export function createTraceContext(parentSpanId?: string): TraceContext {
 }
 
 export type { LogLevel } from "@opnory/types";
+
+// OTel lifecycle spans
+export { emitSpan, isOtelEnabled } from "./otel.js";
+export type { OtelSpanInput } from "./otel.js";
+export { LifecycleSpan, isLifecycleOtelEnabled } from "./lifecycle-traces.js";
+export type { LifecycleAttributes } from "./lifecycle-traces.js";

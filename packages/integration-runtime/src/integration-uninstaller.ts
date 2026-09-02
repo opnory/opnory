@@ -2,7 +2,7 @@
 // Core-owned uninstall workflow for tenant integrations
 // State machine: ACTIVE → UNINSTALLING → INACTIVE (fail-closed)
 
-import { getLogger } from "@opnory/observability";
+import { getLogger, LifecycleSpan } from "@opnory/observability";
 import type {
   IntegrationTransitionResult,
   TenantIntegrationRepository,
@@ -62,6 +62,23 @@ export class IntegrationUninstallerImpl implements IntegrationUninstaller {
       throw new Error(`Integration not found for tenant ${tenantId}, plugin ${pluginId}`);
     }
 
+    const lifecycle = new LifecycleSpan(
+      {
+        tenantId,
+        integrationId: integration.id,
+        pluginId,
+        provider: pluginId,
+        operation: "integration.uninstall",
+        desiredState: "inactive",
+        actualState: integration.actualStatus,
+        configVersion: integration.configVersion,
+        mutated: "true",
+        credentialRef: integration.credentialRef,
+      },
+      "integration.uninstall",
+    );
+    await lifecycle.root();
+
     // 2. If already inactive, return no-op
     if (integration.desiredStatus === "inactive" && integration.actualStatus === "inactive") {
       logger.info(
@@ -104,6 +121,8 @@ export class IntegrationUninstallerImpl implements IntegrationUninstaller {
     // 5. Dispose runtime instance via kernel
     try {
       await this.disposeWithRetry(tenantId, pluginId);
+      await lifecycle.child("plugin.dispose");
+      await lifecycle.child("capability.unregister");
     } catch (error) {
       // If cleanup fails, leave in UNINSTALLING with failure reason
       const failureCode: IntegrationFailureCode = "cleanup_failed";
@@ -115,6 +134,12 @@ export class IntegrationUninstallerImpl implements IntegrationUninstaller {
         now,
         null
       );
+
+      await lifecycle.child(
+        "integration.degrade",
+        undefined,
+        { failureCode, actualState: "uninstalling" },
+      ).catch(() => {}); // OTel emission must never mask the real failure
 
       throw new Error(
         `Integration uninstall failed: ${String(error)}. Integration left in uninstalling state with cleanup_failed.`,
@@ -141,6 +166,12 @@ export class IntegrationUninstallerImpl implements IntegrationUninstaller {
     );
 
     const final = (await this.repository.getById(integration.id))!;
+
+    await lifecycle.child(
+      "integration.uninstall_confirm",
+      undefined,
+      { actualState: "inactive", verified: "true" },
+    ).catch(() => {});
 
     logger.info(
       { integrationId: final.id, tenantId, pluginId },
