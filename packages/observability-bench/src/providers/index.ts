@@ -20,11 +20,15 @@ const PHOENIX_PROJECT = process.env.PHOENIX_PROJECT ?? "default";
 
 const jaegerCapabilities: ProviderCapabilities = {
   traceLookup: true,
-  attributeFiltering: false, // no stable server-side tag filter on JSON query service
+  // Native tag-equality filtering proven against the real Phase 7 corpus:
+  // GET /api/traces?service=opnory&tag=opnory.tenant_hash:<h> returns only the
+  // matching tenant's traces (zero cross-tenant leak). Equality only — no
+  // range/regex operators, no OTel resource scoping.
+  attributeFiltering: true,
   aggregation: false,
   fullExport: false, // no governed bulk export
   pagination: false,
-  correlationLookup: false, // no correlation-indexed lookup
+  correlationLookup: false, // no correlation-indexed lookup (tag search is equality, not a join)
 };
 
 const tempoCapabilities: ProviderCapabilities = {

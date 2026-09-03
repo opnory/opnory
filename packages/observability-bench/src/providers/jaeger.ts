@@ -12,6 +12,7 @@
 // `unsupported`, never emulated client-side.
 
 import type { RetrievedSpan, TraceReader, QueryResult } from "../provider.js";
+import { createHash } from "node:crypto";
 
 interface JaegerTag {
   key: string;
@@ -136,21 +137,57 @@ export class JaegerReader implements TraceReader {
     windowStartEpochMs: number;
     windowEndEpochMs: number;
   }): Promise<QueryResult> {
-    // Jaeger has no server-side attribute filter for arbitrary tags on the
-    // JSON query service. Report unsupported (empty rows + a note) rather than
-    // emulate client-side. The benchmark must not credit a nonexistent primitive.
+    // Native server-side span-tag EQUALITY filter: Jaeger's JSON query service
+    // exposes `?service=&operation=&tag=key:value&start=&end=` (start/end in µs).
+    // The real Phase 7 corpus proved `tag=opnory.tenant_hash:<hash>` returns
+    // only the matching tenant's traces (zero cross-tenant leak; negative
+    // control → 0). This is tag equality only — no range/regex operators and
+    // no OTel "resource" scoping (Jaeger flattens everything to tags). Anything
+    // richer is reported unsupported rather than emulated.
+    const tenantHash = createHash("sha256")
+      .update(params.tenantId)
+      .digest("hex")
+      .slice(0, 16);
     const t0 = performance.now();
+
+    const q = new URLSearchParams({
+      service: "opnory",
+      limit: "1000",
+    });
+    q.append("tag", `opnory.tenant_hash:${tenantHash}`);
+    q.append("tag", `opnory.provider:${params.provider}`);
+    // outcome → the lifecycle corpus encodes it as actual_state (equality),
+    // because the Phase 7 spans carry no opnory.final_outcome attribute.
+    const state = params.outcome === "failed" ? "degraded" : "active";
+    q.append("tag", `opnory.actual_state:${state}`);
+    if (params.windowStartEpochMs > 0 && params.windowEndEpochMs > 0) {
+      q.set("start", String(params.windowStartEpochMs * 1000)); // ms → µs (Jaeger)
+      q.set("end", String(params.windowEndEpochMs * 1000));
+    }
+
+    const res = await fetch(`${this.baseUrl}/api/traces?${q.toString()}`);
+    const txt = await res.text();
+    const ms = performance.now() - t0;
+    if (!res.ok) throw new Error(`jaeger ${res.status}: ${txt.slice(0, 200)}`);
+
+    const resp = JSON.parse(txt) as JaegerTraceResponse;
+    const rows: RetrievedSpan[] = [];
+    for (const trace of resp.data ?? []) {
+      for (const span of trace.spans) {
+        rows.push(toRetrievedSpan(span, trace.processes));
+      }
+    }
     return {
       providerName: this.providerName,
       query: {
         kind: "filtered_scan",
-        description: `tenant=${params.tenantId} provider=${params.provider} outcome=${params.outcome}`,
+        description: `tenant_hash=${tenantHash} provider=${params.provider} state=${state}`,
       },
-      rows: [],
-      queryTimeMs: 0,
-      wallTimeMs: performance.now() - t0,
+      rows,
+      queryTimeMs: ms,
+      wallTimeMs: ms,
       rateLimited: false,
-      responseBytes: 0,
+      responseBytes: Buffer.byteLength(txt),
       paginated: false,
       pageCount: 1,
     };
