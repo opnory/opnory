@@ -1,0 +1,19 @@
+# Caddy reverse proxy with basic auth in front of Tempo.
+# Tempo is private on the compose network; this is the ONLY host-facing surface.
+# The basic-auth hash comes from the ephemeral .env (never committed).
+
+:8080 {
+    basicauth {
+        {$TEMPO_BASIC_AUTH_HASH}
+    }
+
+    handle /api/* {
+        reverse_proxy tempo:3200
+    }
+    handle /v1/* {
+        reverse_proxy tempo:4318
+    }
+    handle {
+        respond "not found" 404
+    }
+}
