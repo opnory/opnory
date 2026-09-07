@@ -131,14 +131,14 @@ failure-taxonomy) has been exercised against Honeycomb.
 | Pricing | events/month-based (not GB-volume like Grafana Cloud Traces) |
 | Runtime parity / isolation / redaction / visibility latency | **UNPROVEN** |
 
-### Honeycomb admission status — commercially blocked, not technically failed
+### Honeycomb admission status — write-only proven, read path commercially blocked
 
 ```text
 Honeycomb
-Evidence state: DOCS / UNPROVEN
+Evidence state: HOSTED LIVE — WRITE ONLY
 
-OTLP ingest:                  docs-supported
-Native Query Data API:        docs-supported
+OTLP ingest:                  HOSTED LIVE (HTTP 200, real emitter)
+Native Query Data API:        BLOCKED BY PLAN (Run queries unavailable)
 Run Queries permission:       Enterprise-only
 Hosted read proof:            BLOCKED BY PLAN
 Tenant isolation:             UNPROVEN
@@ -151,11 +151,12 @@ Blocker observed:  2026-09-07
 Resolution path:   Enterprise trial / sales enablement
 ```
 
-This is a **commercial** blocker (`Run Queries` is not available on the Free/Pro
-self-serve plan), not evidence of backend failure. Honeycomb has not been
-technically exercised; there is no parity/isolation/redaction result to report
-against it. See the trial checklist in
-`docs/honeycomb-enterprise-trial-checklist.md`.
+This is a **commercial** blocker (`Run queries` is not available on the Free/Pro
+self-serve plan), not evidence of backend failure. The ingest path is proven
+`HOSTED LIVE — WRITE ONLY` via the real emitter
+(`docs/observability-honeycomb-hosted-write-only.md`); no parity/isolation/redaction
+result exists yet because the native read API is not reachable. See the trial
+checklist in `docs/honeycomb-enterprise-trial-checklist.md`.
 
 ### Honeycomb-specific measurement caveat
 
