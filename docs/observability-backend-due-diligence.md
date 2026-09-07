@@ -131,6 +131,32 @@ failure-taxonomy) has been exercised against Honeycomb.
 | Pricing | events/month-based (not GB-volume like Grafana Cloud Traces) |
 | Runtime parity / isolation / redaction / visibility latency | **UNPROVEN** |
 
+### Honeycomb admission status — commercially blocked, not technically failed
+
+```text
+Honeycomb
+Evidence state: DOCS / UNPROVEN
+
+OTLP ingest:                  docs-supported
+Native Query Data API:        docs-supported
+Run Queries permission:       Enterprise-only
+Hosted read proof:            BLOCKED BY PLAN
+Tenant isolation:             UNPROVEN
+Redaction:                    UNPROVEN
+Failure taxonomy:             UNPROVEN
+Write→queryable latency:      UNPROVEN
+ADR 0009 admission:           NOT YET ELIGIBLE
+
+Blocker observed:  2026-09-07
+Resolution path:   Enterprise trial / sales enablement
+```
+
+This is a **commercial** blocker (`Run Queries` is not available on the Free/Pro
+self-serve plan), not evidence of backend failure. Honeycomb has not been
+technically exercised; there is no parity/isolation/redaction result to report
+against it. See the trial checklist in
+`docs/honeycomb-enterprise-trial-checklist.md`.
+
 ### Honeycomb-specific measurement caveat
 
 Honeycomb's query-result API is **asynchronous** (submit → poll for result).
@@ -150,14 +176,19 @@ rather than conflating the two into one number.
 
 ## 4. Open items blocking ADR 0009
 
-1. Hosted **Grafana Cloud Traces** account + ingest endpoint + read-scoped
-   credentials (secrets; none held in this repo).
+1. ~~Hosted **Grafana Cloud Traces** account + ingest endpoint + read-scoped
+   credentials~~ **RESOLVED** — `HOSTED LIVE`, six hard gates passed twice
+   (`docs/observability-grafana-cloud-hosted-proof.md`).
 2. Hosted **Honeycomb** account + API key/team/dataset scope + ingest endpoint
-   (secrets; none held in this repo).
-3. Replay the exact Phase 7 corpus and run the five hard-gate scenarios against
-   each hosted endpoint (unchanged methodology).
+   (secrets; none held in this repo) — **commercially blocked** (`Run Queries`
+   is Enterprise-only; see trial checklist
+   `docs/honeycomb-enterprise-trial-checklist.md`).
+3. ~~Replay the exact Phase 7 corpus and run the five hard-gate scenarios against
+   each hosted endpoint~~ **DONE for Grafana Cloud**; still pending for Honeycomb.
 4. For Honeycomb specifically: measure write→queryable visibility and query
    execution completion **separately** (async query API).
-5. Hosted write→query visibility measured independently for Grafana Cloud.
+5. ~~Hosted write→query visibility measured independently for Grafana Cloud~~
+   **DONE** (~32s visibility, query latency measured separately; see the hosted
+   proof artifact).
 6. Contract review for retention/deletion/export specifics (both hosted
    candidates).
