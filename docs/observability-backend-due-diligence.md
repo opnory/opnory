@@ -24,7 +24,7 @@ prevent vendor documentation from acquiring the epistemic weight of runtime proo
 | Candidate | Type | Evidence state | Why in scope |
 |---|---|---|---|
 | **Jaeger (self-host)** | OSS tracing (parity baseline) | `LOCAL LIVE` | characterized locally; corrected capability (see `observability-bakeoff-corrections.md`) |
-| **Grafana OSS + Tempo OSS (self-host)** | self-hosted OSS stack (separate candidate from Grafana Cloud) | `LOCAL LIVE` (single-binary) → `SELF-HOSTED LIVE` pending | TEMPO is the trace storage/query backend; Grafana OSS is the UI. Distinct from Grafana Cloud (hosted) and from the local single-binary Tempo baseline: the production dimensions (object storage, auth, restart/retention, TLS, backups) are UNPROVEN |
+| **Grafana OSS + Tempo OSS (self-host)** | self-hosted OSS stack (separate candidate from Grafana Cloud) | `SELF-HOSTED LIVE` (single-node; not production-ready) | Tempo = trace storage/query backend; Grafana OSS = UI. Distinct from Grafana Cloud and the local single-binary baseline. Functional + auth + object-store-recovery + restart determinism proven (`ops/self-hosted/README.md`); 9 production dimensions still UNPROVEN |
 | **Grafana Cloud Traces** | managed Tempo (TraceQL) | `HOSTED LIVE` | the hosted form of the backend whose local proof already passed 5/5 |
 | **Honeycomb** | independent SaaS tracing (columnar, event-based) | `HOSTED LIVE — WRITE ONLY` (read `BLOCKED BY PLAN`) | a genuinely different SaaS architecture, not another Tempo |
 | **Phoenix** | OSS tracing/evals | `LOCAL LIVE` | hard-gate FAIL on tenant isolation (ADR 0007) — excluded until resolved |
