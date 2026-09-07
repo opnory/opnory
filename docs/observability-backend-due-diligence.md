@@ -24,8 +24,9 @@ prevent vendor documentation from acquiring the epistemic weight of runtime proo
 | Candidate | Type | Evidence state | Why in scope |
 |---|---|---|---|
 | **Jaeger (self-host)** | OSS tracing (parity baseline) | `LOCAL LIVE` | characterized locally; corrected capability (see `observability-bakeoff-corrections.md`) |
-| **Grafana Cloud Traces** | managed Tempo (TraceQL) | `DOCS` (hosted runtime `UNPROVEN`) | the hosted form of the backend whose local proof already passed 5/5 |
-| **Honeycomb** | independent SaaS tracing (columnar, event-based) | `DOCS` / `UNPROVEN` | a genuinely different SaaS architecture, not another Tempo |
+| **Grafana OSS + Tempo OSS (self-host)** | self-hosted OSS stack (separate candidate from Grafana Cloud) | `LOCAL LIVE` (single-binary) → `SELF-HOSTED LIVE` pending | TEMPO is the trace storage/query backend; Grafana OSS is the UI. Distinct from Grafana Cloud (hosted) and from the local single-binary Tempo baseline: the production dimensions (object storage, auth, restart/retention, TLS, backups) are UNPROVEN |
+| **Grafana Cloud Traces** | managed Tempo (TraceQL) | `HOSTED LIVE` | the hosted form of the backend whose local proof already passed 5/5 |
+| **Honeycomb** | independent SaaS tracing (columnar, event-based) | `HOSTED LIVE — WRITE ONLY` (read `BLOCKED BY PLAN`) | a genuinely different SaaS architecture, not another Tempo |
 | **Phoenix** | OSS tracing/evals | `LOCAL LIVE` | hard-gate FAIL on tenant isolation (ADR 0007) — excluded until resolved |
 
 ## Candidate-admission rule
@@ -38,12 +39,13 @@ rule; the hosted run through the ADR 0007 hard gates does.
 
 ## Decision set
 
-This is a three-way comparison, deliberately not expanded further:
+This is a four-way comparison:
 
 ```text
-Jaeger                 local native baseline        LOCAL LIVE
-Grafana Cloud Traces   managed Tempo candidate      DOCS / hosted UNPROVEN
-Honeycomb              independent SaaS architecture DOCS / hosted UNPROVEN
+Jaeger                 independent OSS baseline     LOCAL LIVE
+Grafana OSS + Tempo    self-hosted OSS stack        LOCAL LIVE → SELF-HOSTED LIVE pending
+Grafana Cloud Traces   managed Tempo candidate      HOSTED LIVE
+Honeycomb              independent SaaS architecture HOSTED LIVE — WRITE ONLY (read BLOCKED BY PLAN)
 ```
 
 This document records the **operational** criteria the local benchmark could not
@@ -166,14 +168,55 @@ execution completion` MUST be measured **separately** — mirroring ADR 0007's
 existing separation of freshness (write→readable) from query latency (execution),
 rather than conflating the two into one number.
 
+## 2b. Grafana OSS + Tempo OSS (self-host) — operational facts
+
+**Evidence state:** `LOCAL LIVE` (single-binary Tempo) → `SELF-HOSTED LIVE` pending.
+
+The existing local Tempo baseline (`packages/observability-bench/docker/tempo.yaml`)
+is a **single-binary, `local` filesystem-backed, no-auth** deployment (no TLS, no
+object storage, `block_retention: 1h`). That proves *functional trace behavior*
+only. It does **not** prove the production dimensions a self-hosted deployment
+must satisfy:
+
+```text
+Self-hosted promotion criteria (all UNPROVEN today):
+
+o durable object storage (S3-compatible)          UNPROVEN
+o restart / data-retention behavior               UNPROVEN
+o authenticated access (auth reverse-proxy/SSO)   UNPROVEN (Tempo has NO built-in auth)
+o backups / restoration                           UNPROVEN
+o production TLS                                  UNPROVEN
+o multi-instance / HA operation                   UNPROVEN
+o resource sizing                                 UNPROVEN
+o upgrade procedure                               UNPROVEN
+o failure recovery                                UNPROVEN
+```
+
+**Licensing:** Grafana OSS and Tempo OSS are both released under **AGPLv3**. This
+does **not** automatically make Opnory (BSD-2-Clause) AGPL when the components are
+operated as separate services, but the components must be kept cleanly separated,
+and any distribution of modified builds or tight incorporation of their source
+requires AGPL review before release.
+
+### Note on the candidate split
+
+"Grafana OSS + Tempo OSS" is a **distinct candidate** from Grafana Cloud Traces and
+from the local single-binary Tempo baseline. Tempo is the trace storage/query
+backend; Grafana OSS is the visualization/query UI with native Tempo datasource
+support. The same frozen Phase 7 corpus and hard gates apply, but the proof
+question is different: *can Opnory operate its own production-grade OSS
+observability backend without Grafana Cloud?*
+
 ## 3. Non-claims (explicit)
 
-- None of the above is runtime proof. It is vendor documentation, dated
-  2026-09-02.
+- Vendor documentation (pricing/compliance/region facts) is dated 2026-09-02 and is
+  **not** runtime proof.
 - The local Tempo ~7s write→query latency (ADR 0008) is **not** a hosted
   prediction and must not be carried into the selection as one.
-- No production-backend selection is made here. ADR 0009 requires hosted runtime
-  evidence through the ADR 0007 hard gates.
+- No production-backend selection is made here. ADR 0009 requires hosted (or
+  self-hosted-production) runtime evidence through the ADR 0007 hard gates.
+- The self-hosted Grafana OSS + Tempo OSS candidate is `LOCAL LIVE` only; its
+  `SELF-HOSTED LIVE` promotion is pending the production dimensions in §2b.
 
 ## 4. Open items blocking ADR 0009
 
@@ -193,3 +236,8 @@ rather than conflating the two into one number.
    proof artifact).
 6. Contract review for retention/deletion/export specifics (both hosted
    candidates).
+7. **Self-hosted Grafana OSS + Tempo OSS**: begin the `SELF-HOSTED LIVE` proof —
+   deploy with S3-compatible object storage + auth reverse-proxy, replay the
+   corpus twice, test restart persistence and restoration (see §2b promotion
+   criteria). Scope (MinIO vs real bucket, depth of production dimensions)
+   to be confirmed.
