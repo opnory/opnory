@@ -39,14 +39,12 @@ this to Tempo's minimum S3 operations (`PutObject`, `GetObject`, `ListBucket`,
 `DeleteObject`, `GetObjectTagging`, `PutObjectTagging`) is a **follow-up hardening
 item — UNPROVEN**, not silently treated as production-ready.
 
-## Operational finding (durability vs. search visibility)
+## Operational finding: TraceQL search needs an explicit time window
 
-Trace **retrieval by ID** (`GET /api/traces/{id}`) can succeed before TraceQL
-**search** (`GET /api/search`) is ready. In this single-node stack the recovered
-block is queryable by trace ID immediately, but the TraceQL search index did not
-expose it within the observation window. Record durability/trace-read availability
-separately from search visibility (same discipline as the write→queryable split in
-the Grafana Cloud leg).
+Tempo's TraceQL search (`/api/search`) defaults to a short time window; old spans (~3.7 h)
+fall outside it and an unwindowed query returns 0 even though the traces are durable and
+queryable by ID. Always bracket TraceQL with an explicit `start`/`end` around the span
+timestamp. Trace-by-ID retrieval (`GET /api/traces/{id}`) has no default-window behavior.
 
 ## Evidence
 

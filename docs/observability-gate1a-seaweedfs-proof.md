@@ -11,7 +11,7 @@
 | Corpus trace retrieval (trace-by-ID) | **PASS** (7/7 + probe) |
 | Attribute integrity | **PASS** |
 | Redaction | **PASS** |
-| Tenant isolation (TraceQL select) | **UNPROVEN** (search index not exposed within observation window) |
+| Tenant isolation (TraceQL select) | **PASS** (positive 7, negative 0) |
 
 `SELF-HOSTED LIVE — SINGLE NODE`.
 
@@ -46,29 +46,38 @@ Probe trace `cdf9a830fa2048c49c1c2fbda19f011a` (`integration.install`) → 200.
 Retrieved span attributes confirm `opnory.tenant_hash`, `opnory.operation`,
 `opnory.provider`, `service.name` integrity (attribute integrity PASS).
 
-## Tenant isolation — UNPROVEN
+## Tenant isolation — PASS
 
-Trace-by-ID retrieval proves durability and attribute integrity, but does **not**
-prove tenant-scoped query selectivity. The TraceQL search (`/api/search`) returned
-0 spans for the expected tenant hash within the observation window — the recovered
-block (`metas=1`, `compactedMetas=0`) was readable by trace ID but not yet exposed
-through the TraceQL search index.
+Tenant-scoped query selectivity is demonstrated through TraceQL, using an **explicit
+`start`/`end` window** bracketing the recovered spans (epoch ~1788852891). `opnory.tenant_hash`
+is a **resource** attribute (confirmed in the payload: resource attr present, span attr empty).
 
-Positive control `{.opnory.tenant_hash="tenant-gate1a-mt"}` → 0 (expected >0).
-For that reason tenant isolation is recorded **UNPROVEN**, not PASS, pending
-search-index availability. This is a separate, follow-up search/index lifecycle
-investigation — not papered over.
+| TraceQL query (explicit window) | Traces returned | Expected |
+|---|---|---|
+| `{}` (unconditional) | 8 | 7 corpus + 1 probe |
+| `{.opnory.tenant_hash="tenant-gate1a-mt"}` | 7 | 7 corpus |
+| `{.opnory.tenant_hash="probe-gate1a"}` | 1 | 1 probe |
+| `{.opnory.tenant_hash="deadbeefdeadbeef"}` | 0 | 0 (negative control) |
+
+Every returned trace was re-fetched by ID and confirmed to carry the requested
+`opnory.tenant_hash` — no cross-tenant leakage.
 
 ## Redaction — PASS
 
 A scan of all retrieved span JSON for the rotated credential substrings found zero
 leaks (`leakedTokens: []`).
 
-## Operational finding: durability vs. search visibility
+## Operational finding: TraceQL search requires an explicit time window
 
-Trace retrieval by ID can succeed before TraceQL search/indexing is ready. Durability
-and trace-read availability must be recorded separately from search visibility
-(mirroring the write→queryable latency split in the Grafana Cloud leg).
+Tempo's TraceQL search (`/api/search`) defaults to a short time window that **excluded**
+the recovered spans (~3.7 h old), so an unwindowed tenant query returned 0 and initially
+looked like "search index not built." The traces were always durable and queryable — the
+query was the problem, not the backend. Always bracket TraceQL with an explicit
+`start`/`end` around the span timestamp. Trace-by-ID retrieval has no such default-window
+behavior, which is why it succeeded immediately.
+
+This supersedes the earlier "durability vs. search visibility" note: there was no
+separate index lifecycle delay here — only a query-window omission.
 
 ## Root-cause diagnosis (corrected)
 
