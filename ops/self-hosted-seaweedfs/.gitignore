@@ -1,0 +1,6 @@
+# Ephemeral local-only credentials + params for the Gate 1A SeaweedFS proof.
+# NEVER commit these files. Values are generated at compose time; see README.
+.env
+.env.*
+s3.json
+secrets/
