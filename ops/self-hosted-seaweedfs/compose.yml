@@ -4,7 +4,7 @@
 # Credentials are ephemeral/local-only, injected via .env + s3.json (gitignored).
 services:
   seaweedfs:
-    image: chrislusf/seaweedfs:latest
+    image: chrislusf/seaweedfs@sha256:fc9f76fa993ad69966ffeb2f65d0318fcae39c6f8e20cf68ef7b3a5cb97769e5
     command: ["server", "-s3", "-s3.config=/etc/seaweedfs/s3.json"]
     environment:
       WEED_JWT_FILER_SIGNING_KEY: ${SEAWEEDFS_SIGNING_KEY}

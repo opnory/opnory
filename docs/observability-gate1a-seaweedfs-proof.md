@@ -98,5 +98,7 @@ production-ready. See `ops/self-hosted-seaweedfs/README.md`.
 
 ## Stack
 
-`ops/self-hosted-seaweedfs/` — SeaweedFS (`server -s3`) + Tempo OSS 2.5.0. Credentials
+`ops/self-hosted-seaweedfs/` — SeaweedFS (pinned digest
+`sha256:fc9f76fa993ad69966ffeb2f65d0318fcae39c6f8e20cf68ef7b3a5cb97769e5`, the exact build
+that produced this evidence; single-node `server -s3`) + Tempo OSS 2.5.0. Credentials
 are gitignored (`.env`, `s3.json`); only `s3.json.example` is committed as a template.

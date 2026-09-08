@@ -5,8 +5,10 @@ production-hardening criteria: `docs/observability-production-hardening-criteria
 
 ## Stack
 
-- **SeaweedFS** (`chrislusf/seaweedfs:latest`, `server -s3`) — single-node S3 API on
-  the private compose network (port 8333). Replaces MinIO per ADR 0010.
+- **SeaweedFS** — pinned to the exact image digest that produced the Gate 1A evidence:
+  `chrislusf/seaweedfs@sha256:fc9f76fa993ad69966ffeb2f65d0318fcae39c6f8e20cf68ef7b3a5cb97769e5`
+  (single-node `server -s3`, S3 API on private port 8333). Structural reproducibility: a
+  rerun of this commit executes the identical build, not whatever `:latest` points at.
 - **Tempo OSS** (`grafana/tempo:2.5.0`) — ingest + query private on the network; S3
   backend `seaweedfs:8333`, `forcepathstyle: true`.
 
