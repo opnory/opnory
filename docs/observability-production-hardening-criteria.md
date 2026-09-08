@@ -30,14 +30,32 @@ criteria are the next, separate leg.
 
 ## The nine evidence gates
 
-### 1. Real object storage
+### 1A. Local OSS object-store durability
 
-**PASS when:** traces are written to a production-class S3-compatible or cloud
-object store; all Tempo-local state is destroyed; a fresh Tempo deployment
-retrieves historical traces solely from object storage.
+**Target:** SeaweedFS (self-hostable OSS, native S3 API).
 
-*(Single-node MinIO was a test vehicle for S3 semantics, not a production
-storage claim.)*
+**PASS when:** Tempo writes through the SeaweedFS S3 API; historical traces become
+durable in SeaweedFS; **all** Tempo-local WAL/cache/state is destroyed; a fresh Tempo
+deployment is created against the preserved SeaweedFS state; and historical traces remain
+retrievable through Tempo's native read API, with tenant isolation and redaction intact.
+
+**Evidence classification:** `SELF-HOSTED LIVE — SINGLE NODE`.
+
+**Explicit non-claim:** this does **not** prove production storage HA/durability.
+
+### 1B. Production object-store durability
+
+**Target:** not yet selected (deferred). Candidate backend must be OSS, self-hostable,
+S3-compatible, multi-node, replicated and/or erasure-coded, and capable of surviving a
+real storage-node loss.
+
+**PASS when:** a multi-node deployment runs on distinct failure domains; an actual node
+loss occurs while writes/reads continue or recover within budget; no loss of
+already-durable traces; rebuild/rebalance is demonstrated; and destructive
+Tempo-local-state recovery still succeeds.
+
+**Candidates (undecided):** SeaweedFS distributed, Ceph RGW, or another qualifying OSS
+backend. This gate does **not** preselect a winner.
 
 ### 2. TLS
 

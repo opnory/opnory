@@ -1,0 +1,43 @@
+# SeaweedFS + Tempo OSS — Gate 1A local object-store durability proof.
+# Tempo is PRIVATE on the compose network. SeaweedFS is the S3-compatible
+# object store (replacing MinIO per ADR 0010: provider-neutral, self-hostable).
+# Credentials are ephemeral/local-only, injected via .env + s3.json (gitignored).
+services:
+  seaweedfs:
+    image: chrislusf/seaweedfs@sha256:fc9f76fa993ad69966ffeb2f65d0318fcae39c6f8e20cf68ef7b3a5cb97769e5
+    command: ["server", "-s3", "-s3.config=/etc/seaweedfs/s3.json"]
+    environment:
+      WEED_JWT_FILER_SIGNING_KEY: ${SEAWEEDFS_SIGNING_KEY}
+      WEED_JWT_FILER_SIGNING_READ_KEY: ${SEAWEEDFS_SIGNING_KEY}
+      WEED_S3_ACCESS_KEY: ${SEAWEEDFS_ACCESS_KEY}
+      WEED_S3_SECRET_KEY: ${SEAWEEDFS_SECRET_KEY}
+    volumes:
+      - seaweedfs-data:/data
+      - ./s3.json:/etc/seaweedfs/s3.json:ro
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8333/"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+    networks: [tempo-net]
+
+  tempo:
+    image: grafana/tempo:2.5.0
+    command: ["-config.file=/etc/tempo.yaml", "-config.expand-env=true"]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml:ro
+    environment:
+      S3_ACCESS_KEY: ${SEAWEEDFS_ACCESS_KEY}
+      S3_SECRET_KEY: ${SEAWEEDFS_SECRET_KEY}
+    depends_on:
+      seaweedfs:
+        condition: service_healthy
+    # NO host port: private on the network.
+    networks: [tempo-net]
+
+volumes:
+  seaweedfs-data:
+
+networks:
+  tempo-net:
+    driver: bridge
