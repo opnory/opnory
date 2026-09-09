@@ -1,14 +1,31 @@
 {
   "identities": [
     {
-      "name": "anonymous",
+      "name": "admin",
       "credentials": [
         {
-          "accessKey": "${SEAWEEDFS_ACCESS_KEY}",
-          "secretKey": "${SEAWEEDFS_SECRET_KEY}"
+          "accessKey": "${SEAWEEDFS_ADMIN_ACCESS_KEY}",
+          "secretKey": "${SEAWEEDFS_ADMIN_SECRET_KEY}"
         }
       ],
-      "actions": ["Admin"]
+      "actions": [
+        "Admin"
+      ]
+    },
+    {
+      "name": "tempo",
+      "credentials": [
+        {
+          "accessKey": "${SEAWEEDFS_TEMPO_ACCESS_KEY}",
+          "secretKey": "${SEAWEEDFS_TEMPO_SECRET_KEY}"
+        }
+      ],
+      "actions": [
+        "Read:tempo-traces",
+        "Write:tempo-traces",
+        "List:tempo-traces",
+        "Tagging:tempo-traces"
+      ]
     }
   ]
 }
