@@ -30,16 +30,17 @@ services:
       seaweedfs:
         condition: service_healthy
     environment:
-      AWS_ACCESS_KEY_ID: ${SEAWEEDFS_ACCESS_KEY}
-      AWS_SECRET_ACCESS_KEY: ${SEAWEEDFS_SECRET_KEY}
+      AWS_ACCESS_KEY_ID: ${SEAWEEDFS_ADMIN_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${SEAWEEDFS_ADMIN_SECRET_KEY}
       AWS_REGION: us-east-1
       AWS_ENDPOINT_URL: http://seaweedfs:8333
       AWS_EC2_METADATA_DISABLED: "true"
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >
-        aws s3api create-bucket --bucket tempo-traces 2>&1 || true;
-        exit 0
+        aws s3api head-bucket --bucket tempo-traces 2>/dev/null ||
+        aws s3api create-bucket --bucket tempo-traces;
+        aws s3api head-bucket --bucket tempo-traces
     networks: [tempo-net]
 
   tempo:
