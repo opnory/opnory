@@ -11,13 +11,34 @@ COMPOSE_FILE="${COMPOSE_DIR}/compose.yml"
 ENV_FILE="${COMPOSE_DIR}/.env"
 S3_JSON_FILE="${COMPOSE_DIR}/s3.json"
 
-TRACE_CORPUS_FILE="${COMPOSE_DIR}/gate1a-evidence.json"
 TEMPO_OTLP_ENDPOINT="http://localhost:4318/v1/traces"
 TEMPO_API_ENDPOINT="http://localhost:3200"
 SEAWEEDFS_S3_ENDPOINT="http://localhost:8333"
 
 CONTAINER_NAMES=("seaweedfs" "bootstrap-bucket" "tempo")
 VOLUME_NAME="seaweedfs-data"
+
+BASELINE_MODE=false
+
+# ========= ARGUMENT PARSING =========
+usage() {
+  cat <<EOF
+Usage: $0 [--baseline]
+
+--baseline    Run baseline verification against current working-tree config (admin identity + bootstrap-bucket).
+              Skips credential negative controls (covered only after least-privilege hardening).
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --baseline) BASELINE_MODE=true ;;
+    -h|--help) usage ;;
+    *) die "Unknown option: $1" ;;
+  esac
+  shift
+done
 
 # ========= HELPERS =========
 log() { echo "[$(date '+%H:%M:%S')] $*"; }
@@ -41,8 +62,15 @@ check_prereqs() {
   require_env SEAWEEDFS_ACCESS_KEY
   require_env SEAWEEDFS_SECRET_KEY
   require_env SEAWEEDFS_SIGNING_KEY
-  require_env SEAWEEDFS_TEMPO_ACCESS_KEY
-  require_env SEAWEEDFS_TEMPO_SECRET_KEY
+  if [[ "${BASELINE_MODE}" == "true" ]]; then
+    # Baseline: Tempo uses admin creds (single identity), no SEAWEEDFS_TEMPO_* required
+    require_env SEAWEEDFS_ACCESS_KEY
+    require_env SEAWEEDFS_SECRET_KEY
+    log "BASELINE MODE: using admin credentials for Tempo; credential negative controls SKIPPED"
+  else
+    require_env SEAWEEDFS_TEMPO_ACCESS_KEY
+    require_env SEAWEEDFS_TEMPO_SECRET_KEY
+  fi
   ok "Prerequisites satisfied"
 }
 
@@ -135,6 +163,7 @@ query_traceql() {
 # ========= MAIN VERIFICATION =========
 main() {
   log "=== Gate 1A Durability Verification Started ==="
+  [[ "${BASELINE_MODE}" == "true" ]] && log "BASELINE MODE: credential negative controls will be SKIPPED"
   check_prereqs
 
   # --- PHASE 1: START STACK ---
@@ -184,14 +213,13 @@ main() {
   for tid in "${trace_ids[@]}"; do
     local result
     result=$(query_trace_by_id "${tid}")
-    echo "${result}" | jq -e '.spans[0].traceID == "'"${tid}"'"' >/dev/null || die "Trace ${tid} not found by ID"
+    echo "${result}" | jq -e --arg t "${tid}" '.spans[0].traceID == $t' >/dev/null || die "Trace ${tid} not found by ID"
     ok "Trace ${tid} retrieved by ID"
   done
 
   # --- PHASE 8: EXPLICIT-WINDOW TRACEQL POSITIVE CONTROL ---
   local search_start=$((emit_time - 60))
   local search_end=$((emit_time + 60))
-  local search_window="${search_start}000000000,${search_end}000000000"
   log "TraceQL positive control (tenant-a, explicit window)..."
   local result
   result=$(query_traceql '{.service.name = "gate1a-verifier" && .test.tenant = "tenant-a"}' "${search_start}000000000" "${search_end}000000000")
@@ -215,34 +243,38 @@ main() {
   [[ "${secret_val}" != "REDACT_ME" ]] || die "Secret not redacted (found literal REDACT_ME)"
   ok "Redaction assertion passed (secret value not present in stored trace)"
 
-  # --- PHASE 11: NEGATIVE CONTROLS FOR TEMPO CREDENTIAL ---
-  log "Running credential negative controls (Tempo credential must be bucket-scoped)..."
-  export AWS_ACCESS_KEY_ID="${SEAWEEDFS_TEMPO_ACCESS_KEY}"
-  export AWS_SECRET_ACCESS_KEY="${SEAWEEDFS_TEMPO_SECRET_KEY}"
-  export AWS_REGION=us-east-1
-  export AWS_ENDPOINT_URL="${SEAWEEDFS_S3_ENDPOINT}"
-  export AWS_EC2_METADATA_DISABLED="true"
+  # --- PHASE 11: NEGATIVE CONTROLS FOR TEMPO CREDENTIAL (SKIPPED IN BASELINE) ---
+  if [[ "${BASELINE_MODE}" == "true" ]]; then
+    log "BASELINE MODE: Skipping credential negative controls (11a-11c) — covered only after hardening"
+  else
+    log "Running credential negative controls (Tempo credential must be bucket-scoped)..."
+    export AWS_ACCESS_KEY_ID="${SEAWEEDFS_TEMPO_ACCESS_KEY}"
+    export AWS_SECRET_ACCESS_KEY="${SEAWEEDFS_TEMPO_SECRET_KEY}"
+    export AWS_REGION=us-east-1
+    export AWS_ENDPOINT_URL="${SEAWEEDFS_S3_ENDPOINT}"
+    export AWS_EC2_METADATA_DISABLED="true"
 
-  # 11a: Cannot create bucket
-  log "  11a: Attempting create-bucket with Tempo cred (expect denial)..."
-  if aws s3api create-bucket --bucket tempo-traces-2 --endpoint-url "${SEAWEEDFS_S3_ENDPOINT}" 2>/dev/null; then
-    die "Negative control failed: Tempo credential was able to create bucket"
-  fi
-  ok "  Tempo credential correctly denied create-bucket"
+    # 11a: Cannot create bucket
+    log "  11a: Attempting create-bucket with Tempo cred (expect denial)..."
+    if aws s3api create-bucket --bucket tempo-traces-2 --endpoint-url "${SEAWEEDFS_S3_ENDPOINT}" 2>/dev/null; then
+      die "Negative control failed: Tempo credential was able to create bucket"
+    fi
+    ok "  Tempo credential correctly denied create-bucket"
 
-  # 11b: Cannot delete bucket
-  log "  11b: Attempting delete-bucket with Tempo cred (expect denial)..."
-  if aws s3api delete-bucket --bucket tempo-traces --endpoint-url "${SEAWEEDFS_S3_ENDPOINT}" 2>/dev/null; then
-    die "Negative control failed: Tempo credential was able to delete bucket"
-  fi
-  ok "  Tempo credential correctly denied delete-bucket"
+    # 11b: Cannot delete bucket
+    log "  11b: Attempting delete-bucket with Tempo cred (expect denial)..."
+    if aws s3api delete-bucket --bucket tempo-traces --endpoint-url "${SEAWEEDFS_S3_ENDPOINT}" 2>/dev/null; then
+      die "Negative control failed: Tempo credential was able to delete bucket"
+    fi
+    ok "  Tempo credential correctly denied delete-bucket"
 
-  # 11c: Cannot access different bucket
-  log "  11c: Attempting head-bucket on different bucket with Tempo cred (expect denial)..."
-  if aws s3api head-bucket --bucket some-other-bucket --endpoint-url "${SEAWEEDFS_S3_ENDPOINT}" 2>/dev/null; then
-    die "Negative control failed: Tempo credential accessed different bucket"
+    # 11c: Cannot access different bucket
+    log "  11c: Attempting head-bucket on different bucket with Tempo cred (expect denial)..."
+    if aws s3api head-bucket --bucket some-other-bucket --endpoint-url "${SEAWEEDFS_S3_ENDPOINT}" 2>/dev/null; then
+      die "Negative control failed: Tempo credential accessed different bucket"
+    fi
+    ok "  Tempo credential correctly denied cross-bucket access"
   fi
-  ok "  Tempo credential correctly denied cross-bucket access"
 
   # --- ALL ASSERTIONS PASSED ---
   log "=== ALL GATE 1A ASSERTIONS PASSED ==="
