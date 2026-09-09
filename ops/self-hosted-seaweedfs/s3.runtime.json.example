@@ -1,0 +1,19 @@
+{
+  "identities": [
+    {
+      "name": "tempo",
+      "credentials": [
+        {
+          "accessKey": "${SEAWEEDFS_TEMPO_ACCESS_KEY}",
+          "secretKey": "${SEAWEEDFS_TEMPO_SECRET_KEY}"
+        }
+      ],
+      "actions": [
+        "Read:tempo-traces",
+        "Write:tempo-traces",
+        "List:tempo-traces",
+        "Tagging:tempo-traces"
+      ]
+    }
+  ]
+}

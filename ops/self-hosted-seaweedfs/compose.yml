@@ -7,6 +7,10 @@
 # (Read/Write/List/Tagging on tempo-traces only). A separate bootstrap "admin"
 # credential creates the bucket once (init container) and is never exposed to
 # Tempo. The running S3 identity set visible to Tempo excludes Admin.
+#
+# Two-phase identity swap (orchestrated by verify-durability.sh):
+#   Phase 1: s3.json ← s3.bootstrap.json (admin + tempo) → bootstrap-bucket → stop SeaweedFS
+#   Phase 2: s3.json ← s3.runtime.json (tempo only) → Admin denial → Tempo + durability
 services:
   seaweedfs:
     image: chrislusf/seaweedfs@sha256:fc9f76fa993ad69966ffeb2f65d0318fcae39c6f8e20cf68ef7b3a5cb97769e5
