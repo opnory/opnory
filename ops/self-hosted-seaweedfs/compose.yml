@@ -9,56 +9,47 @@
 # Tempo. The running S3 identity set visible to Tempo excludes Admin.
 #
 # Two-phase identity swap (orchestrated by verify-durability.sh):
-#   Phase 1: s3.json ← s3.bootstrap.json (admin + tempo) → bootstrap-bucket → stop SeaweedFS
-#   Phase 2: s3.json ← s3.runtime.json (tempo only) → Admin denial → Tempo + durability
+#   Phase 1: s3.json <- s3.bootstrap.json (admin + tempo) -> fail-closed bucket bootstrap -> stop SeaweedFS
+#   Phase 2: s3.json <- s3.runtime.json (tempo only) -> Admin denial -> Tempo + durability
 services:
   seaweedfs:
+    container_name: seaweedfs
     image: chrislusf/seaweedfs@sha256:fc9f76fa993ad69966ffeb2f65d0318fcae39c6f8e20cf68ef7b3a5cb97769e5
     command: ["server", "-s3", "-s3.config=/etc/seaweedfs/s3.json"]
     environment:
       WEED_JWT_FILER_SIGNING_KEY: ${SEAWEEDFS_SIGNING_KEY}
       WEED_JWT_FILER_SIGNING_READ_KEY: ${SEAWEEDFS_SIGNING_KEY}
+    ports:
+      - "8333:8333"
     volumes:
       - seaweedfs-data:/data
       - ./s3.json:/etc/seaweedfs/s3.json:ro
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8333/"]
+      test: ["CMD", "sh", "-c", "curl -s --max-time 2 http://127.0.0.1:8333/ > /dev/null"]
       interval: 3s
       timeout: 5s
       retries: 30
     networks: [tempo-net]
 
-  bootstrap-bucket:
-    image: amazon/aws-cli:latest
-    depends_on:
-      seaweedfs:
-        condition: service_healthy
-    environment:
-      AWS_ACCESS_KEY_ID: ${SEAWEEDFS_ADMIN_ACCESS_KEY}
-      AWS_SECRET_ACCESS_KEY: ${SEAWEEDFS_ADMIN_SECRET_KEY}
-      AWS_REGION: us-east-1
-      AWS_ENDPOINT_URL: http://seaweedfs:8333
-      AWS_EC2_METADATA_DISABLED: "true"
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - >
-        aws s3api head-bucket --bucket tempo-traces 2>/dev/null ||
-        aws s3api create-bucket --bucket tempo-traces;
-        aws s3api head-bucket --bucket tempo-traces
-    networks: [tempo-net]
-
   tempo:
+    container_name: tempo
     image: grafana/tempo:2.5.0
     command: ["-config.file=/etc/tempo.yaml", "-config.expand-env=true"]
+    ports:
+      - "3200:3200"
     volumes:
       - ./tempo.yaml:/etc/tempo.yaml:ro
     environment:
       S3_ACCESS_KEY: ${SEAWEEDFS_TEMPO_ACCESS_KEY}
       S3_SECRET_KEY: ${SEAWEEDFS_TEMPO_SECRET_KEY}
     depends_on:
-      bootstrap-bucket:
-        condition: service_completed_successfully
-    # NO host port: private on the network.
+      seaweedfs:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3200/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
     networks: [tempo-net]
 
 volumes:

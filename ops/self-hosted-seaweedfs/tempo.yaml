@@ -14,8 +14,8 @@ distributor:
 
 ingester:
   trace_idle_period: 2s
-  max_block_bytes: 1_000_000
-  max_block_duration: 5m
+  max_block_bytes: 10000
+  max_block_duration: 10s
 
 compactor:
   compaction:
@@ -24,6 +24,7 @@ compactor:
 storage:
   trace:
     backend: s3
+    blocklist_poll: 10s
     s3:
       endpoint: seaweedfs:8333
       bucket: tempo-traces
@@ -31,8 +32,6 @@ storage:
       secret_key: ${S3_SECRET_KEY}
       insecure: true
       forcepathstyle: true
-    wal:
-      path: /var/tempo/wal
 
 query_frontend:
   trace_by_id:
