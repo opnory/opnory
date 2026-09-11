@@ -5,6 +5,8 @@
 
 ## Result
 
+**Historical live evidence (pre-refactor, real OTLP emitter, 7-trace corpus; not reproduced by `verify-durability.sh`). Reproducible verifier evidence is in `verify-durability.sh` + the README evidence record; redaction is deferred per decision B2.**
+
 | Check | Result |
 |---|---|
 | Durable object-store recovery | **PASS** |
@@ -67,7 +69,7 @@ Every returned trace was re-fetched by ID and confirmed to carry the requested
 A scan of all retrieved span JSON for the rotated credential substrings found zero
 leaks (`leakedTokens: []`).
 
-## Operational finding: TraceQL search requires an explicit time window
+## Operational finding: TraceQL search needs an explicit time window
 
 Tempo's TraceQL search (`/api/search`) defaults to a short time window that **excluded**
 the recovered spans (~3.7 h old), so an unwindowed tenant query returned 0 and initially
@@ -76,8 +78,13 @@ query was the problem, not the backend. Always bracket TraceQL with an explicit
 `start`/`end` around the span timestamp. Trace-by-ID retrieval has no such default-window
 behavior, which is why it succeeded immediately.
 
-This supersedes the earlier "durability vs. search visibility" note: there was no
-separate index lifecycle delay here — only a query-window omission.
+**Important:** The earlier claim "This supersedes the earlier 'durability vs. search
+visibility' note: there was no separate index lifecycle delay here — only a query-window
+omission" was **overstated** for the destroy/recreate scenario. After Tempo restart,
+recovered blocks **do** require compaction before they appear in TraceQL search. The
+query-window issue was the immediate blocker; compaction delay is a separate, real
+factor for post-recreate TraceQL. The verifier therefore exercises tenant isolation
+pre-recreate (where the index is fresh) and proves durability via trace-by-ID post-recreate.
 
 ## Root-cause diagnosis (corrected)
 
@@ -93,8 +100,10 @@ separate index lifecycle delay here — only a query-window omission.
 ## Least-privilege status
 
 The bootstrap SeaweedFS identity uses `actions: ["Admin"]`. Narrowing to Tempo's
-minimum S3 operations is a **follow-up hardening item — UNPROVEN**, not treated as
-production-ready. See `ops/self-hosted-seaweedfs/README.md`.
+minimum S3 operations is a **follow-up hardening item — UNPROVEN** in the
+pre-refactor configuration; **superseded by the least-privilege refactor + verifier
+(verify-durability.sh), which proves the two-phase identity swap and Admin denial
+at steady state**. See `ops/self-hosted-seaweedfs/README.md` for current status.
 
 ## Stack
 

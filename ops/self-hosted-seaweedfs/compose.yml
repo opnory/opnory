@@ -2,37 +2,50 @@
 # Tempo is PRIVATE on the compose network. SeaweedFS is the S3-compatible
 # object store (replacing MinIO per ADR 0010: provider-neutral, self-hostable).
 # Credentials are ephemeral/local-only, injected via .env + s3.json (gitignored).
+#
+# Least-privilege: Tempo authenticates with a bucket-scoped "tempo" identity
+# (Read/Write/List/Tagging on tempo-traces only). A separate bootstrap "admin"
+# credential creates the bucket once (init container) and is never exposed to
+# Tempo. The running S3 identity set visible to Tempo excludes Admin.
+#
+# Two-phase identity swap (orchestrated by verify-durability.sh):
+#   Phase 1: s3.json <- s3.bootstrap.json (admin + tempo) -> fail-closed bucket bootstrap -> stop SeaweedFS
+#   Phase 2: s3.json <- s3.runtime.json (tempo only) -> Admin denial -> Tempo + durability
 services:
   seaweedfs:
+    container_name: seaweedfs
     image: chrislusf/seaweedfs@sha256:fc9f76fa993ad69966ffeb2f65d0318fcae39c6f8e20cf68ef7b3a5cb97769e5
     command: ["server", "-s3", "-s3.config=/etc/seaweedfs/s3.json"]
     environment:
       WEED_JWT_FILER_SIGNING_KEY: ${SEAWEEDFS_SIGNING_KEY}
       WEED_JWT_FILER_SIGNING_READ_KEY: ${SEAWEEDFS_SIGNING_KEY}
-      WEED_S3_ACCESS_KEY: ${SEAWEEDFS_ACCESS_KEY}
-      WEED_S3_SECRET_KEY: ${SEAWEEDFS_SECRET_KEY}
     volumes:
       - seaweedfs-data:/data
       - ./s3.json:/etc/seaweedfs/s3.json:ro
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8333/"]
+      test: ["CMD", "sh", "-c", "curl -s --max-time 2 http://127.0.0.1:8333/ > /dev/null"]
       interval: 3s
       timeout: 5s
       retries: 30
     networks: [tempo-net]
 
   tempo:
+    container_name: tempo
     image: grafana/tempo:2.5.0
     command: ["-config.file=/etc/tempo.yaml", "-config.expand-env=true"]
     volumes:
       - ./tempo.yaml:/etc/tempo.yaml:ro
     environment:
-      S3_ACCESS_KEY: ${SEAWEEDFS_ACCESS_KEY}
-      S3_SECRET_KEY: ${SEAWEEDFS_SECRET_KEY}
+      S3_ACCESS_KEY: ${SEAWEEDFS_TEMPO_ACCESS_KEY}
+      S3_SECRET_KEY: ${SEAWEEDFS_TEMPO_SECRET_KEY}
     depends_on:
       seaweedfs:
         condition: service_healthy
-    # NO host port: private on the network.
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3200/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
     networks: [tempo-net]
 
 volumes:
