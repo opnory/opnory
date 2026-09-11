@@ -57,18 +57,24 @@ The running S3 identity set visible to Tempo contains only the bucket-scoped `te
 identity (`Read`/`Write`/`List`/`Tagging` on `tempo-traces`). The bootstrap `Admin`
 credential is used solely for one-time bucket creation and is not exposed to Tempo.
 
-**Evidence**: `verify-durability.sh` passes end-to-end from a clean slate (fresh volumes,
-no local state). Two consecutive runs confirmed:
-- Fail-closed bootstrap with Admin credentials (Phase 1)
-- Two-phase identity swap — Admin removed from runtime config (Phase 2/3)
-- Admin denial + cross-bucket denial asserted (Phase 3/12)
-- Durable S3 flush confirmed via block-object polling (Phase 5/8)
-- Destroy/recreate Tempo → trace-by-ID retrieval (Phase 9/10)
-- TraceQL positive/negative controls run against ingesting Tempo (Phase 6/7)
+**Evidence record**
 
-**Scope boundary**: This verifier proves SeaweedFS durability + least-privilege only.
-It does *not* prove Opnory redaction or the frozen `opnory.*` attribute contract
-(that is a separate artifact using the real Opnory emitter).
+```text
+Gate 1A durability: post-recreate trace-by-ID retrieval            PASS
+Tenant isolation:   explicit-window TraceQL positive control       PASS
+                    explicit-window TraceQL negative control       PASS
+                    (exercised before destructive recovery)
+Post-recreate TraceQL searchability: NOT EXERCISED — depends on
+Tempo compaction/index availability, separate from object-store durability
+```
+
+**durable retrieval ≠ indexed search readiness. UNEXERCISED ≠ FAIL.**
+
+The verifier reproduces the **Gate 1A storage-durability property** using post-recreate
+trace-by-ID retrieval. Tenant-isolation controls are exercised against the ingesting
+Tempo instance (pre-recreate). Post-recreate TraceQL index availability is not part of
+this proof. Fresh-restart → searchable-within-N-minutes is a separate concern, to be
+tracked under failure/operational recovery criteria if ever needed — not Gate 1A.
 
 ## Operational finding: TraceQL search needs an explicit time window
 
