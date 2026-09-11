@@ -54,7 +54,7 @@ IAM operation names. `Admin` is for bucket create/list/delete; `Write` covers ob
 upload and deletion.
 
 The running S3 identity set visible to Tempo contains only the bucket-scoped `tempo`
-identity (`Read`/`Write`/`List`/`Tagging` on `tempo-traces`). The bootstrap `Admin`
+identity (`Read`/`Write`/`List` on `tempo-traces`). The bootstrap `Admin`
 credential is used solely for one-time bucket creation and is not exposed to Tempo.
 
 **Evidence record**
@@ -75,6 +75,8 @@ trace-by-ID retrieval. Tenant-isolation controls are exercised against the inges
 Tempo instance (pre-recreate). Post-recreate TraceQL index availability is not part of
 this proof. Fresh-restart → searchable-within-N-minutes is a separate concern, to be
 tracked under failure/operational recovery criteria if ever needed — not Gate 1A.
+
+**Bucket-scoped non-Admin runtime credential: proven** — actions granted: `Read`/`Write`/`List` on `tempo-traces`. `Tagging` is not granted in the steady-state config.
 
 ## Operational finding: TraceQL search needs an explicit time window
 

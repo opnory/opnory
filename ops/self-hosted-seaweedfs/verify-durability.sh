@@ -15,14 +15,18 @@ S3_JSON_FILE="${COMPOSE_DIR}/s3.json"
 S3_BOOTSTRAP_TEMPLATE="${COMPOSE_DIR}/s3.bootstrap.json.example"
 S3_RUNTIME_TEMPLATE="${COMPOSE_DIR}/s3.runtime.json.example"
 
-TEMPO_OTLP_ENDPOINT="http://localhost:4318/v1/traces"
-TEMPO_API_ENDPOINT="http://localhost:3200"
+TEMPO_API_ENDPOINT="http://tempo:3200"
 SEAWEEDFS_S3_ENDPOINT="http://seaweedfs:8333"
+
+# Pinned images for structural reproducibility
+AWS_CLI_IMAGE="amazon/aws-cli@sha256:d948ee299a7ffcaec0d6052a00b9f4c513c61cacfaedfe68b098c85808394441"
+CURL_IMAGE="curlimages/curl@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777"
 
 CONTAINER_NAMES=("seaweedfs" "tempo")
 VOLUME_NAME="seaweedfs-data"
 
-BASELINE_MODE=false
+# Control bucket name for cross-bucket isolation proof
+CONTROL_BUCKET="tempo-negative-control"
 
 # ========= HELPERS =========
 log() { echo "[$(date '+%H:%M:%S')] $*" >&2; }
@@ -40,28 +44,25 @@ aws_s3() {
     -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
     -e AWS_REGION="${AWS_REGION:-us-east-1}" \
     -e AWS_EC2_METADATA_DISABLED="true" \
-    amazon/aws-cli:latest "$@"
+    "${AWS_CLI_IMAGE}" "$@"
 }
 
 require_docker() {
   docker info >/dev/null 2>&1 || die "Docker is not running"
-  docker image inspect amazon/aws-cli:latest >/dev/null 2>&1 || die "amazon/aws-cli:latest image not available"
+  # Images pulled by digest on demand; no pre-check needed.
 }
 
 # ========= ARGUMENT PARSING =========
 usage() {
   cat <<EOF
-Usage: $0 [--baseline]
+Usage: $0 [--help]
 
---baseline    Run baseline verification against current working-tree config (admin identity + bootstrap-bucket).
-              Skips credential negative controls (covered only after least-privilege hardening).
 EOF
   exit 1
 }
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --baseline) BASELINE_MODE=true ;;
     -h|--help) usage ;;
     *) echo "Unknown option: $1" >&2; exit 1 ;;
   esac
@@ -80,16 +81,10 @@ check_prereqs() {
   # Load .env
   set -a; source "${ENV_FILE}"; set +a
   require_env SEAWEEDFS_SIGNING_KEY
-  if [[ "${BASELINE_MODE}" == "true" ]]; then
-    require_env SEAWEEDFS_ACCESS_KEY
-    require_env SEAWEEDFS_SECRET_KEY
-    log "BASELINE MODE: using admin credentials for Tempo; credential negative controls SKIPPED"
-  else
-    require_env SEAWEEDFS_ADMIN_ACCESS_KEY
-    require_env SEAWEEDFS_ADMIN_SECRET_KEY
-    require_env SEAWEEDFS_TEMPO_ACCESS_KEY
-    require_env SEAWEEDFS_TEMPO_SECRET_KEY
-  fi
+  require_env SEAWEEDFS_ADMIN_ACCESS_KEY
+  require_env SEAWEEDFS_ADMIN_SECRET_KEY
+  require_env SEAWEEDFS_TEMPO_ACCESS_KEY
+  require_env SEAWEEDFS_TEMPO_SECRET_KEY
   require_docker
   ok "Prerequisites satisfied"
 }
@@ -128,7 +123,7 @@ generate_runtime_s3_config() {
         {
           name: "tempo",
           credentials: [{accessKey: $tempo_key, secretKey: $tempo_secret}],
-          actions: ["Read:tempo-traces", "Write:tempo-traces", "List:tempo-traces", "Tagging:tempo-traces"]
+          actions: ["Read:tempo-traces", "Write:tempo-traces", "List:tempo-traces"]
         }
       ]
     }' > "${S3_JSON_FILE}"
@@ -164,7 +159,8 @@ wait_tempo_ready() {
   local waited=0
   log "Waiting for Tempo API..."
   while [[ $waited -lt $max_wait ]]; do
-    if curl -sf "${TEMPO_API_ENDPOINT}/ready" >/dev/null 2>&1; then
+    if docker run --rm --network "${COMPOSE_PROJECT:-self-hosted-seaweedfs}_tempo-net" \
+      "${CURL_IMAGE}" curl -sf "http://tempo:3200/ready" >/dev/null 2>&1; then
       ok "Tempo API ready"
       return 0
     fi
@@ -177,6 +173,8 @@ wait_tempo_ready() {
 bootstrap_bucket_fail_closed() {
   log "Running fail-closed bucket bootstrap (Admin credentials)..."
   # One-shot container: deterministic exit code, no persistent-service race.
+  # Creates both tempo-traces and the control bucket; final head-bucket on both
+  # is the postcondition.
   set +e
   docker run --rm --network "${COMPOSE_PROJECT:-self-hosted-seaweedfs}_tempo-net" \
     -e AWS_ACCESS_KEY_ID="${SEAWEEDFS_ADMIN_ACCESS_KEY}" \
@@ -184,15 +182,18 @@ bootstrap_bucket_fail_closed() {
     -e AWS_REGION=us-east-1 \
     -e AWS_ENDPOINT_URL="http://seaweedfs:8333" \
     -e AWS_EC2_METADATA_DISABLED="true" \
-    --entrypoint /bin/sh amazon/aws-cli:latest -c '
+    --entrypoint /bin/sh "${AWS_CLI_IMAGE}" -c '
       aws s3api head-bucket --bucket tempo-traces 2>/dev/null ||
       aws s3api create-bucket --bucket tempo-traces;
-      aws s3api head-bucket --bucket tempo-traces
+      aws s3api head-bucket --bucket tempo-traces;
+      aws s3api head-bucket --bucket tempo-negative-control 2>/dev/null ||
+      aws s3api create-bucket --bucket tempo-negative-control;
+      aws s3api head-bucket --bucket tempo-negative-control
     '
   local rc=$?
   set -e
   [[ $rc -eq 0 ]] || die "fail-closed bootstrap failed: final head-bucket did not pass (exit ${rc})"
-  ok "fail-closed bootstrap completed: bucket tempo-traces verified"
+  ok "fail-closed bootstrap completed: buckets tempo-traces and tempo-negative-control verified"
 }
 
 stop_seaweedfs() {
@@ -244,7 +245,7 @@ emit_trace() {
   # Uses the same pattern as aws_s3(): docker run --rm on tempo-net.
   local network_name="${COMPOSE_PROJECT:-self-hosted-seaweedfs}_tempo-net"
   echo "$payload" | docker run --rm -i --network "$network_name" \
-    curlimages/curl:latest \
+    "${CURL_IMAGE}" \
     curl -sf -X POST http://tempo:4318/v1/traces \
       -H "Content-Type: application/json" \
       -H "X-Tempo-Tenant: single-tenant" \
@@ -258,7 +259,8 @@ wait_trace_available() {
   local waited=0
   local result
   while (( waited < max_wait )); do
-    result=$(curl -sf "${TEMPO_API_ENDPOINT}/api/traces/${tid}" 2>/dev/null || true)
+    result=$(docker run --rm --network "${COMPOSE_PROJECT:-self-hosted-seaweedfs}_tempo-net" \
+      "${CURL_IMAGE}" curl -sf "http://tempo:3200/api/traces/${tid}" 2>/dev/null || true)
     # Tempo 2.x returns OTLP JSON: {"batches": [{"resourceSpans": [...]}]}
     # Check for .batches (OTLP) OR .spans (legacy) — tolerate both shapes.
     if echo "${result}" | jq -e '(.batches // .spans) | length > 0' >/dev/null 2>&1; then
@@ -278,7 +280,8 @@ query_traceql() {
   # Return raw body + HTTP status; do NOT die on non-2xx so caller can inspect.
   # CRITICAL: include tenant header to match Tempo multitenancy routing (proven by probes).
   local result
-  result=$(curl -s -w '\n__HTTP__%{http_code}' -G "${TEMPO_API_ENDPOINT}/api/search" \
+  result=$(docker run --rm --network "${COMPOSE_PROJECT:-self-hosted-seaweedfs}_tempo-net" \
+    "${CURL_IMAGE}" curl -s -w '\n__HTTP__%{http_code}' -G "http://tempo:3200/api/search" \
     -H "X-Tempo-Tenant: single-tenant" \
     --data-urlencode "q=${query}" \
     --data-urlencode "start=${start}" \
@@ -330,17 +333,28 @@ assert_tempo_access() {
     || die "Tempo credential could not access its own bucket"
   ok "  Tempo credential correctly accessed tempo-traces"
 
-  log "  Tempo: head-bucket other-bucket (expect denial)..."
-  if aws_s3 s3api head-bucket --bucket some-other-bucket --endpoint-url "${SEAWEEDFS_S3_ENDPOINT}" 2>/dev/null; then
-    die "Tempo negative control failed: Tempo credential accessed different bucket"
+  log "  Tempo: head-bucket control bucket (expect AccessDenied)..."
+  # The control bucket EXISTS (created in Phase 1 bootstrap), so AccessDenied proves policy,
+  # not absence. Capture stderr to distinguish 403 from 404.
+  local stderr
+  stderr=$(aws_s3 s3api head-bucket --bucket "${CONTROL_BUCKET}" --endpoint-url "${SEAWEEDFS_S3_ENDPOINT}" 2>&1 >/dev/null || true)
+  if echo "${stderr}" | grep -qi "AccessDenied\|403"; then
+    ok "  Tempo credential correctly denied cross-bucket access (AccessDenied)"
+  elif echo "${stderr}" | grep -qi "NoSuchBucket\|404"; then
+    die "Cross-bucket control invalid: control bucket missing (NoSuchBucket) — this means the test setup failed, not that isolation works"
+  else
+    # Unexpected success or other error
+    if [[ -z "${stderr}" ]]; then
+      die "Tempo negative control failed: Tempo credential accessed different bucket (no error)"
+    else
+      die "Unexpected error on cross-bucket head: ${stderr}"
+    fi
   fi
-  ok "  Tempo credential correctly denied cross-bucket access"
 }
 
 # ========= MAIN VERIFICATION =========
 main() {
   log "=== Gate 1A Durability + Least-Privilege Verification Started ==="
-  [[ "${BASELINE_MODE}" == "true" ]] && log "BASELINE MODE: credential negative controls will be SKIPPED"
   check_prereqs
 
   # --- PHASE 1: BOOTSTRAP WITH ADMIN + TEMPO IDENTITIES ---
@@ -362,12 +376,8 @@ main() {
 
   # --- PHASE 3: VERIFY IDENTITY SWAP ---
   log "=== PHASE 3: Verify identity swap ==="
-  if [[ "${BASELINE_MODE}" == "true" ]]; then
-    log "BASELINE MODE: Skipping Admin/Tempo credential assertions"
-  else
-    assert_admin_denied
-    assert_tempo_access
-  fi
+  assert_admin_denied
+  assert_tempo_access
 
   # --- PHASE 4: START TEMPO ---
   log "=== PHASE 4: Start Tempo (steady state) ==="
@@ -399,7 +409,7 @@ main() {
       -e AWS_SECRET_ACCESS_KEY="${SEAWEEDFS_TEMPO_SECRET_KEY}" \
       -e AWS_REGION=us-east-1 \
       -e AWS_EC2_METADATA_DISABLED=true \
-      amazon/aws-cli:latest s3 ls "s3://tempo-traces/single-tenant/" --recursive --endpoint-url http://seaweedfs:8333 2>/dev/null | grep -qE "bloom-0|data.parquet|meta.json"; then
+      "${AWS_CLI_IMAGE}" s3 ls "s3://tempo-traces/single-tenant/" --recursive --endpoint-url http://seaweedfs:8333 2>/dev/null | grep -qE "bloom-0|data.parquet|meta.json"; then
       ok "S3 block objects detected in tempo-traces"
       flushed=true
       break
@@ -459,7 +469,7 @@ main() {
       -e AWS_SECRET_ACCESS_KEY="${SEAWEEDFS_TEMPO_SECRET_KEY}" \
       -e AWS_REGION=us-east-1 \
       -e AWS_EC2_METADATA_DISABLED=true \
-      amazon/aws-cli:latest s3 ls "s3://tempo-traces/single-tenant/" --recursive --endpoint-url http://seaweedfs:8333 2>/dev/null | grep -qE "bloom-0|data.parquet|meta.json"; then
+      "${AWS_CLI_IMAGE}" s3 ls "s3://tempo-traces/single-tenant/" --recursive --endpoint-url http://seaweedfs:8333 2>/dev/null | grep -qE "bloom-0|data.parquet|meta.json"; then
       ok "S3 block objects confirmed after graceful stop"
       flushed=true
       break
@@ -500,33 +510,41 @@ main() {
   log "  Opnory redaction/lifecycle proof is a separate artifact using real emitter + Phase 7 corpus."
 
   # --- PHASE 12: NEGATIVE CONTROLS FOR TEMPO CREDENTIAL ---
-  if [[ "${BASELINE_MODE}" == "true" ]]; then
-    log "BASELINE MODE: Skipping Tempo credential negative controls"
+  log "=== PHASE 12: Tempo credential negative controls ==="
+  export AWS_ACCESS_KEY_ID="${SEAWEEDFS_TEMPO_ACCESS_KEY}"
+  export AWS_SECRET_ACCESS_KEY="${SEAWEEDFS_TEMPO_SECRET_KEY}"
+  export AWS_REGION=us-east-1
+  export AWS_ENDPOINT_URL="${SEAWEEDFS_S3_ENDPOINT}"
+  export AWS_EC2_METADATA_DISABLED="true"
+
+  log "  12a: Attempting create-bucket with Tempo cred (expect denial)..."
+  if aws_s3 s3api create-bucket --bucket tempo-traces-2 --endpoint-url "${SEAWEEDFS_S3_ENDPOINT}" 2>/dev/null; then
+    die "Negative control failed: Tempo credential was able to create bucket"
+  fi
+  ok "  Tempo credential correctly denied create-bucket"
+
+  log "  12b: Attempting delete-bucket with Tempo cred (expect denial)..."
+  if aws_s3 s3api delete-bucket --bucket tempo-traces --endpoint-url "${SEAWEEDFS_S3_ENDPOINT}" 2>/dev/null; then
+    die "Negative control failed: Tempo credential was able to delete bucket"
+  fi
+  ok "  Tempo credential correctly denied delete-bucket"
+
+  log "  12c: Attempting head-bucket on control bucket with Tempo cred (expect AccessDenied)..."
+  # The control bucket EXISTS (created in Phase 1 bootstrap), so AccessDenied proves policy,
+  # not absence. Capture stderr to distinguish 403 from 404.
+  local stderr
+  stderr=$(aws_s3 s3api head-bucket --bucket "${CONTROL_BUCKET}" --endpoint-url "${SEAWEEDFS_S3_ENDPOINT}" 2>&1 >/dev/null || true)
+  if echo "${stderr}" | grep -qi "AccessDenied\|403"; then
+    ok "  Tempo credential correctly denied cross-bucket access (AccessDenied)"
+  elif echo "${stderr}" | grep -qi "NoSuchBucket\|404"; then
+    die "Cross-bucket control invalid: control bucket missing (NoSuchBucket) — this means the test setup failed, not that isolation works"
   else
-    log "=== PHASE 12: Tempo credential negative controls ==="
-    export AWS_ACCESS_KEY_ID="${SEAWEEDFS_TEMPO_ACCESS_KEY}"
-    export AWS_SECRET_ACCESS_KEY="${SEAWEEDFS_TEMPO_SECRET_KEY}"
-    export AWS_REGION=us-east-1
-    export AWS_ENDPOINT_URL="${SEAWEEDFS_S3_ENDPOINT}"
-    export AWS_EC2_METADATA_DISABLED="true"
-
-    log "  12a: Attempting create-bucket with Tempo cred (expect denial)..."
-    if aws_s3 s3api create-bucket --bucket tempo-traces-2 --endpoint-url "${SEAWEEDFS_S3_ENDPOINT}" 2>/dev/null; then
-      die "Negative control failed: Tempo credential was able to create bucket"
+    # Unexpected success or other error
+    if [[ -z "${stderr}" ]]; then
+      die "Tempo negative control failed: Tempo credential accessed different bucket (no error)"
+    else
+      die "Unexpected error on cross-bucket head: ${stderr}"
     fi
-    ok "  Tempo credential correctly denied create-bucket"
-
-    log "  12b: Attempting delete-bucket with Tempo cred (expect denial)..."
-    if aws_s3 s3api delete-bucket --bucket tempo-traces --endpoint-url "${SEAWEEDFS_S3_ENDPOINT}" 2>/dev/null; then
-      die "Negative control failed: Tempo credential was able to delete bucket"
-    fi
-    ok "  Tempo credential correctly denied delete-bucket"
-
-    log "  12c: Attempting head-bucket on different bucket with Tempo cred (expect denial)..."
-    if aws_s3 s3api head-bucket --bucket some-other-bucket --endpoint-url "${SEAWEEDFS_S3_ENDPOINT}" 2>/dev/null; then
-      die "Negative control failed: Tempo credential accessed different bucket"
-    fi
-    ok "  Tempo credential correctly denied cross-bucket access"
   fi
 
   log "=== ALL GATE 1A DURABILITY + LEAST-PRIVILEGE ASSERTIONS PASSED ==="
