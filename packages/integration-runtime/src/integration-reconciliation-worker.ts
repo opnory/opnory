@@ -1101,6 +1101,9 @@ export class IntegrationReconciliationWorkerImpl implements IntegrationReconcili
     // Secret-backend outage carries the structured SecretStoreError code —
     // classify it explicitly before any string heuristic can mis-label it as
     // credential_invalid or provider_unreachable (ADR 0006 taxonomy).
+    // SAFETY: `error` is narrowed to `object` by the `typeof` check above; the
+    // assertion names optional properties that may or may not exist on the
+    // object — reading them is safe because they are optional.
     if (
       typeof error === "object" &&
       error !== null &&
