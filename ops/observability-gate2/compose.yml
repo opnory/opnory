@@ -48,7 +48,7 @@ services:
 
   tempo:
     container_name: tempo-gate2
-    image: grafana/tempo:2.5.0
+    image: grafana/tempo@sha256:f0200a9bff6d14eb3a4332194f7b77c37ee1a3535e7e41db024d95aab6f1b4e8
     command: ["-config.file=/etc/tempo.yaml", "-config.expand-env=true"]
     volumes:
       - ./tempo.yaml:/etc/tempo.yaml:ro

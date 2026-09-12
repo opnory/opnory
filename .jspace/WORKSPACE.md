@@ -16,8 +16,11 @@ Phase 6: Productionizing tenant integrations — persistent state, credential ba
 - ✓06 CordisRuntimeKernel implementation complete; all 10 kernel invariants pass; 331 total tests pass; build/typecheck/lint all green; frozen files unchanged — verified by: bun run build (19/19), bun run typecheck (31/31), bun run lint (0 anti-slop errors), bun test (331 pass), git diff frozen files empty
 - ✓07 Phase 5 complete: Cordis evaluated, OpnoryRuntimeKernel retained, ADR 0005 written — verified by: all tests pass, decision documented
 - ✓08 Gate 1A SeaweedFS durability + least-privilege proven — verified by: verify-durability.sh EXIT=0 from clean slate (twice); post-recreate trace-by-ID PASS; tenant isolation pre-recreate PASS; post-recreate TraceQL NOT EXERCISED by design
+- ✓09 Static-governance ratchet: Oxlint trust-boundary for integration-runtime — PR #4 merged as 4d0b4b40 (commit 74a68f24); targeted boundary 0 warnings/errors for both promoted rules; repo lint 0 errors; build/typecheck/tests green; frozen files byte-identical
 
 ## Open
+- Gate 2 TLS: skeleton committed (feat/observability-hardening-gate2-tls, 26d7a0c7), live verification blocked on public VPS IP + DNS A record for observability.opnory.com
 
 ## Next
-Clean up Phase 5: remove CordisRuntimeKernel and cordis dependency from production; keep ADR 0005 and invariant tests as evidence
+- Clean up Phase 5: remove CordisRuntimeKernel and cordis dependency from production; keep ADR 0005 and invariant tests as evidence
+- Gate 2: provision public VPS, create Cloudflare DNS A record, run verify-tls.sh live against observability.opnory.com
