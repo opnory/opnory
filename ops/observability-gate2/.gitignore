@@ -1,0 +1,10 @@
+# Gate 2 TLS — gitignore
+.env
+s3.json
+caddy-data/
+caddy-config/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
