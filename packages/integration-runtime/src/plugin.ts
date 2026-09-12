@@ -170,12 +170,21 @@ export interface CoreServices {
   readonly capabilities: CapabilityRegistry;
 }
 
+/** JSON-safe value type for I/O boundaries */
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { readonly [k: string]: JsonValue };
+
 /** Logger interface provided by core */
 export interface Logger {
-  debug(msg: string, meta?: Record<string, unknown>): void;
-  info(msg: string, meta?: Record<string, unknown>): void;
-  warn(msg: string, meta?: Record<string, unknown>): void;
-  error(msg: string, meta?: Record<string, unknown>): void;
+  debug(msg: string, meta?: Record<string, JsonValue>): void;
+  info(msg: string, meta?: Record<string, JsonValue>): void;
+  warn(msg: string, meta?: Record<string, JsonValue>): void;
+  error(msg: string, meta?: Record<string, JsonValue>): void;
 }
 
 /** Runtime event bus — ephemeral, may disappear on restart */
@@ -202,7 +211,7 @@ export interface PluginActivationContext {
   readonly pluginId: PluginId;
   readonly manifest: PluginManifest;
   readonly services: CoreServices;
-  readonly config: Readonly<Record<string, unknown>>;
+  readonly config: Readonly<Record<string, JsonValue>>;
 }
 
 /** Plugin lifecycle contract — implemented by each plugin */
@@ -227,7 +236,7 @@ export interface PluginActivationResult {
   /** Capabilities this plugin registers for the tenant */
   readonly capabilities: readonly Capability[];
   /** Any additional plugin-specific state to persist */
-  readonly state?: Readonly<Record<string, unknown>>;
+  readonly state?: Readonly<Record<string, JsonValue>>;
 }
 
 /** Plugin loader — orchestrates discovery, validation, activation lifecycle */
@@ -239,7 +248,7 @@ export interface PluginLoader {
   validate(plugin: Plugin): ValidationResult;
 
   /** Load and activate a plugin for a tenant */
-  load(plugin: Plugin, tenantId: TenantId, config?: Record<string, unknown>): Promise<LoadedPlugin>;
+  load(plugin: Plugin, tenantId: TenantId, config?: Record<string, JsonValue>): Promise<LoadedPlugin>;
 
   /** Unload a plugin for a tenant */
   unload(pluginId: PluginId, tenantId: TenantId): Promise<void>;

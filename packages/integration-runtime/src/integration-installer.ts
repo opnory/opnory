@@ -241,6 +241,9 @@ export class IntegrationInstallerImpl implements IntegrationInstaller {
     // Secret-backend outage is a distinct taxonomy from credential-invalid and
     // provider-unreachable (ADR 0006): recognize the structured error before
     // falling through to string heuristics.
+    // SAFETY: `error` is narrowed to `object` by the `typeof` check above; the
+    // assertion names optional properties that may or may not exist on the
+    // object — reading them is safe because they are optional.
     if (
       typeof error === "object" &&
       error !== null &&

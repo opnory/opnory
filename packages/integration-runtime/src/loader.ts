@@ -18,6 +18,7 @@ import type {
   CredentialProvider,
   CredentialHandle,
   HttpClientFactory,
+  JsonValue,
   HttpClient,
   RequestOptions,
   Logger,
@@ -107,7 +108,7 @@ export class DefaultPluginLoader implements PluginLoader {
     };
   }
 
-  async load(plugin: Plugin, tenantId: TenantId, config: Record<string, unknown> = {}): Promise<LoadedPlugin> {
+  async load(plugin: Plugin, tenantId: TenantId, config: Record<string, JsonValue> = {}): Promise<LoadedPlugin> {
     const validation = this.validate(plugin);
     if (!validation.valid) {
       throw new Error(`Plugin validation failed: ${validation.errors.map(e => e.message).join(", ")}`);
@@ -283,16 +284,16 @@ class DefaultHttpClient implements HttpClient {
 
 /** Simple logger implementation */
 export class ConsoleLogger implements Logger {
-  debug(msg: string, meta?: Record<string, unknown>): void {
+  debug(msg: string, meta?: Record<string, JsonValue>): void {
     console.debug(`[DEBUG] ${msg}`, meta || "");
   }
-  info(msg: string, meta?: Record<string, unknown>): void {
+  info(msg: string, meta?: Record<string, JsonValue>): void {
     console.info(`[INFO] ${msg}`, meta || "");
   }
-  warn(msg: string, meta?: Record<string, unknown>): void {
+  warn(msg: string, meta?: Record<string, JsonValue>): void {
     console.warn(`[WARN] ${msg}`, meta || "");
   }
-  error(msg: string, meta?: Record<string, unknown>): void {
+  error(msg: string, meta?: Record<string, JsonValue>): void {
     console.error(`[ERROR] ${msg}`, meta || "");
   }
 }

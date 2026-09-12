@@ -30,7 +30,7 @@ export interface RuntimeKernel {
     tenantId: TenantId,
     plugin: Plugin,
     services: CoreServices,
-    config?: Readonly<Record<string, unknown>>
+    config?: Readonly<Record<string, JsonValue>>
   ): Promise<PluginActivationResult>;
 
   /**
@@ -61,6 +61,15 @@ export interface RuntimeKernel {
   getState(tenantId: TenantId, pluginId: PluginId): PluginInstanceState | null;
 }
 
+/** JSON-safe value type for I/O boundaries */
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { readonly [k: string]: JsonValue };
+
 /**
  * OpnoryRuntimeKernel — the current proven implementation.
  * Extracts lifecycle logic from DefaultPluginLoader for kernel swap evaluation.
@@ -82,7 +91,7 @@ export class OpnoryRuntimeKernel implements RuntimeKernel {
     tenantId: TenantId,
     plugin: Plugin,
     services: CoreServices,
-    config: Readonly<Record<string, unknown>> = {}
+    config: Readonly<Record<string, JsonValue>> = {}
   ): Promise<PluginActivationResult> {
     const key = this.getKey(tenantId, plugin.manifest.name);
     

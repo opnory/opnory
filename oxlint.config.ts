@@ -91,6 +91,14 @@ export default defineConfig({
       },
     },
     {
+      // integration-runtime trust-boundary ratchet (Issue 3): two-rule promotion only
+      files: ["packages/integration-runtime/src/**"],
+      rules: {
+        "anti-slop/no-unsafe-dictionary-type": "error",
+        "anti-slop/require-safety-comment-for-type-assertion": "error",
+      },
+    },
+    {
       // Frozen adapters: keep all at warn
       files: [
         "packages/governance-core/src/adapters/fulfillment.ts",
