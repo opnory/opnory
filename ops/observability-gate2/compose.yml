@@ -1,0 +1,92 @@
+# Gate 2 — TLS termination + Grafana operator surface
+# Caddy: TLS termination / ACME HTTP-01 on :80 and :443
+# Grafana: private on compose network (3000), reachable ONLY via Caddy
+# Tempo:  private on compose network (3200, 4317, 4318)
+# SeaweedFS: private on compose network (8333)
+# NO Keycloak/OIDC in Gate 2 — that is Gate 3
+# Public exposure: 80 (ACME/redirect), 443 (Caddy HTTPS) ONLY
+
+services:
+  caddy:
+    container_name: caddy-gate2
+    image: caddy@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      - GRAFANA_HOST=grafana
+    networks:
+      - obs-net
+    restart: unless-stopped
+
+  grafana:
+    container_name: grafana-gate2
+    image: grafana/grafana@sha256:0dc5a246ab16bb2c38a349fb588174e832b4c6c2db0981d0c3e6cd774ba66a54
+    environment:
+      - GF_SERVER_ROOT_URL=https://observability.opnory.com
+      - GF_SERVER_SERVE_FROM_SUB_PATH=false
+      - GF_SECURITY_ALLOW_EMBEDDING=false
+      - GF_SECURITY_COOKIE_SECURE=true
+      - GF_SECURITY_COOKIE_SAMESITE=lax
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_DISABLE_LOGIN_FORM=false
+      - GF_AUTH_DISABLE_SIGNOUT_MENU=false
+      - GF_LOG_LEVEL=info
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - obs-net
+    restart: unless-stopped
+    depends_on:
+      - tempo
+
+  tempo:
+    container_name: tempo-gate2
+    image: grafana/tempo:2.5.0
+    command: ["-config.file=/etc/tempo.yaml", "-config.expand-env=true"]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml:ro
+    environment:
+      - S3_ACCESS_KEY=${SEAWEEDFS_TEMPO_ACCESS_KEY}
+      - S3_SECRET_KEY=${SEAWEEDFS_TEMPO_SECRET_KEY}
+    networks:
+      - obs-net
+    restart: unless-stopped
+    depends_on:
+      seaweedfs:
+        condition: service_healthy
+
+  seaweedfs:
+    container_name: seaweedfs-gate2
+    image: chrislusf/seaweedfs@sha256:fc9f76fa993ad69966ffeb2f65d0318fcae39c6f8e20cf68ef7b3a5cb97769e5
+    command: ["server", "-s3", "-s3.config=/etc/seaweedfs/s3.json"]
+    environment:
+      - WEED_JWT_FILER_SIGNING_KEY=${SEAWEEDFS_SIGNING_KEY}
+      - WEED_JWT_FILER_SIGNING_READ_KEY=${SEAWEEDFS_SIGNING_KEY}
+    volumes:
+      - seaweedfs-data:/data
+      - ./s3.json:/etc/seaweedfs/s3.json:ro
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -s --max-time 2 http://127.0.0.1:8333/ > /dev/null"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+    networks:
+      - obs-net
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:
+  grafana-data:
+  seaweedfs-data:
+
+networks:
+  obs-net:
+    driver: bridge

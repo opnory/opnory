@@ -1,0 +1,30 @@
+# Gate 2 — Caddy TLS termination for observability.opnory.com
+# HTTP-01 ACME on :80, HTTPS on :443 reverse_proxy → Grafana
+# NO Keycloak/OIDC — that is Gate 3
+
+observability.opnory.com {
+    # HTTP-01 ACME challenge handled automatically by Caddy
+    # HTTP -> HTTPS redirect is automatic in Caddy v2
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+    }
+
+    # Grafana operator surface
+    reverse_proxy grafana:3000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Health endpoint (no auth)
+    handle /healthz {
+        respond "ok" 200
+    }
+}
