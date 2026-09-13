@@ -206,7 +206,7 @@ server.addHook("preHandler", async (request, reply) => {
 | Prereq | Status | Notes |
 |--------|--------|-------|
 | **Gate 2 TLS proof (UNPROVEN)** | **BLOCKER for live OIDC** | OIDC redirect_uri needs valid TLS hostname (`api.opnory.com`). Gate 2 forwards still disabled. |
-| **SEC-14 `trustProxy` allowlist** | **PREREQ regardless of D-1** | Fastify `trustProxy: true` must have explicit Cloudflare IP allowlist before any auth header trust |
+| **SEC-14 `trustProxy` allowlist** | **PREREQ regardless of D-1** | Fastify `trustProxy: true` must have explicit Caddy upstream allowlist (local compose network, no Cloudflare proxy) before any auth header trust |
 | **Entra tenant / Okta org** | Not confirmed | Must exist before implementation |
 | **Domain `api.opnory.com`** | Not created | Cloudflare DNS-only A record needed |
 
@@ -241,7 +241,7 @@ The `trustProxy: true` **without allowlist** (SEC-14 alert #3, GHSA-444r-cwp2-x5
 
 | Current | Required Before Gate 3 Implementation |
 |---------|----------------------------------------|
-| `fastify({ trustProxy: true })` | `fastify({ trustProxy: ["173.245.48.0/20", "103.21.244.0/22", ...] })` — Cloudflare IP ranges |
+| `fastify({ trustProxy: true })` | `fastify({ trustProxy: ["127.0.0.1/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"] })` — Caddy upstream (local compose network) |
 
 This fix is independent of IdP choice and **must land before or with** any auth middleware.
 
