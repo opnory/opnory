@@ -1,4 +1,5 @@
 import fastify, { FastifyInstance } from "fastify";
+import { zodToJsonSchema } from "zod-to-json-schema";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
@@ -27,12 +28,22 @@ export async function createApiServer(): Promise<FastifyInstance> {
   const agent = getAgent();
 
   const server = fastify({
-    trustProxy: true,
+    trustProxy: ["127.0.0.1", ...(process.env.OPNORY_TRUST_PROXY_CIDRS?.split(",") || [])],
   });
+
+  // Register AccessRequest schema for Fastify 5 $ref resolution
+  const accessRequestJsonRaw = zodToJsonSchema(AccessRequestSchema, {
+    $refStrategy: "none",
+    target: "jsonSchema7",
+  });
+  const { $schema: _schema, ...accessRequestJson } = accessRequestJsonRaw;
+  server.addSchema({ $id: "AccessRequest", ...accessRequestJson });
 
   // Register plugins
   await server.register(helmet);
-  await server.register(cors, { origin: true });
+  await server.register(cors, {
+    origin: process.env.OPNORY_CORS_ORIGINS?.split(",") || ["http://localhost:3000"],
+  });
   await server.register(rateLimit, {
     max: 100,
     timeWindow: "1 minute",

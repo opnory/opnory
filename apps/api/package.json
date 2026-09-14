@@ -13,29 +13,30 @@
     "test:watch": "bun test --watch"
   },
   "dependencies": {
-    "fastify": "4.28.1",
-    "@fastify/cors": "^9.0.0",
-    "@fastify/helmet": "^11.0.0",
-    "@fastify/rate-limit": "^9.0.0",
-    "zod": "^3.23.0",
-    "uuid": "^14.0.1",
+    "@fastify/cors": "^11.0.0",
+    "@fastify/helmet": "^13.0.0",
+    "@fastify/rate-limit": "^10.3.0",
+    "@opnory/access-audit": "workspace:*",
+    "@opnory/access-service": "workspace:*",
+    "@opnory/access-types": "workspace:*",
     "@opnory/agent": "workspace:*",
     "@opnory/config": "workspace:*",
     "@opnory/escalation": "workspace:*",
     "@opnory/knowledge": "workspace:*",
     "@opnory/observability": "workspace:*",
     "@opnory/types": "workspace:*",
-    "@opnory/access-service": "workspace:*",
-    "@opnory/access-types": "workspace:*",
-    "@opnory/access-audit": "workspace:*"
+    "fastify": "^5.6.0",
+    "uuid": "^14.0.1",
+    "zod": "^3.23.0",
+    "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "tsx": "^4.16.0",
-    "eslint": "^9.0.0",
-    "typescript": "^5.5.0",
     "@types/bun": "^1.2.0",
-    "@types/uuid": "^10.0.0"
+    "@types/node": "^22.0.0",
+    "@types/uuid": "^10.0.0",
+    "eslint": "^9.0.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0"
   },
   "type": "module"
 }
