@@ -2,7 +2,7 @@
 
 ## 1. Purpose & Non-Claims
 
-This document captures the current-state evidence, architectural gap analysis, and **explicit user decisions required** before any implementation of SSO, OIDC, MFA, or admin access controls for Opnory.
+This document captures the current-state evidence, architectural gap analysis, and the **user decisions locked 2026-09-13** governing SSO, OIDC, MFA, or admin access controls for Opnory.
 
 **Non-claims (mandatory):**
 - No SSO/OIDC/MFA implementation exists or is claimed in this document
@@ -82,11 +82,13 @@ This document captures the current-state evidence, architectural gap analysis, a
 
 ---
 
-## 4. Decision Matrix — USER INPUT REQUIRED
+## 4. Decision Matrix — DECISIONS LOCKED 2026-09-13
 
-The following decisions **must be resolved by you** before any implementation. Do not proceed until each is answered.
+The following decisions were **resolved by the user on 2026-09-13** and are now locked. No further input is required before implementation.
 
-### D-1: Identity Provider Choice
+### D-1: Identity Provider Choice — RESOLVED
+
+**Decision**: **Entra ID first**, behind a **provider-neutral OIDC configuration boundary**. Do not let Entra-specific identifiers/claims leak into Opnory authorization domain logic. Keycloak remains useful for local/offline proof, not as the production default.
 
 | Option | Pros | Cons | Operational Cost |
 |--------|------|------|------------------|
@@ -95,56 +97,68 @@ The following decisions **must be resolved by you** before any implementation. D
 | **Okta OIDC** | Mature OIDC, MFA, lifecycle mgmt | Vendor cost; separate from Entra fulfillment | MEDIUM — subscription cost |
 | **Dual: Entra + Okta** | Matches existing dual-provider fulfillment model | Two IdPs to manage, sync, audit | HIGH |
 
-**Recommendation**: **Entra ID OIDC** if Opnory tenant exists; aligns with existing Entra fulfillment adapter, single vendor for identity + fulfillment. **Keycloak only if air-gapped/on-prem requirement**.
+**Constraint**: All OIDC integration code must use a **provider-neutral configuration layer** (issuer URL, client ID/secret, JWKS endpoint, scope mapping). Entra-specific claims (e.g., `tid`, `oid`, `groups` with Entra object IDs) must be mapped to Opnory-native identifiers at the boundary before entering any authorization logic.
 
-### D-2: Enforcement Surface
+### D-2: Enforcement Surface — RESOLVED
+
+**Decision**: **API first**, with route-specific authentication. `/health` may remain narrowly public; Slack ingress uses Slack signature verification; mutating `/v1/access/*` routes require authenticated identity + role authorization. Grafana OIDC should be a separate Gate 3 hardening change.
 
 | Option | Scope | Notes |
 |--------|-------|-------|
-| **apps/api only** | All `/v1/*` routes | Minimal surface; Grafana (Gate 2) stays separate |
+| **apps/api only** (SELECTED) | All `/v1/*` routes | Minimal surface; Grafana (Gate 2) stays separate |
 | **apps/api + Grafana** | API + observability UI | Grafana OIDC config overlaps Gate 2 — requires **separate Gate 2 branch/PR** (not mutation of `6077f30a`) |
 | **All public endpoints** | API + Grafana + future UI | Future-proof but wider blast radius |
 
-**Recommendation**: **apps/api only** for Gate 3. Grafana OIDC is a Gate 2 enhancement on a *new* branch.
+**Constraint**: Grafana OIDC is a **separate Gate 3 hardening change** on a new branch (e.g., `feat/gate3-grafana-oidc`), not part of the core API authentication implementation.
 
-### D-3: Token Strategy
+### D-3: Token Strategy — RESOLVED
+
+**Decision**: **JWT Bearer access tokens** (NOT OIDC ID tokens), validated locally via issuer/JWKS/audience/signature/expiry.
 
 | Option | Mechanism | Revocation | Best For |
 |--------|-----------|------------|----------|
-| **OIDC ID Token passthrough** | Bearer token from IdP, validated via JWKS | IdP-controlled (short TTL) | Stateless API, microservices |
-| **Session cookies + backend store** | HttpOnly cookie, server-side session | Immediate (delete session) | Traditional web apps, CSRF protection needed |
-| **Opaque access tokens + introspection** | Token issued by IdP, validated via introspection endpoint | IdP-controlled | High-security, audit trail |
+| **JWT Bearer access tokens** (SELECTED) | Access token from IdP, validated via JWKS (issuer, audience, signature, expiry) | IdP-controlled (short TTL) | Stateless API, microservices; explicit audience scoping |
+| Session cookies + backend store | HttpOnly cookie, server-side session | Immediate (delete session) | Traditional web apps, CSRF protection needed |
+| Opaque access tokens + introspection | Token issued by IdP, validated via introspection endpoint | IdP-controlled | High-security, audit trail |
 
-**Recommendation**: **OIDC ID Token passthrough (JWT Bearer)** — stateless, aligns with API-first architecture, `trustProxy: true` allowlist fix (SEC-14) ensures header integrity.
+**Rationale**: OIDC ID tokens are for authentication context, not API authorization. Access tokens carry scopes/audiences; validation is local (no introspection round-trip); JWT structure allows stateless verification with rotating JWKS.
 
-### D-4: MFA Enforcement Model
+### D-4: MFA Enforcement Model — RESOLVED
+
+**Decision**: **IdP-enforced WebAuthn/passkeys**, with phishing-resistant MFA required for privileged/admin identities. Do not build TOTP MFA into Opnory.
 
 | Option | Enforcement Point | Phishing Resistance |
 |--------|-------------------|---------------------|
-| **IdP-enforced (recommended)** | Entra Conditional Access / Okta Adaptive MFA | WebAuthn/passkeys (phishing-resistant) |
-| **Application-enforced** | App checks MFA claim in token | Requires app logic, less reliable |
-| **TOTP only** | App or IdP | **Not phishing-resistant** |
+| **IdP-enforced WebAuthn/passkeys** (SELECTED) | Entra Conditional Access | WebAuthn/passkeys (phishing-resistant) |
+| Application-enforced | App checks MFA claim in token | Requires app logic, less reliable |
+| TOTP only | App or IdP | **Not phishing-resistant** |
 
-**Recommendation**: **IdP-enforced WebAuthn/passkeys** — zero app code, highest assurance, meets SEC-02 "phishing-resistant MFA" intent.
+**Rationale**: WebAuthn/passkeys provide cryptographic phishing resistance. Entra Conditional Access can enforce WebAuthn for all privileged/admin identities. Zero application code required; IdP handles credential registration, attestation, and policy.
 
-### D-5: Break-Glass / Emergency Admin (SEC-03)
+### D-5: Break-Glass / Emergency Admin (SEC-03) — RESOLVED
 
-| Requirement | Proposed Design |
-|-------------|-----------------|
-| Sealed credential | Time-limited emergency admin token, stored in sealed envelope (Shamir split or physical safe) |
-| Access path | Direct DB/API bypass via documented CLI, no OIDC dependency |
+**Decision**: **Physical-safe model initially**, evolving to HSM/sealed custody in Gate 4. **Do not** implement "direct DB/API bypass" as the normal break-glass design. Use **dedicated emergency identities/credentials** that flow through normal Opnory authorization (audited, time-limited), not bypassing it.
+
+| Requirement | Locked Design |
+|-------------|---------------|
+| Credential custody | Physical-safe initially (Shamir split or sealed envelope) → HSM/sealed in Gate 4 |
+| Access path | **Dedicated emergency identities/credentials** — normal Opnory authorization flow, tightly monitored, time-limited, NOT DB/API bypass |
 | Audit | Every break-glass use triggers alert + immutable audit log |
 | Testing | Quarterly drill, evidence retained |
 
 **Required for SOC 2**: Documented, tested, auditable break-glass — even for solo maintainer.
 
-### D-6: Admin Role Model
+### D-6: Admin Role Model — RESOLVED
 
-| Question | Decision Needed |
-|----------|-----------------|
-| Single admin or multi-role? | `admin` vs `super-admin` vs `read-only-admin` |
-| Role assignment | IdP group membership → role mapping |
-| Lifecycle | JML via IdP (D-1) or manual? |
+**Decision**: **Multi-role with explicit read-only split**. Minimum model: `platform-admin`, `access-approver`, and `auditor/read-only`. One human may hold multiple roles while Opnory is solo-maintained, but the permissions must remain structurally separated.
+
+| Role | Scope | Typical IdP Group |
+|------|-------|-------------------|
+| **platform-admin** | Full Opnory control: manage tenants, integrations, config, break-glass | `opnory-platform-admins` |
+| **access-approver** | Approve/deny access requests; read audit trails | `opnory-access-approvers` |
+| **auditor/read-only** | Read-only access to requests, audit, config; no mutations | `opnory-auditors` |
+
+**Constraint**: Role assignment via IdP group membership → Opnory role mapping. No wildcard/admin-by-default. Token validation extracts groups, maps to Opnory roles, enforces per-route.
 
 ---
 
@@ -173,30 +187,56 @@ apps/api (Fastify) ← OIDC middleware validates JWT from Entra
    └── /v1/access/requests*       → auth required + admin role (approval)
 ```
 
-### 5.2 Fastify Middleware Sketch (Implementation Phase)
+### 5.2 Fastify Middleware Sketch (Implementation Phase — Conditional on D-3: JWT Bearer Access Tokens)
 
 ```typescript
-// apps/api/src/auth/oauth2.ts — ONLY after user approves D-1 through D-6
+// apps/api/src/auth/jwt-bearer.ts — ONLY after decisions locked (2026-09-13)
+// Validates JWT Bearer ACCESS TOKENS (not OIDC ID tokens) via local JWKS verification
 import { fastify } from "fastify";
-import fastifyOAuth2 from "@fastify/oauth2";
+import fastifyJwt from "@fastify/jwt";
+import jwksClient from "jwks-rsa";
 
-await server.register(fastifyOAuth2, {
-  name: "entra",
-  credentials: {
-    client: { id: config.entra.clientId, secret: config.entra.clientSecret },
-    auth: fastifyOAuth2.ENTRA_CONFIGURATION,
-  },
-  scope: ["openid", "profile", "email"],
-  callbackUri: "https://api.opnory.com/auth/callback",
+const client = jwksClient({
+  jwksUri: config.entra.jwksUri, // e.g., https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys
+  cache: true,
+  rateLimit: true,
 });
 
-// Route guard
+function getKey(header: any, callback: any) {
+  client.getSigningKey(header.kid, (err, key) => {
+    if (err) return callback(err);
+    callback(null, key.getPublicKey());
+  });
+}
+
+await server.register(fastifyJwt, {
+  secret: getKey, // dynamic key lookup via JWKS
+  verify: {
+    issuer: config.entra.issuer,       // required: validate iss
+    audience: config.entra.audience,   // required: validate aud
+    maxAge: "15m",                     // required: validate exp
+  },
+});
+
+// Route guard — applies to all routes except explicitly public ones
 server.addHook("preHandler", async (request, reply) => {
   if (isPublicRoute(request.routeOptions.url)) return;
-  const token = request.headers.authorization?.replace("Bearer ", "");
-  if (!token) return reply.code(401).send({ error: "Unauthorized" });
-  // Validate JWT via JWKS, check claims, extract roles
+  try {
+    const payload = await request.jwtVerify();
+    // Map Entra groups claim → Opnory roles (platform-admin, access-approver, auditor/read-only)
+    request.user = mapEntraGroupsToOpnoryRoles(payload);
+  } catch {
+    return reply.code(401).send({ error: "Unauthorized" });
+  }
 });
+
+// Public routes (explicit allowlist, not implicit deny)
+function isPublicRoute(url: string): boolean {
+  return url === "/health" ||
+         url === "/v1/slack/commands"; // Slack signature verified separately
+}
+
+// Slack ingress uses Slack signature verification (separate middleware)
 ```
 
 ---
@@ -241,32 +281,34 @@ The `trustProxy: true` **without allowlist** (SEC-14 alert #3, GHSA-444r-cwp2-x5
 
 | Current | Required Before Gate 3 Implementation |
 |---------|----------------------------------------|
-| `fastify({ trustProxy: true })` | `fastify({ trustProxy: ["127.0.0.1/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"] })` — Caddy upstream (local compose network) |
+| `fastify({ trustProxy: true })` | `fastify({ trustProxy: ["127.0.0.1", "172.16.0.0/12"] })` — exact Caddy upstream (container network) only |
+
+**Rationale**: The Fastify advisory specifically recommends an IP/CIDR/custom trust predicate that validates the connecting address and ensures the origin cannot be reached around the proxy. Trusting all RFC1918 space (`10/8`, `172.16/12`, `192.168/16`) is **too broad** for a hardened deployment. Only the **actual Caddy source IP/subnet** (Docker compose network) should be trusted. This is the minimal trust boundary that satisfies the advisory while maintaining security.
 
 This fix is independent of IdP choice and **must land before or with** any auth middleware.
 
 ---
 
-## 10. Open Questions for User Decision
+## 10. Decisions Locked (2026-09-13)
 
-| ID | Question | Options | Your Decision |
-|----|----------|---------|---------------|
-| **D-1** | Identity Provider | Keycloak / Entra / Okta / Dual | |
-| **D-2** | Enforcement Surface | API only / API+Grafana / All | |
-| **D-3** | Token Strategy | JWT Bearer / Session cookies / Opaque introspection | |
-| **D-4** | MFA Model | IdP WebAuthn / App-enforced / TOTP | |
-| **D-5** | Break-Glass Design | Shamir split / Physical safe / HSM-sealed / Other | |
-| **D-6** | Admin Role Model | Single admin / Multi-role / Read-only split | |
+| ID | Decision | Final Selection |
+|----|----------|-----------------|
+| **D-1** | Identity Provider | **Entra ID first**, provider-neutral OIDC boundary; Keycloak for local/offline proof only |
+| **D-2** | Enforcement Surface | **API first** (`apps/api` only); `/health` narrowly public; Slack signature verification; `/v1/access/*` auth + role; Grafana OIDC on separate branch |
+| **D-3** | Token Strategy | **JWT Bearer access tokens** validated locally (issuer/JWKS/audience/signature/expiry); **NO OIDC ID token passthrough** |
+| **D-4** | MFA Model | **IdP-enforced WebAuthn/passkeys** (phishing-resistant); no app-built TOTP |
+| **D-5** | Break-Glass Design | **Physical-safe model initially** → HSM/sealed in Gate 4; **dedicated emergency identities**, NOT DB/API bypass |
+| **D-6** | Admin Role Model | **Multi-role with read-only split**: `platform-admin`, `access-approver`, `auditor/read-only`; solo maintainer may hold multiple, permissions structurally separated |
 
-**Gate 3 implementation does not start until D-1 through D-6 are resolved.**
+**Implementation is now unblocked** per the agreed sequencing: UUID PR → Fastify v5 staged migration + `@fastify/*` plugins → exact Caddy `trustProxy` + restrictive CORS → Gate 3 Entra/JWT/WebAuthn/multi-role implementation → local negative/authz proof → only then deliberately reopen Gate 2 ingress for TLS/OIDC live proof.
 
 ---
 
 ## 11. Next Actions (Post-Decision)
 
-1. **Resolve D-1 through D-6** (user)
+1. **Decisions locked 2026-09-13** (see §10)
 2. **Create implementation branch** (e.g., `feat/gate3-sso-impl`) from `main`
-3. **Implement OIDC middleware** in `apps/api` per chosen strategy
+3. **Implement JWT Bearer access-token validation** in `apps/api` per locked D-3 strategy
 4. **Add `trustProxy` allowlist** (SEC-14 remediation)
 5. **Update Caddy** for `/auth/*` routes (new Gate 3 branch, not Gate 2)
 6. **Run full gate suite** (`typecheck`, `lint`, `build`, `test`)
