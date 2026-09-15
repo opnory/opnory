@@ -34,10 +34,20 @@ Credentials are ephemeral and generated locally. Two files are gitignored:
 SeaweedFS validates client SigV4 signatures against identities in `s3.json`, and
 requires an STS fallback signing key. The composition that works:
 
-1. The verifier generates `s3.json` via `jq` from templates:
-   - **Bootstrap phase**: `s3.bootstrap.json.example` → `s3.json` (admin + tempo identities)
-   - **Runtime phase**: `s3.runtime.json.example` → `s3.json` (tempo identity only, no Admin)
-   SeaweedFS does **not** expand `${VAR}` in its config; the verifier materializes concrete JSON.
+1. Render `s3.json` from templates with **committed tool** `render-s3-config.py`
+   (reads `.env`, substitutes `${VAR}` placeholders, validates non-empty credentials,
+   unique access keys and distinct secret keys across identities, then writes the
+   gitignored `s3.json` atomically with mode `0600`). This is the **single
+   configuration path used by verify-durability.sh** and by any operator runbook.
+   - **Bootstrap phase**: `python3 render-s3-config.py s3.bootstrap.json.example s3.json`
+     (admin + tempo identities)
+   - **Runtime phase**: `python3 render-s3-config.py s3.runtime.json.example s3.json`
+     (tempo identity only, no Admin)
+   SeaweedFS does **not** expand `${VAR}` in its config; it `json.Unmarshal`s the file
+   literally at startup (`weed/s3api/auth_credentials.go`, verified in source for
+   pinned digest `fc9f76fa…`). The renderer exists because a template with literal
+   placeholders causes `InvalidAccessKeyId`, not because SeaweedFS itself does any
+   substitution.
 2. Mount `s3.json` via `-s3.config=/etc/seaweedfs/s3.json` with an `identities` entry
    whose `accessKey`/`secretKey` match what Tempo signs with (`SEAWEEDFS_TEMPO_*`).
 3. Set `WEED_JWT_FILER_SIGNING_KEY` (and `_READ_KEY`) to a shared secret — the STS

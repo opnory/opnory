@@ -72,7 +72,8 @@ done
 check_prereqs() {
   command -v docker >/dev/null || die "docker not found"
   command -v docker >/dev/null || die "docker compose not found"
-  command -v jq >/dev/null || die "jq not found"
+  command -v jq >/dev/null || die "jq not found (required for OTLP payload/response handling)"
+  command -v python3 >/dev/null || die "python3 not found (required by render-s3-config.py)"
   command -v curl >/dev/null || die "curl not found"
   command -v openssl >/dev/null || die "openssl not found"
   [[ -f "${ENV_FILE}" ]] || die "Missing ${ENV_FILE}"
@@ -90,44 +91,17 @@ check_prereqs() {
 }
 
 generate_bootstrap_s3_config() {
-  log "Generating bootstrap S3 config with real credentials..."
-  jq -n \
-    --arg admin_key "${SEAWEEDFS_ADMIN_ACCESS_KEY}" \
-    --arg admin_secret "${SEAWEEDFS_ADMIN_SECRET_KEY}" \
-    --arg tempo_key "${SEAWEEDFS_TEMPO_ACCESS_KEY}" \
-    --arg tempo_secret "${SEAWEEDFS_TEMPO_SECRET_KEY}" \
-    '{
-      identities: [
-        {
-          name: "admin",
-          credentials: [{accessKey: $admin_key, secretKey: $admin_secret}],
-          actions: ["Admin"]
-        },
-        {
-          name: "tempo",
-          credentials: [{accessKey: $tempo_key, secretKey: $tempo_secret}],
-          actions: ["Read:tempo-traces", "Write:tempo-traces", "List:tempo-traces", "Tagging:tempo-traces"]
-        }
-      ]
-    }' > "${S3_JSON_FILE}"
-  ok "Bootstrap S3 config written to ${S3_JSON_FILE}"
+  log "Rendering bootstrap S3 config via render-s3-config.py (single source of truth)..."
+  python3 "${COMPOSE_DIR}/render-s3-config.py" "${S3_BOOTSTRAP_TEMPLATE}" "${S3_JSON_FILE}" \
+    || die "render-s3-config.py failed for bootstrap template"
+  ok "Bootstrap S3 config written to ${S3_JSON_FILE} (mode 600, validated distinct identities)"
 }
 
 generate_runtime_s3_config() {
-  log "Generating runtime S3 config with real credentials..."
-  jq -n \
-    --arg tempo_key "${SEAWEEDFS_TEMPO_ACCESS_KEY}" \
-    --arg tempo_secret "${SEAWEEDFS_TEMPO_SECRET_KEY}" \
-    '{
-      identities: [
-        {
-          name: "tempo",
-          credentials: [{accessKey: $tempo_key, secretKey: $tempo_secret}],
-          actions: ["Read:tempo-traces", "Write:tempo-traces", "List:tempo-traces"]
-        }
-      ]
-    }' > "${S3_JSON_FILE}"
-  ok "Runtime S3 config written to ${S3_JSON_FILE}"
+  log "Rendering runtime S3 config via render-s3-config.py (single source of truth)..."
+  python3 "${COMPOSE_DIR}/render-s3-config.py" "${S3_RUNTIME_TEMPLATE}" "${S3_JSON_FILE}" \
+    || die "render-s3-config.py failed for runtime template"
+  ok "Runtime S3 config written to ${S3_JSON_FILE} (tempo identity only, no Admin)"
 }
 
 cleanup() {
