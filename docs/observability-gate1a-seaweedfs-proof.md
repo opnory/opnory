@@ -100,10 +100,51 @@ pre-recreate (where the index is fresh) and proves durability via trace-by-ID po
 ## Least-privilege status
 
 The bootstrap SeaweedFS identity uses `actions: ["Admin"]`. Narrowing to Tempo's
-minimum S3 operations is a **follow-up hardening item — UNPROVEN** in the
-pre-refactor configuration; **superseded by the least-privilege refactor + verifier
-(verify-durability.sh), which proves the two-phase identity swap and Admin denial
-at steady state**. See `ops/self-hosted-seaweedfs/README.md` for current status.
+minimum S3 operations was a **follow-up hardening item — UNPROVEN** in the
+pre-refactor configuration; **resolved PROVEN on 2026-09-15 via a controlled
+manual run** (see `ops/self-hosted-seaweedfs/README.md` and this file's
+"Least-privilege proof" section below).
+
+## Least-privilege proof (2026-09-15, on branch feat/observability-seaweedfs-least-privilege-v3)
+
+Mechanism: SeaweedFS 4.45 (`sha256:fc9f76fa…`) reads `-s3.config` as a literal
+JSON file at process startup, synchronously inside
+`NewIdentityAccessManagementWithStore` (`weed/s3api/s3api_server.go:190` →
+`weed/s3api/auth_credentials.go:363-380`), **before** the HTTP listener starts.
+It does **not** expand `${VAR}` placeholders in that file; the JSON must be
+materialized to concrete values before `docker compose up`. The renderer
+(`render-s3-config.py`) does that from the tracked templates into the gitignored
+`./s3.json`.
+
+Controlled two-phase run against the pinned image digest:
+
+1. **Bootstrap phase** (`s3.json` rendered from `s3.bootstrap.json.example` —
+   identities: `admin` with `Admin`, `tempo` with `Read/Write/List/Tagging` on
+   `tempo-traces` only):
+   - admin `s3 mb s3://tempo-traces` → succeeded.
+2. **Runtime phase** (`s3.json` re-rendered from `s3.runtime.json.example` —
+   tempo identity only), SeaweedFS restarted, volume preserved:
+   - admin credential denied with `InvalidAccessKeyId` (fail-closed — the key
+     registry holds no admin entry at steady state).
+   - tempo listed `tempo-traces` and its objects, wrote a probe object via `cp`.
+   - tempo was denied `CreateBucket` on a second bucket with `AccessDenied`.
+3. **Tempo (grafana/tempo:2.5.0)** started healthy against the runtime identity
+   ("Tempo started", blocklist polls succeeding). One OTLP trace was emitted and
+   retrieved by ID (HTTP 200) with `opnory.tenant_hash` intact.
+4. **Durability**: Tempo container destroyed and recreated (fresh container, no
+   local WAL); the same trace retrieved HTTP 200 — state recovered from S3 under
+   the tempo identity only.
+5. **Restart determinism**: SeaweedFS restarted across the config swap and one
+   restart of runtime config; each subsequent access pattern behaved as asserted.
+
+Conclusion: least-privilege (bootstrap-only admin + runtime tempo-scoped
+identity on one bucket, no broader rights) is **PROVEN** for the pinned
+SeaweedFS build.
+
+Root-cause note: earlier failures (`InvalidAccessKeyId` with real keys) were
+traced to the runtime `s3.json` containing the literal strings
+`tempo-key`/`tempo-secret`, never hydrated to the actual `.env` values. Once the
+file was materialized correctly, the mechanism worked as documented.
 
 ## Stack
 
