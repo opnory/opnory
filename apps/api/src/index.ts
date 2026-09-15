@@ -21,15 +21,48 @@ import {
   type ApprovalDecision,
 } from "@opnory/access-types";
 
+import {
+  AuthError,
+  createOidcValidator,
+  requireRole,
+  type OidcAuthConfig,
+  type TokenPrincipal,
+} from "./auth/oidc.js";
+
+declare module "fastify" {
+  interface FastifyRequest {
+    principal?: TokenPrincipal;
+  }
+}
+
 const logger = getLogger().child({ component: "api" });
 
-export async function createApiServer(): Promise<FastifyInstance> {
+export async function createApiServer(opts?: { oidcConfig?: OidcAuthConfig }): Promise<FastifyInstance> {
   const config = getConfig();
   const agent = getAgent();
 
   const server = fastify({
     trustProxy: ["127.0.0.1", ...(process.env.OPNORY_TRUST_PROXY_CIDRS?.split(",") || [])],
   });
+
+  // OIDC auth wiring: if configured, validate Bearer access tokens and attach principal.
+  let validateToken: ReturnType<typeof createOidcValidator> | null = null;
+  if (opts?.oidcConfig) {
+    validateToken = createOidcValidator(opts.oidcConfig);
+    server.setErrorHandler((error, request, reply) => {
+      if (error instanceof AuthError) {
+        return reply.code(error.statusCode).send({ error: error.message });
+      }
+      return reply.send(error);
+    });
+    server.decorateRequest("principal", undefined);
+    server.addHook("onRequest", async (request) => {
+      if (!validateToken) return;
+      const authHeader = request.headers.authorization;
+      if (!authHeader) return;
+      request.principal = await validateToken(authHeader);
+    });
+  }
 
   // Register AccessRequest schema for Fastify 5 $ref resolution
   const accessRequestJsonRaw = zodToJsonSchema(AccessRequestSchema, {
@@ -294,6 +327,7 @@ export async function createApiServer(): Promise<FastifyInstance> {
           404: { type: "object", properties: { error: { type: "string" } } },
         },
       },
+      onRequest: requireRole("platform-admin", "access-approver"),
     },
     async (request, reply) => {
       const traceLogger = logger.child({ component: "access-requests" });
@@ -346,6 +380,7 @@ export async function createApiServer(): Promise<FastifyInstance> {
           404: { type: "object", properties: { error: { type: "string" } } },
         },
       },
+      onRequest: requireRole("platform-admin", "access-approver", "auditor-read-only"),
     },
     async (request, reply) => {
       const accessRequest = await accessService.getRequestById(
@@ -391,6 +426,7 @@ export async function createApiServer(): Promise<FastifyInstance> {
           409: { type: "object", properties: { error: { type: "string" } } },
         },
       },
+      onRequest: requireRole("platform-admin", "access-approver"),
     },
     async (request, reply) => {
       const traceLogger = logger.child({
@@ -471,6 +507,7 @@ export async function createApiServer(): Promise<FastifyInstance> {
           409: { type: "object", properties: { error: { type: "string" } } },
         },
       },
+      onRequest: requireRole("platform-admin", "access-approver"),
     },
     async (request, reply) => {
       const traceLogger = logger.child({
@@ -551,9 +588,9 @@ export async function createApiServer(): Promise<FastifyInstance> {
               },
             },
           },
-          404: { type: "object", properties: { error: { type: "string" } } },
         },
       },
+      onRequest: requireRole("platform-admin", "access-approver", "auditor-read-only"),
     },
     async (request, reply) => {
       const accessRequest = await accessService.getRequestById(
