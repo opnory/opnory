@@ -15,9 +15,19 @@
 
 import { createRemoteJWKSet, jwtVerify, errors as joseErrors } from "jose";
 import type { FastifyReply, FastifyRequest } from "fastify";
+import { z } from "zod";
 import { getLogger } from "@opnory/observability";
 
 const logger = getLogger().child({ component: "auth" });
+
+/** Shape of jose error objects we rely on for claim diagnostics. */
+const JoseClaimErrorSchema = z.object({ claim: z.string().optional() });
+
+/** Parsed payload boundary: only claims we actually consume. */
+const PayloadClaimsSchema = z.object({
+  sub: z.string().optional(),
+  groups: z.array(z.string()).optional(),
+});
 
 export type OpnoryRole = "platform-admin" | "access-approver" | "auditor-read-only";
 
@@ -80,26 +90,32 @@ export function createOidcValidator(config: OidcAuthConfig) {
       throw new AuthError("malformed_token", "Bearer token is empty");
     }
 
-    let payload: Record<string, unknown>;
+    let payload: { sub?: string; groups?: string[] };
     try {
       const result = await jwtVerify(token, jwks, {
         issuer: config.issuer,
         audience: config.audience,
       });
-      payload = result.payload;
+      const parsed = PayloadClaimsSchema.safeParse(result.payload);
+      if (!parsed.success) {
+        throw new AuthError("invalid_signature", "Token payload shape invalid");
+      }
+      payload = parsed.data;
     } catch (err) {
+      if (err instanceof AuthError) throw err;
       if (err instanceof joseErrors.JWTExpired) {
         throw new AuthError("token_expired", "Token expired");
       }
       if (err instanceof joseErrors.JWTClaimValidationFailed) {
-        const claim = (err as { claim?: string }).claim;
+        const claimParsed = JoseClaimErrorSchema.safeParse(err);
+        const claim = claimParsed.success ? claimParsed.data.claim : undefined;
         if (claim === "iss") {
           throw new AuthError("wrong_issuer", "Token issuer mismatch");
         }
         if (claim === "aud") {
           throw new AuthError("wrong_audience", "Token audience mismatch");
         }
-        throw new AuthError("invalid_signature", `Claim validation failed: ${claim}`);
+        throw new AuthError("invalid_signature", `Claim validation failed: ${claim ?? "unknown"}`);
       }
       if (err instanceof joseErrors.JWSSignatureVerificationFailed) {
         throw new AuthError("invalid_signature", "Signature verification failed");
@@ -108,7 +124,7 @@ export function createOidcValidator(config: OidcAuthConfig) {
       throw new AuthError("invalid_signature", "Token verification failed");
     }
 
-    const groups = Array.isArray(payload.groups) ? (payload.groups as string[]) : [];
+    const groups = payload.groups ?? [];
     const roles = new Set<OpnoryRole>();
     for (const group of groups) {
       const role = config.roleGroupMap[group];
@@ -117,7 +133,7 @@ export function createOidcValidator(config: OidcAuthConfig) {
 
     return {
       roles,
-      subject: typeof payload.sub === "string" ? payload.sub : "unknown",
+      subject: payload.sub ?? "unknown",
     };
   };
 }
