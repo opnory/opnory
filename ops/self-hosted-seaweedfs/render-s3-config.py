@@ -12,9 +12,14 @@ Usage:
 Example:
     python3 render-s3-config.py s3.bootstrap.json.example s3.json
 
+The renderer validates that all identity access keys are unique and all secret
+keys are distinct across identities, and writes the output atomically with mode
+0600 (credential-bearing file).
+
 Exit codes: 0 success; 1 unresolved placeholder / invalid JSON / bad identity set.
 """
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -56,19 +61,29 @@ def main() -> int:
     if not identities:
         sys.stderr.write("no identities in rendered config\n")
         return 1
-    seen_keys: set[str] = set()
+    seen_aks: set[str] = set()
+    seen_sks: set[str] = set()
     for ident in identities:
         for cred in ident.get("credentials", []):
             ak, sk = cred.get("accessKey", ""), cred.get("secretKey", "")
             if not ak or not sk:
                 sys.stderr.write(f"identity {ident.get('name')} has empty credential\n")
                 return 1
-            if ak in seen_keys:
+            if ak in seen_aks:
                 sys.stderr.write(f"duplicate accessKey across identities\n")
                 return 1
-            seen_keys.add(ak)
+            if sk in seen_sks:
+                sys.stderr.write(f"duplicate secretKey across identities\n")
+                return 1
+            seen_aks.add(ak)
+            seen_sks.add(sk)
 
-    Path(out_path).write_text(text)
+    # Atomic write with restrictive permissions: credential-bearing file.
+    tmp_path = Path(out_path).with_suffix(".tmp")
+    fd = os.open(tmp_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(text)
+    os.rename(tmp_path, out_path)
     names = [i["name"] for i in identities]
     print(f"rendered {out_path}: identities={names}")
     return 0

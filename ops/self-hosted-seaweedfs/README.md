@@ -35,8 +35,10 @@ SeaweedFS validates client SigV4 signatures against identities in `s3.json`, and
 requires an STS fallback signing key. The composition that works:
 
 1. Render `s3.json` from templates with **committed tool** `render-s3-config.py`
-   (reads `.env`, substitutes `${VAR}` placeholders, validates non-empty/distinct
-   credentials, writes the gitignored `s3.json`):
+   (reads `.env`, substitutes `${VAR}` placeholders, validates non-empty credentials,
+   unique access keys and distinct secret keys across identities, then writes the
+   gitignored `s3.json` atomically with mode `0600`). This is the **single
+   configuration path used by verify-durability.sh** and by any operator runbook.
    - **Bootstrap phase**: `python3 render-s3-config.py s3.bootstrap.json.example s3.json`
      (admin + tempo identities)
    - **Runtime phase**: `python3 render-s3-config.py s3.runtime.json.example s3.json`
