@@ -44,7 +44,7 @@ Observed facts:
 
 - Password authentication itself succeeded (per the Entra sign-in log).
 - The block targeted `originalTransferMethod=deviceCodeFlow` specifically.
-- Conditional Access status: notApplied; no CA policies present in the tenant.
+- Conditional Access status for this sign-in: notApplied.
 - Security Defaults were **preserved** — not disabled, weakened, or bypassed.
 - The proof was moved to authorization-code + PKCE (a flow Security Defaults
   permits) rather than changing any tenant policy.
