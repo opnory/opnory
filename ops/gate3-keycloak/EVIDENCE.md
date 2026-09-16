@@ -51,14 +51,14 @@ roleGroupMap `{ "opnory-platform-admins": "platform-admin" }`.
 Protected route under test: `GET /v1/access/requests/:id` (requires one of
 platform-admin / access-approver / auditor-read-only).
 
-| Case                                              | Status | Body |
-| ------------------------------------------------- | ------ | ---- |
-| GET /health, no token                             | **200** | `{"status":"ok",...}` |
-| protected, no token                               | **401** | `{"error":"Not authenticated"}` |
-| protected, malformed token (`Bearer not.a.jwt`)   | **401** | `{"error":"Token verification failed"}` |
-| protected, expired token (2s lifespan, waited)    | **401** | `{"error":"Token expired"}` |
-| protected, valid Keycloak token, NO role          | **403** | `{"error":"Required role not present (need one of: platform-admin, access-approver, auditor-read-only)"}` |
-| protected, valid Keycloak token, platform-admin   | **404** | `{"error":"Access request not found"}` — **authorization passed, business handler reached** (the request ID is validly formed but does not exist, so the handler returned its own 404). |
+| Case                                            | Status  | Body                                                                                                                                                                                    |
+| ----------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET /health, no token                           | **200** | `{"status":"ok",...}`                                                                                                                                                                   |
+| protected, no token                             | **401** | `{"error":"Not authenticated"}`                                                                                                                                                         |
+| protected, malformed token (`Bearer not.a.jwt`) | **401** | `{"error":"Token verification failed"}`                                                                                                                                                 |
+| protected, expired token (2s lifespan, waited)  | **401** | `{"error":"Token expired"}`                                                                                                                                                             |
+| protected, valid Keycloak token, NO role        | **403** | `{"error":"Required role not present (need one of: platform-admin, access-approver, auditor-read-only)"}`                                                                               |
+| protected, valid Keycloak token, platform-admin | **404** | `{"error":"Access request not found"}` — **authorization passed, business handler reached** (the request ID is validly formed but does not exist, so the handler returned its own 404). |
 
 ## Crypto / OIDC boundary (Phase 5)
 
@@ -66,10 +66,13 @@ The proof exercises the production-shaped code path in `apps/api/src/auth/oidc.t
 Keycloak-issued RS256 JWT → remote JWKS lookup (jose `createRemoteJWKSet`)
 against the live realm → signature verification → issuer match → audience match
 → expiration check → `groups` claim → Opnory role mapping → Fastify
-authorization hook. No locally hand-signed tokens were used anywhere; all 401s
-above came from real jose validation failures against the genuine Keycloak
-JWTs, and the two success-path rows only pass when JWKS/signature/issuer/
-audience/expiry all validate.
+authorization hook. The no-token row exercises the authentication boundary before JWT
+verification. The malformed-token row exercises jose rejection of invalid
+JWT input. The expired-token row uses a genuine Keycloak-issued JWT and
+exercises expiration validation. The valid no-role and platform-admin rows
+use genuine Keycloak-issued JWTs and reach role mapping only after
+signature, issuer, audience, and expiry validation succeed. No locally
+hand-signed tokens were used anywhere.
 
 ## Non-evidence (never captured)
 
