@@ -1,0 +1,126 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://opnory.dev/schemas/iac-repro-evidence.schema.json",
+  "title": "Opnory IaC Phase 1 Reproducibility Evidence",
+  "description": "Sanitized machine-readable evidence for one full lab lifecycle attempt. Two PASSING lifecycle records (cycle 1 and cycle 2) are required for the Phase 1B claim. Raw provider credentials, tokens, SSH private material, application secrets, and unsafe identifying material must never appear in any field.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "generator",
+    "commit_sha",
+    "tool_versions",
+    "provider",
+    "environment",
+    "terraform_state_identity",
+    "cycles",
+    "overall_result"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "generator": { "const": "infra/repro-harness" },
+    "commit_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{7,40}$"
+    },
+    "tool_versions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["opentofu", "ansible", "docker", "docker_compose"],
+      "properties": {
+        "opentofu": { "type": ["string", "null"] },
+        "ansible": { "type": ["string", "null"] },
+        "docker": { "type": ["string", "null"] },
+        "docker_compose": { "type": ["string", "null"] }
+      }
+    },
+    "provider": {
+      "type": "string",
+      "description": "Provider key from infra/providers/<name>/. Must not be a credential or account identifier."
+    },
+    "environment": { "const": "lab" },
+    "terraform_state_identity": {
+      "type": "string",
+      "description": "Non-secret identifier for the remote state workspace, e.g. backend type + workspace name. Must not contain bucket keys, SAS tokens, or credentials."
+    },
+    "mutation_budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["declared", "observed"],
+      "properties": {
+        "declared": { "type": "integer", "minimum": 0 },
+        "observed": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "cycles": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 2,
+      "items": { "$ref": "#/definitions/cycle" }
+    },
+    "overall_result": { "enum": ["PASS", "FAIL", "ABORTED", "DRY_RUN"] }
+  },
+  "definitions": {
+    "step_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "enum": ["pass", "fail", "skipped", "dry_run_planned"]
+        },
+        "detail": {
+          "type": "string",
+          "description": "Short sanitized detail. No credentials, IPs are allowed (host is the public lab identity), no account IDs."
+        },
+        "duration_seconds": { "type": "number", "minimum": 0 },
+        "mutations": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of provider resource mutations attributed to this step, from the mutation ledger."
+        }
+      }
+    },
+    "cycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cycle",
+        "preflight",
+        "plan",
+        "apply",
+        "cloud_init",
+        "ansible_converge",
+        "compose_up",
+        "workload_health",
+        "opnory_verification",
+        "post_apply_drift",
+        "ansible_idempotence",
+        "destroy",
+        "post_destroy_residue",
+        "cycle_result"
+      ],
+      "properties": {
+        "cycle": { "type": "integer", "enum": [1, 2] },
+        "preflight": { "$ref": "#/definitions/step_result" },
+        "plan": { "$ref": "#/definitions/step_result" },
+        "apply": { "$ref": "#/definitions/step_result" },
+        "cloud_init": { "$ref": "#/definitions/step_result" },
+        "ansible_converge": { "$ref": "#/definitions/step_result" },
+        "compose_up": { "$ref": "#/definitions/step_result" },
+        "workload_health": { "$ref": "#/definitions/step_result" },
+        "opnory_verification": { "$ref": "#/definitions/step_result" },
+        "post_apply_drift": { "$ref": "#/definitions/step_result" },
+        "ansible_idempotence": { "$ref": "#/definitions/step_result" },
+        "destroy": { "$ref": "#/definitions/step_result" },
+        "post_destroy_residue": {
+          "$ref": "#/definitions/step_result",
+          "description": "Verification that no resources remain after destroy (ADR 0003 invariant #7 analogue: zero residue)."
+        },
+        "cycle_result": { "enum": ["PASS", "FAIL", "ABORTED", "DRY_RUN"] }
+      }
+    }
+  }
+}

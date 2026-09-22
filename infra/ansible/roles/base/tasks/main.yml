@@ -1,0 +1,41 @@
+---
+# OS baseline: packages, timezone, hardening that must exist before anything
+# else. Idempotent by construction (apt/ufw/file modules only).
+- name: Install baseline packages
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - ufw
+      - unattended-upgrades
+      - logrotate
+      - jq
+    state: present
+    update_cache: true
+
+- name: Set timezone to UTC
+  community.general.timezone:
+    name: Etc/UTC
+
+- name: Disable password authentication in sshd
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?PasswordAuthentication"
+    line: "PasswordAuthentication no"
+    validate: "/usr/sbin/sshd -t -f %s"
+  notify: Reload sshd
+  become: true
+
+- name: Ensure /srv/opnory exists with deployment ownership
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: opnory
+    group: opnory
+    mode: "0755"
+  loop:
+    - /srv/opnory
+    - /srv/opnory/config
+    - /srv/opnory/data
+    - /srv/opnory/logs

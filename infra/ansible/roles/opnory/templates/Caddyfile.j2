@@ -1,0 +1,9 @@
+{{ dns_name }} {
+    reverse_proxy api:8080
+    # TLS via ACME; certificates live in the caddy-data volume.
+    # Access logging to stdout (collected via docker logs -> /srv/opnory/logs).
+    log {
+        output stdout
+        format json
+    }
+}

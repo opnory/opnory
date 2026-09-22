@@ -1,0 +1,8 @@
+# Static inventory shim. The real lab inventory is generated:
+#   render_inventory.py < tofu output -json > inventories/lab.generated.yml
+# This file includes it and nothing else, so `ansible-playbook site.yml`
+# fails loudly when the inventory has not been rendered.
+opnory_lab:
+  hosts: {}
+# @generated include (uncommented by render_inventory.py usage):
+# Run with: ansible-playbook -i inventories/lab.generated.yml site.yml
