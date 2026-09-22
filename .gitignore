@@ -39,5 +39,16 @@ coverage/
 # Gitleaks report
 gitleaks-report.json
 
+# IaC reproducibility harness runtime artifacts (never commit state/plans/ledgers)
+infra/**/*.tfstate
+infra/**/*.tfstate.*
+infra/**/*.tfplan
+infra/**/.terraform/
+**/.terraform.lock.hcl
+*.opnory-iac-evidence.json
+*.mutations.jsonl
+opnory-iac-mutations.jsonl
+opnory-iac-evidence.json
+
 # Live governance TypeScript config (generated)
 scripts/live-governance/tsconfig.json

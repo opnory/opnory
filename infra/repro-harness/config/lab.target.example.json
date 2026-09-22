@@ -1,0 +1,14 @@
+{
+  "_comment": "EXAMPLE ONLY. Copy to a path OUTSIDE the repository (or a gitignored location) and fill in for the real lab. Never commit a filled-in target file.",
+  "environment": "lab",
+  "provider": "<provider-key-matching-infra/providers/<name>>",
+  "tofu Working directory": "infra/environments/lab",
+  "state_identity": "<non-secret state workspace id, e.g. s3:opnory-iac-state/lab.tfstate>",
+  "expected_dns_zone": "<public DNS zone for the lab, e.g. lab.example.com>",
+  "allowed_provider_account_hint": "<non-secret provider account/subscription/project label the operator recognizes; used by the provider probe to prevent targeting the wrong account>",
+  "ssh_user": "opnory-deploy",
+  "ansible_playbook": "infra/ansible/site.yml",
+  "compose_project_dir": "/srv/opnory",
+  "mutation_budget": 60,
+  "human_authorization_env": "OPNORY_IAC_LIVE_AUTHORIZED"
+}
