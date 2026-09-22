@@ -1,0 +1,32 @@
+---
+# Backup prerequisites: directory layout + a systemd timer skeleton that runs
+# the (Phase 1B-supplied) backup script. The timer is installed but the actual
+# backup target/destination requires application secrets, supplied at deploy
+# time through the SecretStore boundary — never here.
+- name: Backup directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: opnory
+    group: opnory
+    mode: "0750"
+  loop:
+    - /srv/opnory/backups
+    - /srv/opnory/backups/tmp
+
+- name: Install backup unit files
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - opnory-backup.service
+    - opnory-backup.timer
+  notify: Daemon reload
+
+- name: Enable backup timer (not started until a backup target exists)
+  ansible.builtin.systemd:
+    name: opnory-backup.timer
+    enabled: false

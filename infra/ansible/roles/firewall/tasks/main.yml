@@ -1,0 +1,32 @@
+---
+# Host firewall (ufw) implementing modules/firewall-policy/policy.json.
+# The cloud security group is a separate layer owned by OpenTofu; both are
+# built from the same policy definition.
+- name: Default deny inbound
+  community.general.ufw:
+    direction: incoming
+    policy: deny
+
+- name: Default allow outbound
+  community.general.ufw:
+    direction: outgoing
+    policy: allow
+
+- name: Allow policy ports
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    comment: "{{ item.comment }}"
+  loop: "{{ firewall_allowed_ports }}"
+
+- name: Rate-limit SSH
+  community.general.ufw:
+    rule: limit
+    port: "22"
+    proto: tcp
+  when: firewall_ssh_rate_limit
+
+- name: Enable ufw
+  community.general.ufw:
+    state: enabled

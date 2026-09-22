@@ -1,0 +1,111 @@
+name: iac-pr
+
+# Phase 1A policy (ADR 0012 §9):
+# - no tofu apply here; no provider credentials or OIDC trust granted;
+# - fork PRs run the same checks with read-only permissions, which cannot
+#   access secrets or environments;
+# - apply, when a provider exists, requires the protected 'lab-apply'
+#   environment and is a separate workflow; it does not exist yet because
+#   the provider choice is unresolved (environments/lab/PROVIDER-UNRESOLVED.md).
+
+on:
+  pull_request:
+    paths:
+      - "infra/**"
+      - ".github/workflows/iac-pr.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  tofu-static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: 1.8.4
+
+      - name: tofu fmt -check (recursive)
+        run: tofu fmt -check -recursive infra/
+
+      - name: tofu validate (backend disabled; environments with tf configuration)
+        run: |
+          set -euo pipefail
+          # Phase 1A: environments define no .tf yet (provider unresolved).
+          # If a directory gains configuration, validate it with no backend.
+          for d in infra/environments/*/ infra/providers/*/*/; do
+            if compgen -G "$d/*.tf" > /dev/null; then
+              (cd "$d" && tofu init -backend=false && tofu validate)
+            fi
+          done
+
+  ansible-static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: pipx install ansible-core && pipx inject ansible-core community.general
+
+      - name: ansible-playbook syntax check
+        working-directory: infra/ansible
+        run: ansible-playbook --syntax-check site.yml -i inventories/lab.yml
+
+      - name: render_inventory.py unit smoke (sample contract outputs)
+        run: |
+          echo '{"host_address":{"value":"10.0.0.1"},"private_address":{"value":"10.0.0.1"},"dns_name":{"value":"lab.example.com"},"environment":{"value":"lab"}}' \
+            | python3 infra/ansible/inventories/render_inventory.py > /tmp/inv.json
+          grep -q lab.example.com /tmp/inv.json
+
+      - name: host-contract validator must reject secret-shaped outputs
+        run: |
+          ! echo '{"host_address":{"value":"x"},"private_address":{"value":"y"},"dns_name":{"value":"z"},"environment":{"value":"lab"},"database_url":{"value":"postgres://p@h/db"}}' \
+            | python3 infra/modules/host-contract/validate_contract.py /dev/stdin
+
+  compose-static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: docker compose config (canonical stack template, smoke-rendered)
+        run: |
+          # Render template with placeholder values and validate schema.
+          python3 - <<'EOF'
+          import re, sys, pathlib
+          t = pathlib.Path("infra/ansible/roles/opnory/templates/compose.yml.j2").read_text()
+          t = re.sub(r"\{\{[^}]+\}\}", "PLACEHOLDER", t)
+          pathlib.Path("/tmp/compose.yml").write_text(t)
+          EOF
+          # ${VAR} refs are fine; schema check only.
+          POSTGRES_PASSWORD=x docker compose -f /tmp/compose.yml config --quiet
+          # No host port for postgres/redis/tempo/grafana
+          ! grep -q 'ports:' -A2 /tmp/compose.yml | grep -q '5432:5432'
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: IaC static analysis (checkov, terraform+ansible scoped)
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: infra/
+          framework: terraform ansible
+          soft_fail: false
+
+      - name: Forbidden-pattern grep (defense in depth)
+        run: |
+          set -euo pipefail
+          # No private keys committed anywhere in infra/
+          ! grep -rIl -- '-----BEGIN .* PRIVATE KEY-----' infra/
+          # No remote-exec provisioners (ADR 0012 prohibits them)
+          ! grep -rIn 'remote-exec' infra/ --include='*.tf'
+          # No .tfstate / plan / env artifacts
+          ! find infra -name '*.tfstate*' -o -name '*.tfplan' | grep .

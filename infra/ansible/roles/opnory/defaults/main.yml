@@ -1,0 +1,9 @@
+---
+# Opnory workload configuration. Secrets are NEVER role variables: they are
+# supplied at deploy time into /srv/opnory/.env by the operator (out-of-band,
+# via the SecretStore/CredentialProvider boundary) and this role refuses to
+# template the stack when the env file is absent.
+opnory_image_tag: "edge"
+opnory_http_port: 443
+opnory_compose_dir: /srv/opnory
+opnory_env_file: /srv/opnory/.env

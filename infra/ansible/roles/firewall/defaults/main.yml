@@ -1,0 +1,7 @@
+---
+# Derived from infra/modules/firewall-policy/policy.json; keep in sync.
+firewall_allowed_ports:
+  - { port: 22, proto: tcp, comment: "ssh" }
+  - { port: 80, proto: tcp, comment: "http-acme-redirect" }
+  - { port: 443, proto: tcp, comment: "https" }
+firewall_ssh_rate_limit: true

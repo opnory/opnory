@@ -1,0 +1,14 @@
+---
+# Opnory one-host repeatable state (ADR 0012). Target: the lab host rendered
+# by OpenTofu outputs via inventories/render_inventory.py.
+# Idempotence is a contract: second run must report no meaningful changes.
+- name: Opnory lab host
+  hosts: opnory_lab
+  gather_facts: true
+  roles:
+    - base
+    - docker
+    - firewall
+    - observability
+    - backup
+    - opnory

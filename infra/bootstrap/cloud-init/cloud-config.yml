@@ -1,0 +1,36 @@
+#cloud-config
+# Opnory lab first-boot bootstrap (ADR 0012). Scope: user, SSH key, Ansible
+# takeover prerequisites, one-time OS init. Nothing else.
+# Variables (rendered by the provider stack): ssh_public_key, hostname
+
+hostname: ${hostname}
+fqdn: ${hostname}
+prefer_fqdn_over_hostname: true
+
+users:
+  - name: opnory
+    groups: [sudo]
+    shell: /bin/bash
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+
+package_update: true
+package_upgrade: false
+packages:
+  - python3
+  - python3-apt
+  - rsync
+  - curl
+
+# Unattended security upgrades only; no application provisioning here.
+write_files:
+  - path: /etc/apt/apt.conf.d/20auto-upgrades
+    permissions: "0644"
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+
+runcmd:
+  - systemctl daemon-reload

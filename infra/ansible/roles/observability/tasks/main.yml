@@ -1,0 +1,21 @@
+---
+# Observability prerequisites: directories and log rotation for the Compose
+# observability stack (Tempo/Grafana run as Compose services, not here).
+- name: Observability data directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: opnory
+    group: opnory
+    mode: "0755"
+  loop:
+    - /srv/opnory/data/tempo
+    - /srv/opnory/data/grafana
+
+- name: Log rotation for opnory logs
+  ansible.builtin.template:
+    src: opnory-logrotate.j2
+    dest: /etc/logrotate.d/opnory
+    owner: root
+    group: root
+    mode: "0644"

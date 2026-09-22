@@ -1,0 +1,88 @@
+# Canonical Opnory runtime stack (ADR 0012 §Docker Compose).
+# Rendered by ansible role `opnory`; edit the template, not this file.
+# All credentials come from {{ opnory_env_file }} (operator-provisioned,
+# mode 0600) — never from OpenTofu outputs or this file.
+
+name: opnory
+
+services:
+  api:
+    image: opnory/api:{{ opnory_image_tag }}
+    restart: unless-stopped
+    env_file: {{ opnory_env_file }}
+    environment:
+      DATABASE_URL: postgres://opnory:${POSTGRES_PASSWORD}@postgres:5432/opnory
+      REDIS_URL: redis://redis:6379
+      # Other service endpoints
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks: [opnory]
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: opnory
+      POSTGRES_DB: opnory
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U opnory"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    # No host port: private to the compose network.
+    networks: [opnory]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    networks: [opnory]
+
+  tempo:
+    image: grafana/tempo:2.5.0
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml:ro
+      - /srv/opnory/data/tempo:/var/tempo
+    networks: [opnory]
+
+  grafana:
+    image: grafana/grafana-oss:11.2.0
+    restart: unless-stopped
+    env_file: {{ opnory_env_file }}
+    volumes:
+      - /srv/opnory/data/grafana:/var/lib/grafana
+    networks: [opnory]
+
+  caddy:
+    image: caddy:2.8.4
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "{{ opnory_http_port }}:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [api]
+    networks: [opnory]
+
+volumes:
+  postgres-data:
+  redis-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  opnory:
+    driver: bridge

@@ -1,0 +1,12 @@
+[Unit]
+Description=Opnory data backup (pg_dump + compose volumes)
+# One-shot; triggered by opnory-backup.timer. The backup script
+# (/srv/opnory/bin/backup.sh) is rendered by the opnory role at deploy time
+# only when backup credentials have been supplied out-of-band.
+
+[Service]
+Type=oneshot
+User=opnory
+Group=opnory
+ExecStart=/srv/opnory/bin/backup.sh
+ConditionPathExists=/srv/opnory/bin/backup.sh

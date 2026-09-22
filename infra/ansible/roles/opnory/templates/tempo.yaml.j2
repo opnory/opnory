@@ -1,0 +1,18 @@
+# Tempo config: filesystem backend only (minimal lab; SeaweedFS/S3 backend is
+# deferred per Phase 1A scope).
+server:
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+
+storage:
+  trace:
+    backend: local
+    local:
+      path: /var/tempo/blocks
+    wal:
+      path: /var/tempo/wal

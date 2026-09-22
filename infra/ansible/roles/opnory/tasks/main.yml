@@ -1,0 +1,53 @@
+---
+- name: Fail closed when application secrets are not provisioned
+  ansible.builtin.stat:
+    path: "{{ opnory_env_file }}"
+  register: opnory_env_stat
+
+- name: Assert env file exists (operator supplies it out-of-band)
+  ansible.builtin.assert:
+    that:
+      - opnory_env_stat.stat.exists
+      - opnory_env_stat.stat.mode == '0600'
+    fail_msg: >-
+      {{ opnory_env_file }} must exist with mode 0600, provisioned by the
+      operator via the SecretStore boundary. This role never renders or
+      invents application secrets.
+
+- name: Render canonical compose stack
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ opnory_compose_dir }}/compose.yml"
+    owner: opnory
+    group: opnory
+    mode: "0640"
+
+- name: Render Caddyfile
+  ansible.builtin.template:
+    src: Caddyfile.j2
+    dest: "{{ opnory_compose_dir }}/Caddyfile"
+    owner: opnory
+    group: opnory
+    mode: "0640"
+
+- name: Render Tempo config
+  ansible.builtin.template:
+    src: tempo.yaml.j2
+    dest: "{{ opnory_compose_dir }}/tempo.yaml"
+    owner: opnory
+    group: opnory
+    mode: "0640"
+
+- name: Compose pull
+  ansible.builtin.command: docker compose -f {{ opnory_compose_dir }}/compose.yml pull
+  args:
+    chdir: "{{ opnory_compose_dir }}"
+  become_user: opnory
+
+- name: Compose up
+  ansible.builtin.command: docker compose -f {{ opnory_compose_dir }}/compose.yml up -d
+  args:
+    chdir: "{{ opnory_compose_dir }}"
+  become_user: opnory
+  register: compose_up
+  changed_when: "'Started' in compose_up.stdout or 'Created' in compose_up.stdout or 'Recreated' in compose_up.stdout"

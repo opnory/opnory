@@ -33,6 +33,9 @@ Thumbs.db
 coverage/
 .nyc_output/
 
+# Generated Ansible inventory (contains live addresses; render locally)
+infra/ansible/inventories/lab.generated.yml
+
 # Turbo
 .turbo/
 
