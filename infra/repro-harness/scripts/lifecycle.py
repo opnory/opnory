@@ -53,6 +53,7 @@ PREFLIGHT = HERE / "preflight.py"
 STEPS = [
     "preflight",
     "plan",
+    "pre_apply_zero_state",
     "apply",
     "cloud_init",
     "ansible_converge",
@@ -156,6 +157,29 @@ def _parse_mutation_count(output: str, verb: str) -> int:
     return 0
 
 
+def step_pre_apply_zero_state(ctx: Context) -> StepResult:
+    """Verifier gap G3: before the first apply of a cycle, the state must be
+    empty (no leftover infrastructure)."""
+    if ctx.args.mode != "live":
+        return dry("pre_apply_zero_state")
+    t0 = time.monotonic()
+    rc, out = ctx.run(["tofu", "state", "list"], cwd=ctx.tofu_dir)
+    if rc != 0:
+        # No state yet is fine (tofu state list fails on absent state file).
+        if "No state file" in out or "no matching resources" in out.lower():
+            return StepResult("pass", "zero infrastructure before apply (no state)",
+                              time.monotonic() - t0)
+        return StepResult("fail", f"tofu state list rc={rc}",
+                          time.monotonic() - t0)
+    remaining = [ln for ln in out.splitlines() if ln.strip()]
+    if remaining:
+        return StepResult("fail",
+                          f"{len(remaining)} resources exist before apply — refusing cycle",
+                          time.monotonic() - t0)
+    return StepResult("pass", "zero infrastructure before apply",
+                      time.monotonic() - t0)
+
+
 def step_apply(ctx: Context, cycle: int) -> StepResult:
     if ctx.args.mode != "live":
         return dry("apply")
@@ -239,8 +263,29 @@ def step_opnory_verification(ctx: Context) -> StepResult:
         return dry("opnory_verification")
     t0 = time.monotonic()
     # Verification suite hooks in here; defined by Phase 1B contract.
-    rc, _ = ctx.run([str(REPO_ROOT / "infra/repro-harness/scripts/verify_opnory.sh")],
-                    timeout=900)
+    # The script is provider-agnostic: it receives the target coordinates as
+    # env vars, never tofu internals.
+    dns_rc, dns = ctx.run(["tofu", "output", "-raw", "dns_name"], cwd=ctx.tofu_dir)
+    host_rc, host = ctx.run(["tofu", "output", "-raw", "host_address"],
+                            cwd=ctx.tofu_dir)
+    if dns_rc != 0 or host_rc != 0 or not dns.strip() or not host.strip():
+        return StepResult("fail", "no dns_name/host_address output",
+                          time.monotonic() - t0)
+    user = ctx.config.get("ssh_user", "opnory")
+    project = ctx.config.get("compose_project_dir", "/srv/opnory")
+    env = dict(os.environ)
+    env["OPNORY_VERIFY_DNS_NAME"] = dns.strip()
+    env["OPNORY_VERIFY_HOST_ADDRESS"] = host.strip()
+    env["OPNORY_VERIFY_SSH_USER"] = user
+    env["OPNORY_VERIFY_COMPOSE_PROJECT_DIR"] = project
+    try:
+        proc = subprocess.run(
+            [str(REPO_ROOT / "infra/repro-harness/scripts/verify_opnory.sh")],
+            capture_output=True, text=True, timeout=900, env=env,
+        )
+        rc, out = proc.returncode, (proc.stdout + proc.stderr).strip()[:2000]
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        rc, out = 127, str(exc)
     return StepResult("pass" if rc == 0 else "fail",
                       f"verify_opnory.sh rc={rc}", time.monotonic() - t0)
 
@@ -334,6 +379,7 @@ def run_cycle(ctx: Context, cycle: int) -> dict:
 
     step_fns = {
         "plan": lambda: step_plan(ctx),
+        "pre_apply_zero_state": lambda: step_pre_apply_zero_state(ctx),
         "apply": lambda: step_apply(ctx, cycle),
         "cloud_init": lambda: step_cloud_init(ctx),
         "ansible_converge": lambda: _ansible(ctx, [], "ansible_converge"),

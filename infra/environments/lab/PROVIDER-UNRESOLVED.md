@@ -1,48 +1,45 @@
-# lab environment — provider unresolved (Phase 1A deliberate state)
+# lab environment — Phase 1B state (provider resolved)
+
+> **Superseded by Phase 1B synthesis.** See `PHASE-1B-SYNTHESIS.md` in this
+> directory. The verifier gate (t_52a43bce) selected **Hetzner Cloud**
+> (`hetznercloud/hcloud` ~> 1.69.0); the provider implementation now lives at
+> `infra/providers/hetzner/` and this root wires it to the Cloudflare DNS
+> record and the out-of-band state backend stub.
+>
+> Live mutation budget remains ZERO until a human runs the two-cycle proof
+> per `docs/security/iac-phase1b-execution-contract.md`.
 
 ## Status
 
-There is intentionally **no `*.tf` in this directory** and no
-`infra/providers/<name>/` implementation. Why:
+Phase 1B provider selection is verified and implemented. `main.tf`,
+`variables.tf`, `outputs.tf`, and `versions.tf` in this directory wire:
 
-1. ADR 0012 §4 requires exactly one initial provider selected from repository
-   or research evidence.
-2. Sweep of this repository (workflows, docs, ops/, config packages) finds no
-   compute-provider credential configuration, no cloud account references for
-   lab compute, and no documented preference. Gate-2 TLS proof used a
-   home-lab bridged VM behind a residential router — a manual proof rig, not
-   an IaC-manageable provider.
-3. Fabricating a provider choice (e.g. assuming a Hetzner/AWS/Cloud account
-   exists) would violate the task's "do not invent existing credentials or
-   claim a provider is configured when it is not" clause.
+- `infra/providers/hetzner/compute/` — one Hetzner Cloud VM (host-contract
+  outputs);
+- `infra/providers/hetzner/network/` — firewall implementing
+  `modules/firewall-policy/policy.json`;
+- one Cloudflare A record per `modules/dns/README.md` policy (DNS-only,
+  TTL 300, owned by this stack);
+- `backend "s3" {}` — out-of-band; connection details via init-time
+  `-backend-config` only, never committed.
 
-## What IS implemented for lab
+## Historical note (Phase 1A)
 
-- The full downstream stack consumes only the **host-contract outputs**
-  (`host_address`, `private_address`, `dns_name`, `environment`, optional
-  `storage_ref`). Nothing downstream of this directory needs to change when a
-  provider is selected.
-- `bootstrap/cloud-init/` — provider-agnostic first-boot config.
-- `ansible/` — full host-state + Compose deployment, driven by inventory
-  rendered from `tofu output -json`.
-- `repro-harness/` — lifecycle driver; preflight **fails closed** while this
-  state persists.
+Phase 1A deliberately shipped no provider: repository evidence contained no
+compute-provider credentials or documented preference, and fabricating one
+would have violated the task contract. The preflight gate failed closed on
+that state. Phase 1B resolved it through the swarm decision record
+(workspace t_d0295ea2: providers considered, evidence, rejection rationale)
+and independent security concurrence (commit cfaabdf8), with the OIDC
+deviation explicitly written into the decision record.
 
-## Unblock criteria (Phase 1B input)
+## What still requires a human
 
-A human with authority over budget/credentials must:
-
-1. Name the provider (exactly one) and the identity mechanism
-   (GitHub-OIDC-based preferred per ADR 0012 §8).
-2. Implement `infra/providers/<name>/{compute,network,storage}/` exposing the
-   host-contract outputs (validated by
-   `modules/host-contract/validate_contract.py`).
-3. Add `main.tf`/`variables.tf`/`outputs.tf` to this directory wiring the
-   provider stack, dns module policy, and firewall-policy module together,
-   with an out-of-band backend (backend config supplied at init time via
-   `-backend-config`, never committed).
-4. Re-run `infra/repro-harness` preflight; it must transition from
-   `BLOCKED: provider-unresolved` to ready.
-
-Until (1)-(3), any `tofu apply` here fails by construction (there is nothing
-to apply and no backend configured).
+- Hetzner Cloud account + lab-labeled project + project-scoped `HCLOUD_TOKEN`
+  (operator shell only; Hetzner has no GitHub OIDC — documented deviation).
+- Cloudflare lab zone/subdomain + zone-scoped DNS token.
+- Out-of-band S3-compatible state bucket creation, first `tofu init`, and
+  committing the resulting `.terraform.lock.hcl`.
+- Setting `OPNORY_IAC_PHASE=1B` and
+  `OPNORY_IAC_LIVE_AUTHORIZED=phase1b-two-cycle-lab` and running the
+  two-cycle live proof.

@@ -17,10 +17,9 @@ Authority model per `docs/architecture/adr/0012-infrastructure-as-code.md`:
   - `host-contract/` — the stable output contract every provider must expose.
   - `dns/` — minimal DNS record wiring (delegates records to the environment).
   - `firewall-policy/` — policy *definition* (allowed ports description, see README inside).
-- `providers/` — provider implementations. **Exactly one** initial provider may
-  exist in Phase 1A. Currently **none**: the provider choice is unresolved from
-  repository evidence (no compute credentials/configuration exist in this
-  repo). See `environments/lab/PROVIDER-UNRESOLVED.md`.
+- `providers/` — provider implementations. **Exactly one** initial provider
+  exists: `hetzner/` (Hetzner Cloud, selected by the Phase 1B verifier gate
+  t_52a43bce). See `environments/lab/PHASE-1B-SYNTHESIS.md`.
 - `environments/` — per-environment roots. Only `lab/` will ever create
   resources in Phase 1A; `staging/` and `production/` are placeholders only.
 - `bootstrap/cloud-init/` — first-boot cloud-config (deployment user, SSH key,
@@ -31,13 +30,17 @@ Authority model per `docs/architecture/adr/0012-infrastructure-as-code.md`:
   evidence schema (owned by opnory-executor; live mutation is policy-blocked
   in Phase 1A).
 
-## Phase 1A status
+## Phase 1B status
 
-**IAC PHASE 1A IMPLEMENTATION VERIFIED — LIVE REPRODUCIBILITY PROOF PENDING.**
+**OPNORY IAC PHASE 1B PROVIDER IMPLEMENTATION VERIFIED — LIVE TWO-CYCLE
+REPRODUCIBILITY PROOF NOT YET EXECUTED.**
 
-Provider implementation is intentionally absent; the preflight gate in
-`repro-harness/scripts/preflight.py` fails closed until an initial provider is
-chosen and implemented under `infra/providers/<name>/`.
+The Hetzner provider stack is implemented and statically wired; the harness
+applies the fail-closed gates (preflight environment/label assertions,
+pre-apply zero-state, mutation budget, human authorization env). Live
+apply/destroy still requires a human per
+`docs/security/iac-phase1b-execution-contract.md`. `tofu apply` without that
+gate cannot run.
 
 ## Repository / security boundaries
 

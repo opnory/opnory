@@ -134,6 +134,59 @@ def check_target_config(target_path: Path) -> tuple[list[Check], dict | None]:
     return checks, config
 
 
+def check_lab_label_assertion(config: dict) -> list[Check]:
+    """Verifier gap G2: every Hetzner resource in infra/providers/<name>/ must
+    carry the lab-only label set. Static source scan (fail-closed)."""
+    checks: list[Check] = []
+    repo_root = Path(__file__).resolve().parents[3]
+    provider = config.get("provider", "")
+    if not provider:
+        return checks
+    provider_dir = repo_root / "infra" / "providers" / provider
+    if not provider_dir.is_dir():
+        return checks
+    offenders: list[str] = []
+    required_labels = (
+        re.compile(r'environment\s*=\s*"lab"'),
+        re.compile(r'managed-by\s*=\s*"opnory-iac"'),
+        re.compile(r'swarm\s*=\s*"iac-1b"'),
+    )
+    resource_blocks = re.compile(r'resource\s+"(hcloud_[a-z_]+)"\s+"([^"]+)"')
+    for tf_path in sorted(provider_dir.rglob("*.tf")):
+        text = tf_path.read_text(encoding="utf-8")
+        for match in resource_blocks.finditer(text):
+            # Locate the end of this resource block (best-effort brace match).
+            start = match.end()
+            depth = 0
+            idx = start
+            while idx < len(text):
+                ch = text[idx]
+                if ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                idx += 1
+            body = text[start:idx]
+            # A resource satisfies the assertion when it references the
+            # shared local.labels (which declares the lab set) OR embeds the
+            # three lab labels directly.
+            uses_shared = "local.labels" in body or "local.labels" in text
+            direct = all(p.search(body) for p in required_labels)
+            if not (uses_shared or direct):
+                offenders.append(
+                    f"{tf_path.relative_to(repo_root)}: resource {match.group(1)}.{match.group(2)} missing lab labels"
+                )
+    checks.append(Check(
+        "target:lab-labels-assertion",
+        not offenders,
+        "; ".join(offenders) if offenders else
+        f"infra/providers/{provider} resources carry lab-only labels",
+    ))
+    return checks
+
+
 def check_state_isolation(config: dict) -> list[Check]:
     """No committed state/plan artifacts; backend must not be local for live."""
     checks: list[Check] = []
@@ -191,6 +244,7 @@ def main(argv: list[str]) -> int:
     checks.extend(target_checks)
     if config is not None:
         checks.extend(check_state_isolation(config))
+        checks.extend(check_lab_label_assertion(config))
     checks.extend(check_live_authorization(args.mode))
     checks.extend(check_phase1a_apply_destroy_block(args.mode, steps))
 

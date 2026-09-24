@@ -3,16 +3,24 @@
 Provider implementations of the host-contract live here, one directory per
 provider: `infra/providers/<name>/{compute,network,storage}/`.
 
-## Phase 1A status: NO PROVIDER IMPLEMENTED
+## Phase 1B status: Hetzner Cloud implemented
 
-Repository evidence does not establish any configured compute provider
-(no committed credentials, no existing provider integration, no documented
-sandbox cloud account for compute). Per ADR 0012 §4 and the Phase 1A task:
+The verifier gate (t_52a43bce) selected **Hetzner Cloud**
+(`hetznercloud/hcloud` pinned `~> 1.69.0`). This directory now contains
+exactly one provider, per ADR 0012 §4:
 
-- exactly one initial provider may exist here;
-- the choice must come from repository/research evidence, not fabrication;
-- because no defensible choice exists in-repo, **live execution is BLOCKED**
-  and the repro-harness preflight fails closed on
-  `infra/providers/<name>/` being absent.
+- `hetzner/compute/` — one disposable VM exposing exactly the host-contract
+  outputs (`host_address`, `private_address`, `dns_name`, `environment`);
+  cloud-init rendered from `bootstrap/cloud-init/cloud-config.yml`.
+- `hetzner/network/` — firewall implementing
+  `modules/firewall-policy/policy.json`.
+- `hetzner/storage/` — intentionally absent: the Compose stack needs no
+  provider volume (named docker volumes + host paths). Do not add one
+  without a documented architectural requirement.
 
-See `environments/lab/PROVIDER-UNRESOLVED.md` for the exact unblock criteria.
+Every Hetzner resource carries the lab-only label set
+`environment=lab, managed-by=opnory-iac, swarm=iac-1b`; preflight asserts
+this statically (fail-closed).
+
+See `environments/lab/PHASE-1B-SYNTHESIS.md` for the full contract (state
+backend, CI/OIDC deviation, DNS boundary, two-cycle procedure).
