@@ -60,6 +60,43 @@ expect_rc 3 "$PY" "$HERE/scripts/mutation_ledger.py" --ledger "$L" assert-budget
 expect_rc 3 "$PY" "$HERE/scripts/mutation_ledger.py" --ledger "$L" record --cycle 1 --step apply --action create --count 10000
 expect_rc 3 "$PY" "$HERE/scripts/mutation_ledger.py" --ledger "$L" init --cycle 2 --commit def5678
 
+# --- AWS escape guards (Phase 1B-COST-SAFETY; static only, zero AWS calls) ---
+# Runs the full 15+guard-16 suite as part of the standard self-test gate.
+if bash "$HERE/tests/aws_escape_guards.sh" >/dev/null 2>&1; then
+  echo "ok: aws_escape_guards.sh (all guards pass)"
+else
+  echo "FAIL: aws_escape_guards.sh — see its own output for the failing guard"
+  fail=1
+fi
+
+# --- AWS preflight provider=aws path ----------------------------------------
+# A provider=aws target in dry-run mode must pass the config-shape checks.
+cat > "$TMP/lab-aws.json" <<'EOF'
+{"environment": "lab", "provider": "aws", "mutation_budget": 60,
+ "state_identity": "s3:opnory-iac-state/lab.tfstate",
+ "allowed_provider_account_hint": "deadbeefcafe",
+ "aws_free_plan_attestation": "human-confirmed-free-plan-2026-09",
+ "tofu Working directory": "infra/environments/lab"}
+EOF
+expect_rc 0 "$PY" "$HERE/scripts/preflight.py" --target "$TMP/lab-aws.json" --mode dry-run
+
+# provider=aws live mode without the free-plan gate must fail closed (rc 3)
+# even when the Phase 1B live authorization IS set: G2 is independent of G1.
+OPNORY_IAC_PHASE=1B OPNORY_IAC_LIVE_AUTHORIZED=phase1b-two-cycle-lab \
+  expect_rc 3 "$PY" "$HERE/scripts/preflight.py" --target "$TMP/lab-aws.json" --mode live --steps plan
+
+# An agent-forged free-plan value (env != target attestation) must not pass.
+OPNORY_IAC_PHASE=1B OPNORY_IAC_LIVE_AUTHORIZED=phase1b-two-cycle-lab \
+  OPNORY_AWS_FREE_PLAN_CONFIRMED=forged-by-agent \
+  expect_rc 3 "$PY" "$HERE/scripts/preflight.py" --target "$TMP/lab-aws.json" --mode live --steps plan
+
+# A tampered instance_type in the lab variables must fail the static check.
+cp "$HERE/../environments/lab/variables.tf" "$TMP/variables.tf.bak"
+sed 's/var.instance_type == "t3a.medium"/var.instance_type == "m5.2xlarge"/' \
+  "$HERE/../environments/lab/variables.tf" > "$TMP/vt-tmp" && cp "$TMP/vt-tmp" "$HERE/../environments/lab/variables.tf"
+expect_rc 3 "$PY" "$HERE/scripts/preflight.py" --target "$TMP/lab-aws.json" --mode dry-run
+cp "$TMP/variables.tf.bak" "$HERE/../environments/lab/variables.tf"
+
 # --- lifecycle (dry-run with example target blocked by preflight) ----------
 # Dry-run against the example target must fail preflight — preflight runs for real.
 expect_rc 1 "$PY" "$HERE/scripts/lifecycle.py" --target "$TARGET_EXAMPLE" --mode dry-run \
