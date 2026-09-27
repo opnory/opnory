@@ -66,6 +66,14 @@ STEPS = [
     "post_destroy_residue",
 ]
 
+# Cost-safety runtime cap (Phase 1B-COST-SAFETY, security design F5/G5): a
+# live cycle hard-aborts at 4h wall-clock so a failed proof can never leave
+# metered compute running indefinitely. On ANY abort after apply (step
+# failure or cap breach) destroy is attempted unconditionally BEFORE the
+# cycle is recorded failed — destroy is the cost-safety egress and takes
+# precedence over the cap itself.
+CYCLE_WALL_CLOCK_CAP_SECONDS = 4 * 60 * 60
+
 
 class StepResult:
     def __init__(self, status: str, detail: str = "", duration: float = 0.0,
@@ -368,6 +376,11 @@ def run_cycle(ctx: Context, cycle: int) -> dict:
     ctx.ledger("init", "--cycle", str(cycle), "--commit", ctx.args.commit,
                "--force")
 
+    # Wall-clock cap anchor (G5). live mode only — dry-run/static cannot
+    # leave compute running, so the cap does not apply.
+    cap_applies = ctx.args.mode == "live"
+    cycle_started = time.monotonic()
+
     # Preflight is always really executed — it is non-mutating by design.
     t0 = time.monotonic()
     rc, out = ctx.run([sys.executable, str(PREFLIGHT), "--target", ctx.args.target,
@@ -393,14 +406,48 @@ def run_cycle(ctx: Context, cycle: int) -> dict:
     }
 
     aborted = False
+    abort_reason = ""
+    apply_attempted = False
     for step in STEPS[1:]:
         if aborted or results["preflight"].status == "fail":
             results[step] = StepResult("skipped", "aborted upstream")
             continue
+        # Wall-clock cap: refuse to START a step past the deadline. A breach
+        # aborts the cycle (after the destroy-on-abort handling below).
+        if cap_applies and step not in ("destroy", "post_destroy_residue"):
+            elapsed = time.monotonic() - cycle_started
+            if elapsed > CYCLE_WALL_CLOCK_CAP_SECONDS:
+                results[step] = StepResult(
+                    "skipped",
+                    f"wall-clock cap breached ({elapsed:.0f}s > "
+                    f"{CYCLE_WALL_CLOCK_CAP_SECONDS}s); aborting cycle")
+                aborted = True
+                abort_reason = "wall-clock cap breached"
+                continue
+        if step == "apply":
+            apply_attempted = True
         res = step_fns[step]()
         results[step] = res
         if res.status == "fail":
             aborted = True
+            abort_reason = f"step {step} failed"
+
+    # Cost-safety egress (F5): if the cycle aborted AFTER apply was reached
+    # and destroy has not actually run (the loop marks it "skipped"), attempt
+    # destroy UNCONDITIONALLY before recording the failure — a failed live
+    # cycle must never leave metered compute running. The destroy attempt is
+    # recorded in the ledger like any destroy; its result is reported
+    # honestly (pass or fail).
+    if (ctx.args.mode == "live" and aborted and apply_attempted
+            and results.get("destroy") is not None
+            and results["destroy"].status == "skipped"):
+        res = step_destroy(ctx, cycle)
+        res.detail = f"destroy-on-abort ({abort_reason}); " + res.detail
+        results["destroy"] = res
+        if res.status == "pass":
+            residue = step_post_destroy_residue(ctx)
+            residue.detail = "post-abort residue check; " + residue.detail
+            results["post_destroy_residue"] = residue
 
     statuses = [r.status for r in results.values()]
     if any(s == "fail" for s in statuses):

@@ -26,6 +26,14 @@ FORBIDDEN_PATTERNS = (
     re.compile(r"(?i)access[_-]?token[\"'\s:=]+[A-Za-z0-9_.-]{16,}"),
     re.compile(r"AKIA[0-9A-Z]{16}"),  # AWS access key id shape
     re.compile(r"xox[baprs]-[A-Za-z0-9-]{10,}"),  # Slack tokens
+    # Raw AWS account ids must never appear in evidence (F8): identity is
+    # attested as sha256(account)[:12] in preflight only. Anchored to JSON
+    # field names that would carry an account id so ordinary 12-digit
+    # numbers (timestamps, counts) do not false-positive.
+    re.compile(
+        r'"[^"]*account[^"]*"\s*:\s*"[0-9]{12}"',
+        re.IGNORECASE,
+    ),
 )
 
 REQUIRED_STEPS = (
