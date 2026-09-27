@@ -63,7 +63,9 @@ resource "aws_instance" "this" {
 
   # NEVER "unlimited": surplus credits bill money. Standard mode is the
   # cost-safety invariant (escape test 12 asserts this exact value).
-  credit_specification = "standard"
+  credit_specification {
+    cpu_credits = "standard"
+  }
 
   metadata_options {
     http_tokens   = "required" # IMDSv2 only
@@ -76,7 +78,7 @@ resource "aws_instance" "this" {
 
   root_block_device {
     volume_type           = "gp3"
-    volume_size          = 20
+    volume_size           = 20
     encrypted             = true
     delete_on_termination = true # residue-proof
   }

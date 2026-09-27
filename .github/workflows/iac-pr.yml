@@ -25,7 +25,10 @@ jobs:
 
       - uses: opentofu/setup-opentofu@v1
         with:
-          tofu_version: 1.8.4
+          # >= 1.10 required: the lab state backend uses S3-native locking
+          # (use_lockfile=true), which landed in OpenTofu 1.10.0. 1.8.4
+          # cannot parse the backend and would fail closed on init.
+          tofu_version: 1.12.6
 
       - name: tofu fmt -check (recursive)
         run: tofu fmt -check -recursive infra/

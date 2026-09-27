@@ -107,7 +107,7 @@ assert_present "g11:iam-instance-type-condition" '"ec2:InstanceType":\s*"t3a\.me
 # --- Guard 12: non-Free-plan selection / unexpected graph expansion ----------
 n_instances=$(grep -rEc 'resource\s+"aws_instance"' $AWS_DIR 2>/dev/null | awk -F: '{s+=$2} END {print s+0}')
 if [ "$n_instances" -eq 1 ]; then ok "g12:exactly-one-aws_instance (count=$n_instances)"; else bad "g12:expected exactly 1 aws_instance, found $n_instances"; fi
-assert_present "g12:credit-standard-pin" 'credit_specification\s*=\s*"standard"' "$AWS_DIR/compute/main.tf"
+assert_present "g12:credit-standard-pin" 'cpu_credits\s*=\s*"standard"' "$AWS_DIR/compute/main.tf"
 assert_present "g12:imdsv2-required" 'http_tokens\s*=\s*"required"' "$AWS_DIR/compute/main.tf"
 
 # --- Guard 13: unexpected EBS expansion --------------------------------------

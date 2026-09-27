@@ -51,7 +51,13 @@ infra/**/*.tfstate
 infra/**/*.tfstate.*
 infra/**/*.tfplan
 infra/**/.terraform/
-**/.terraform.lock.hcl
+# Lockfile policy (Phase 1B-COST-SAFETY, resolved intentionally): the lab
+# root's dependency lockfile IS committed (reproducibility: it pins the
+# exact provider builds the two-cycle proof runs against), so only provider
+# module dirs keep theirs ignored. The committed lockfile must contain only
+# the expected providers (cloudflare + hashicorp/aws); the escape suite and
+# review enforce that.
+infra/providers/**/.terraform.lock.hcl
 *.opnory-iac-evidence.json
 *.mutations.jsonl
 opnory-iac-mutations.jsonl
