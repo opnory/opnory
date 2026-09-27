@@ -1,7 +1,8 @@
 # Opnory IaC Phase 1B — Synthesis (task t_fec9254e)
 
 **Verifier gate:** PASS (t_52a43bce, main@cfaabdf8).
-**Selected provider:** Hetzner Cloud (`hetznercloud/hcloud` ~> 1.69.0).
+**Selected provider:** Hetzner Cloud (`hetznercloud/hcloud` ~> 1.69.0) —
+*superseded for the live proof target by Phase 1B-COST-SAFETY; see §20.*
 **Strongest claim produced by this synthesis:**
 
 > OPNORY IAC PHASE 1B PROVIDER IMPLEMENTATION VERIFIED —
@@ -245,3 +246,95 @@ only redacted pointers attach to tasks.
 5. Human: set authorization env vars and run the two-cycle live proof.
 6. CI: `tofu fmt/validate` + checkov run on the PR (local tofu unavailable
    on this operator machine).
+
+---
+
+## 20. Phase 1B-COST-SAFETY supersession — the selected live proof target is AWS Free Plan
+
+Task t_8c16b5ad (builder), consuming the architect design (t_fc63bd52) and
+the security design (t_79216dcd, verdict: approved with mandatory
+corrections F1–F8). This section supersedes the Hetzner selection **for the
+live proof target only**; everything else in the Phase 1B contract — the
+lifecycle driver, mutation ledger, application verifier, evidence schema,
+two-cycle semantics, pre-apply zero-state, destroy-mandatory-after-each-cycle
+— is reused unchanged.
+
+- **AWS Free Plan is the selected live proof target** (provider
+  `hashicorp/aws` ~> 6.66, region `us-east-2`, instance `t3a.medium`,
+  credit specification `standard`, S3 state backend with `use_lockfile=true`).
+  The AWS account is human-confirmed in the AWS console as Free plan, $100
+  initial credits, ~6 months remaining, not upgraded.
+- **Hetzner was implemented but live execution was abandoned before any
+  mutation** because zero out-of-pocket cost became the governing
+  constraint: a Hetzner VM would bill a credit card, while the AWS Free plan
+  cannot produce out-of-pocket charges unless the account is upgraded or a
+  paid-only service is activated (both structurally refused — see below).
+  The Hetzner implementation stays in-tree, byte-for-byte, marked
+  non-selected; the Hetzner executor remains blocked. Zero Hetzner live
+  mutations ever occurred.
+- **Cloudflare remains authoritative DNS** — unchanged Zone.DNS-Edit token
+  model on the opnory.com zone; the `cloudflare_record` block is unchanged;
+  AWS takes over no DNS.
+- **No production readiness claim follows from this lab proof.** It proves
+  reproducibility of the harness against a disposable single-host lab on a
+  Free plan, nothing more.
+- **Free-plan expiration / credit exhaustion ends the executable live-proof
+  window** (per aws.amazon.com/free: the account closes itself at 6 months
+  or credit exhaustion). This is a time-bounded window, not a standing
+  capability.
+
+### Cost-safety boundary (hard security boundary)
+
+Zero out-of-pocket cost is an **account-plan invariant**: it is preserved by
+never upgrading to Paid, never activating paid-only services, never joining
+Organizations/Control Tower, never purchasing RIs/Savings Plans/Marketplace
+products. The implementation fails closed on all of these:
+
+- 15 Free-plan escape guards + a destroy-path guard are enforced statically
+  by `infra/repro-harness/tests/aws_escape_guards.sh` (zero AWS API calls),
+  wired into the standard self-test gate; the committed IAM policy denies
+  purchase/billing/organizations actions by omission and marketplace images
+  by explicit Deny.
+- The mutation budget stays 60 with corrected arithmetic: 14 resource blocks
+  per cycle (13 AWS + 1 Cloudflare, per security F2) × 2 (create+delete) ×
+  2 cycles = 56 ≤ 60. The preflight graph-count check expects exactly 14.
+- A 4h wall-clock cycle cap plus unconditional **destroy-on-abort** after
+  apply (security F5/G5): a failed live cycle can never leave metered
+  compute running.
+- Live burn while an instance runs ≈ $0.045/hr; two capped cycles ≤ $0.36 —
+  0.36% of the $100 credits. No idle-charge resources exist in the graph
+  (no EIP, no NAT, no LB, no RDS, no EKS).
+
+### Human authorization gates for AWS (all fail-closed)
+
+1. `OPNORY_IAC_PHASE=1B` (existing)
+2. `OPNORY_IAC_LIVE_AUTHORIZED=phase1b-two-cycle-lab` (existing, human-set)
+3. **NEW G2:** `OPNORY_AWS_FREE_PLAN_CONFIRMED` must equal the
+   `aws_free_plan_attestation` recorded in the uncommitted target file —
+   set by the human operator only; the agent may never synthesize it.
+   Account-plan status is HUMAN evidence; it is never inferred from
+   credentials working.
+4. Target identity: the live preflight compares
+   `sha256(<12-digit account id>)[:12]` from `sts:GetCallerIdentity` to the
+   target's `allowed_provider_account_hint`. The raw account id never
+   enters evidence, logs, or the repo (F8; also rejected by the evidence
+   renderer).
+
+### IAM and account safety
+
+Dedicated least-privilege user `opnory-lab-executor` (human-created,
+programmatic access only, never root, no Organizations/Identity Center):
+see `infra/providers/aws/iam/opnory-lab-executor.policy.json` and its
+README. Root credentials are never used by OpenTofu; the live preflight
+refuses any root-caller identity. No IAM principal, access key, state
+bucket, or any AWS resource is created by this implementation task.
+
+### Operator prerequisites before any live proof (all human, out-of-band)
+
+1. Create the `opnory-lab-executor` IAM user + policy (placeholders filled).
+2. Create the S3 state bucket per `STATE-BACKEND.md` (versioning ON, TLS
+   deny policy, SSE-S3).
+3. Verify the Canonical AMI owner id in the console; supply it as the
+   `ami_owner` tfvar.
+4. Export the gate env vars and run
+   `lifecycle.py --mode live --cycles 2` from the operator shell.

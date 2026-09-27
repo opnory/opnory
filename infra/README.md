@@ -17,9 +17,12 @@ Authority model per `docs/architecture/adr/0012-infrastructure-as-code.md`:
   - `host-contract/` — the stable output contract every provider must expose.
   - `dns/` — minimal DNS record wiring (delegates records to the environment).
   - `firewall-policy/` — policy *definition* (allowed ports description, see README inside).
-- `providers/` — provider implementations. **Exactly one** initial provider
-  exists: `hetzner/` (Hetzner Cloud, selected by the Phase 1B verifier gate
-  t_52a43bce). See `environments/lab/PHASE-1B-SYNTHESIS.md`.
+- `providers/` — provider implementations. **Two** exist as of Phase
+  1B-COST-SAFETY: `aws/` (selected live-proof target, Free plan,
+  t_8c16b5ad) and `hetzner/` (implemented in Phase 1B-A, non-selected —
+  its live execution was abandoned before any mutation because zero
+  out-of-pocket cost became the governing constraint; its executor stays
+  blocked). See `environments/lab/PHASE-1B-SYNTHESIS.md` §20.
 - `environments/` — per-environment roots. Only `lab/` will ever create
   resources in Phase 1A; `staging/` and `production/` are placeholders only.
 - `bootstrap/cloud-init/` — first-boot cloud-config (deployment user, SSH key,
@@ -30,17 +33,25 @@ Authority model per `docs/architecture/adr/0012-infrastructure-as-code.md`:
   evidence schema (owned by opnory-executor; live mutation is policy-blocked
   in Phase 1A).
 
-## Phase 1B status
+## Phase 1B-COST-SAFETY status
 
-**OPNORY IAC PHASE 1B PROVIDER IMPLEMENTATION VERIFIED — LIVE TWO-CYCLE
-REPRODUCIBILITY PROOF NOT YET EXECUTED.**
+**AWS FREE-PLAN PROVIDER IMPLEMENTED — LIVE TWO-CYCLE PROOF NOT YET
+EXECUTED. ZERO LIVE MUTATIONS.**
 
-The Hetzner provider stack is implemented and statically wired; the harness
-applies the fail-closed gates (preflight environment/label assertions,
-pre-apply zero-state, mutation budget, human authorization env). Live
-apply/destroy still requires a human per
-`docs/security/iac-phase1b-execution-contract.md`. `tofu apply` without that
-gate cannot run.
+The AWS provider stack is implemented and statically wired; the harness
+applies the fail-closed gates (preflight environment/label/graph-count
+assertions, pre-apply zero-state, mutation budget 60, human authorization
+env, the human Free-plan confirmation gate, 4h cycle cap +
+destroy-on-abort, 15+1 escape guards). Live apply/destroy still requires a
+human per `docs/security/iac-phase1b-execution-contract.md` plus the
+operator prerequisites in
+`environments/lab/PHASE-1B-SYNTHESIS.md` §20 (IAM principal, state bucket,
+AMI owner verification — all created/verified out-of-band by the human).
+`tofu apply` without those gates cannot run. Zero out-of-pocket cloud cost
+is the governing constraint: the lab burns credits, never a card, and
+only within the Free-plan window (expiry/credit exhaustion ends the
+executable live-proof window). No production readiness claim follows from
+this lab proof.
 
 ## Repository / security boundaries
 
