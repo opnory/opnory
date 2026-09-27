@@ -1,0 +1,206 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyPaidMarketplaceImages",
+      "Effect": "Deny",
+      "Action": "ec2:RunInstances",
+      "Resource": "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:image/*",
+      "Condition": { "StringEquals": { "ec2:Owner": "aws-marketplace" } }
+    },
+    {
+      "Sid": "LabRunInstancesImageOwnerPinned",
+      "Effect": "Allow",
+      "Action": "ec2:RunInstances",
+      "Resource": "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:image/*",
+      "Condition": { "StringEquals": { "ec2:Owner": "<CANONICAL_OWNER_ID>" } }
+    },
+    {
+      "Sid": "LabRunInstancesInstancePinned",
+      "Effect": "Allow",
+      "Action": "ec2:RunInstances",
+      "Resource": "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:instance/*",
+      "Condition": {
+        "StringEquals": {
+          "ec2:InstanceType": "t3a.medium",
+          "ec2:MetadataHttpTokens": "required"
+        }
+      }
+    },
+    {
+      "Sid": "LabRunInstancesLaunchDependencies",
+      "Effect": "Allow",
+      "Action": "ec2:RunInstances",
+      "Resource": [
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:subnet/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:security-group/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:network-interface/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:volume/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:key-pair/*"
+      ]
+    },
+    {
+      "Sid": "LabInstanceLifecycle",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:TerminateInstances",
+        "ec2:StopInstances",
+        "ec2:StartInstances",
+        "ec2:ModifyInstanceCreditSpecification"
+      ],
+      "Resource": "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:instance/*"
+    },
+    {
+      "Sid": "LabVpcCreate",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateVpc",
+        "ec2:CreateSubnet",
+        "ec2:CreateInternetGateway",
+        "ec2:CreateRouteTable",
+        "ec2:CreateRoute",
+        "ec2:CreateSecurityGroup",
+        "ec2:ModifyVpcAttribute",
+        "ec2:ModifySubnetAttribute"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:vpc/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:subnet/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:internet-gateway/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:route-table/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:security-group/*"
+      ]
+    },
+    {
+      "Sid": "LabVpcAttach",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:AttachInternetGateway",
+        "ec2:DetachInternetGateway",
+        "ec2:AssociateRouteTable",
+        "ec2:DisassociateRouteTable",
+        "ec2:ReplaceRoute"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:internet-gateway/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:vpc/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:route-table/*"
+      ]
+    },
+    {
+      "Sid": "LabVpcDestroy",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DeleteVpc",
+        "ec2:DeleteSubnet",
+        "ec2:DeleteInternetGateway",
+        "ec2:DeleteRouteTable",
+        "ec2:DeleteRoute",
+        "ec2:DeleteSecurityGroup"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:vpc/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:subnet/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:internet-gateway/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:route-table/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:security-group/*"
+      ]
+    },
+    {
+      "Sid": "LabSecurityGroupRules",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:AuthorizeSecurityGroupEgress",
+        "ec2:RevokeSecurityGroupIngress",
+        "ec2:RevokeSecurityGroupEgress"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:security-group/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:security-group-rule/*"
+      ]
+    },
+    {
+      "Sid": "LabKeyPair",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:ImportKeyPair",
+        "ec2:DeleteKeyPair"
+      ],
+      "Resource": "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:key-pair/*"
+    },
+    {
+      "Sid": "LabTagsOnGraphResources",
+      "Effect": "Allow",
+      "Action": ["ec2:CreateTags", "ec2:DeleteTags"],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:vpc/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:subnet/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:internet-gateway/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:route-table/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:security-group/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:instance/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:key-pair/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:volume/*"
+      ]
+    },
+    {
+      "Sid": "LabEbsVolumes",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateVolume",
+        "ec2:AttachVolume",
+        "ec2:DetachVolume",
+        "ec2:DeleteVolume"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:volume/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:instance/*",
+        "arn:aws:ec2:us-east-2:<ACCOUNT_ID>:snapshot/*"
+      ]
+    },
+    {
+      "Sid": "LabDescribeReadOnly",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:DescribeInstanceStatus",
+        "ec2:DescribeImages",
+        "ec2:DescribeVpcs",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeSecurityGroupRules",
+        "ec2:DescribeRouteTables",
+        "ec2:DescribeInternetGateways",
+        "ec2:DescribeVolumes",
+        "ec2:DescribeTags",
+        "ec2:DescribeAvailabilityZones",
+        "ec2:DescribeRegions",
+        "ec2:DescribeAccountAttributes",
+        "ec2:DescribeInstanceCreditSpecifications"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "LabStateBucket",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:PutObjectTagging"
+      ],
+      "Resource": [
+        "arn:aws:s3:::<STATE_BUCKET>",
+        "arn:aws:s3:::<STATE_BUCKET>/lab.tfstate*"
+      ]
+    },
+    {
+      "Sid": "IdentityVerification",
+      "Effect": "Allow",
+      "Action": "sts:GetCallerIdentity",
+      "Resource": "*"
+    }
+  ]
+}
