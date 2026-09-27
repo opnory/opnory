@@ -60,6 +60,20 @@ expect_rc 3 "$PY" "$HERE/scripts/mutation_ledger.py" --ledger "$L" assert-budget
 expect_rc 3 "$PY" "$HERE/scripts/mutation_ledger.py" --ledger "$L" record --cycle 1 --step apply --action create --count 10000
 expect_rc 3 "$PY" "$HERE/scripts/mutation_ledger.py" --ledger "$L" init --cycle 2 --commit def5678
 
+# F-5 (t_84c60ec5): budget enforcement is CUMULATIVE across cycles. The
+# old per-cycle `init --force` truncated the ledger so totals only ever saw
+# the last cycle (max 28 vs the declared 56 <= 60 arithmetic). One ledger,
+# two cycles of create+delete: totals must observe BOTH cycles (5+5+5+5=20).
+L3="$TMP/ledger-cumulative.jsonl"
+expect_rc 0 "$PY" "$HERE/scripts/mutation_ledger.py" --ledger "$L3" init --cycle 1 --commit abc1234
+expect_rc 0 "$PY" "$HERE/scripts/mutation_ledger.py" --ledger "$L3" record --cycle 1 --step apply --action create --count 5
+expect_rc 0 "$PY" "$HERE/scripts/mutation_ledger.py" --ledger "$L3" record --cycle 1 --step destroy --action delete --count 5
+expect_rc 0 "$PY" "$HERE/scripts/mutation_ledger.py" --ledger "$L3" record --cycle 2 --step cycle_start --action noop --count 0
+expect_rc 0 "$PY" "$HERE/scripts/mutation_ledger.py" --ledger "$L3" record --cycle 2 --step apply --action create --count 5
+expect_rc 0 "$PY" "$HERE/scripts/mutation_ledger.py" --ledger "$L3" record --cycle 2 --step destroy --action delete --count 5
+expect_rc 0 "$PY" "$HERE/scripts/mutation_ledger.py" --ledger "$L3" assert-budget --budget 20
+expect_rc 3 "$PY" "$HERE/scripts/mutation_ledger.py" --ledger "$L3" assert-budget --budget 19
+
 # --- AWS escape guards (Phase 1B-COST-SAFETY; static only, zero AWS calls) ---
 # Runs the full 15+guard-16 suite as part of the standard self-test gate.
 if bash "$HERE/tests/aws_escape_guards.sh" >/dev/null 2>&1; then
@@ -96,6 +110,53 @@ sed 's/var.instance_type == "t3a.medium"/var.instance_type == "m5.2xlarge"/' \
   "$HERE/../environments/lab/variables.tf" > "$TMP/vt-tmp" && cp "$TMP/vt-tmp" "$HERE/../environments/lab/variables.tf"
 expect_rc 3 "$PY" "$HERE/scripts/preflight.py" --target "$TMP/lab-aws.json" --mode dry-run
 cp "$TMP/variables.tf.bak" "$HERE/../environments/lab/variables.tf"
+
+# --- F-2/F-3 self-test: stripped-labels provider dir (t_84c60ec5) -----------
+# The label assertion must fail CLOSED (rc=3, never a traceback — the F-2
+# IndexError regression exited rc=1 and lost the offender detail) and must
+# NAME the offending resource. The fixture strips the in-block tags from
+# ONLY aws_subnet in a copy of the real module while the file still
+# references local.labels in other blocks — exactly the violation shape the
+# old file-level `or "local.labels" in text` fallback masked (F-3).
+NEGFIX2="$TMP/labelfix"
+mkdir -p "$NEGFIX2/infra/repro-harness/scripts" \
+         "$NEGFIX2/infra/providers/aws/network" \
+         "$NEGFIX2/infra/environments/lab"
+cp "$HERE/scripts/preflight.py" "$NEGFIX2/infra/repro-harness/scripts/"
+cp "$HERE/../providers/aws/network/main.tf" "$NEGFIX2/infra/providers/aws/network/main.tf"
+sed '/resource "aws_subnet" "lab"/,/^}/ s/^[[:space:]]*tags = local\.labels$//' \
+  "$NEGFIX2/infra/providers/aws/network/main.tf" > "$TMP/stripped.tf"
+mv "$TMP/stripped.tf" "$NEGFIX2/infra/providers/aws/network/main.tf"
+if grep -q 'tags = local.labels' "$NEGFIX2/infra/providers/aws/network/main.tf"; then
+  echo "ok: fixture still references local.labels in sibling blocks (F-3 premise holds)"
+else
+  echo "FAIL: fixture construction stripped every labels reference"; fail=1
+fi
+cat > "$TMP/labelfix-target.json" <<'EOF'
+{"environment": "lab", "provider": "aws", "mutation_budget": 60,
+ "state_identity": "s3:opnory-iac-state/lab.tfstate",
+ "aws_free_plan_attestation": "x",
+ "tofu Working directory": "infra/environments/lab"}
+EOF
+PFOUT="$("$PY" "$NEGFIX2/infra/repro-harness/scripts/preflight.py" \
+  --target "$TMP/labelfix-target.json" --mode dry-run 2>&1)"
+PFRC=$?
+if [ "$PFRC" -eq 3 ]; then
+  if printf '%s' "$PFOUT" | grep -q 'aws_subnet\.lab missing lab labels'; then
+    if printf '%s' "$PFOUT" | grep -q 'Traceback'; then
+      echo "FAIL: label assertion crashed with a traceback (F-2 regression)"
+      fail=1
+    else
+      echo "ok: stripped-labels provider dir -> rc=3, offender aws_subnet.lab named, no traceback (F-2/F-3)"
+    fi
+  else
+    echo "FAIL: offender aws_subnet.lab not named in the FAIL detail"
+    fail=1
+  fi
+else
+  echo "FAIL: expected rc=3 on stripped-labels provider dir, got rc=$PFRC (exit contract is 0|3)"
+  fail=1
+fi
 
 # --- lifecycle (dry-run with example target blocked by preflight) ----------
 # Dry-run against the example target must fail preflight — preflight runs for real.
@@ -145,7 +206,14 @@ EOF
 expect_rc 0 "$PY" "$HERE/scripts/render_evidence.py" "$TMP/ev-dry.json"
 
 # 3b. Evidence leaking a private key must be rejected.
-sed 's/"unresolved"/"-----BEGIN OPENSSH PRIVATE KEY-----"/' "$TMP/ev-dry.json" > "$TMP/ev-bad.json"
+# F-6 (t_84c60ec5): the leaked-key fixture is assembled from two fragments
+# so the REPO never contains the contiguous forbidden pattern — CI's
+# forbidden-pattern grep scans all of infra/ and previously matched this
+# test's own input string. The assembled key exists only in the throwaway
+# /tmp evidence file, where render_evidence.py must reject it.
+LEAK1='-----BEGIN OPENSSH PRIV'
+LEAK2='ATE KEY-----'
+sed "s/\"unresolved\"/\"$LEAK1$LEAK2\"/" "$TMP/ev-dry.json" > "$TMP/ev-bad.json"
 expect_rc 3 "$PY" "$HERE/scripts/render_evidence.py" "$TMP/ev-bad.json"
 
 # 3c. overall_result=PASS with DRY_RUN cycles must be rejected.

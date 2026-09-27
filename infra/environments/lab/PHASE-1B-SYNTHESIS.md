@@ -338,3 +338,82 @@ bucket, or any AWS resource is created by this implementation task.
    `ami_owner` tfvar.
 4. Export the gate env vars and run
    `lifecycle.py --mode live --cycles 2` from the operator shell.
+
+---
+
+## 21. Executor-validation findings F-1..F-7 — dispositions (t_84c60ec5)
+
+The independent executor validation (t_a6f352e1) exercised the landed branch
+in static/dry-run mode and found seven defects (report:
+EXECUTOR-VALIDATION-REPORT.md, blackboard comment #19). All are fixed on this
+branch before PR; none touch the frozen governance-core adapters. Zero AWS
+API calls, zero live mutations.
+
+### F-5 DECISION (recorded here as required before the live proof): ledger
+budget enforcement is CUMULATIVE, option (a). `lifecycle.py` initializes the
+mutation ledger ONCE per run (cycle 1) and never re-initializes: the old
+per-cycle `init --force` truncated the ledger to the last cycle, so
+`assert-budget`/`totals` observed at most 28 mutations while the declared
+arithmetic describes 56 (14 blocks x create+delete x 2 cycles <= 60). With
+the fix, `observed` in the evidence equals the true cumulative total across
+both cycles. A leftover ledger from an earlier run no longer gets silently
+discarded: `init` without `--force` fails closed (rc=3, run FAILs) and the
+operator must remove or archive it first. Cycle >= 2 records a `cycle_start`
+noop audit marker (noops never count toward observed). The harness never
+passes `--force`.
+
+### F-1: checkov skip policy (CI decision — record of which resolution)
+Resolution: **explicit in-tree skip annotations, not a CI policy change.**
+Each of the 7 failing checks carries a `# checkov:skip=CKV_...:<reason>`
+comment on the resource it exempts, so the cost-safety tradeoff is auditable
+in-tree at the exact resource. No resources were added to appease checkov
+(no flow logs, no detailed monitoring, no instance IAM role — each would add
+metered surface or widen blast radius). Local checkov 3.3.20 over `infra/`
+(framework set `terraform ansible`, same as CI): terraform 33 pass /
+0 fail / 7 skipped (the 7 annotated skips consumed); ansible 4 pass /
+0 fail. CI uses
+bridgecrewio/checkov-action@v12; its pinned checkov version may differ —
+the skips are version-independent text annotations that any checkov >= 2.0
+honors (BC_KV2 skip syntax identical).
+
+### F-3: label-exemption decisions (SG rules, routes)
+`aws_vpc_security_group_{ingress,egress}_rule` DO support `tags` (verified
+against the real hashicorp/aws provider schema via `tofu providers schema
+-json`) and now carry `tags = local.labels`. `aws_route` and
+`aws_route_table_association` have NO `tags` attribute in the provider
+schema — structurally unlabelable; they are exempt in preflight.py
+`PROVIDER_UNLABELABLE_RESOURCES` (provider-keyed, hetzner:
+`hcloud_firewall_attachment`), and their parents (`aws_route_table`,
+`aws_subnet`) are labeled, so route plumbing is reachable only via a
+labeled parent. The block-level satisfaction rule (F-3) is: shared
+`local.labels` reference inside the resource block, or the three lab labels
+embedded directly in the block. The file-level `or "local.labels" in text`
+fallback is REMOVED (it masked block-level violations — the stripped-subnet
+tamper proved it).
+
+### F-6: CI private-key grep vs the negative test fixture
+The CI forbidden-pattern grep matched the OPENSSH-key string inside the
+run_tests.sh negative fixture (the evidence-renderer must REJECT a leaked
+key — that string was the test's INPUT, never a secret). Resolution: the
+fixture is now assembled at runtime from two string fragments, so the
+committed repo contains ZERO contiguous forbidden-pattern text and the CI
+grep keeps scanning ALL of infra/ with no exclusions (excluding tests/
+from the scan was rejected — it would weaken defense-in-depth). The
+assembled key exists only inside the throwaway /tmp evidence file during
+the self-test, where render_evidence.py must still reject it.
+
+### F-7: task preflight item 13 (real lab tfvars present)
+Accepted as implicit enforcement — recorded here as the decision. Required
+variables without defaults (`ami_owner` 12-digit validation, `hostname`,
+`ssh_public_key`, `operator_cidr`, `cloudflare_zone_id`, `dns_record_name`)
+fail `tofu plan` closed when the real `lab.tfvars` is absent, and the live
+proof's step_plan runs a real plan before any apply. No preflight change
+made; tofu's own required-variable failure IS the fail-closed check.
+
+### Fixed-but-worth-knowing
+- F-2: `check_lab_label_assertion` regex now wraps the provider prefix in
+  capture groups; offender detail (resource type + name) prints on FAIL with
+  rc=3, never a traceback. Self-test added in run_tests.sh (stripped-labels
+  fixture -> rc=3 + named offender).
+- F-4: trailing blank line at EOF removed from `lab.example.tfvars`;
+  `git diff --check 6fb43c20..HEAD` is clean over the committed range.
