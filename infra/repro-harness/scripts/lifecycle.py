@@ -46,7 +46,11 @@ import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-REPO_ROOT = HERE.parents[3]
+# HERE = <repo>/infra/repro-harness/scripts (a directory). parents[0] =
+# repro-harness, [1] = infra, [2] = repo root. (parents[3] would be one
+# level ABOVE the repo — that mispointing made ctx.tofu_dir unresolvable
+# and silently skipped static-mode tofu validation; fixed here.)
+REPO_ROOT = HERE.parents[2]
 LEDGER = HERE / "mutation_ledger.py"
 PREFLIGHT = HERE / "preflight.py"
 
