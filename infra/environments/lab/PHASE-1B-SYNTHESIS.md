@@ -417,3 +417,96 @@ made; tofu's own required-variable failure IS the fail-closed check.
   fixture -> rc=3 + named offender).
 - F-4: trailing blank line at EOF removed from `lab.example.tfvars`;
   `git diff --check 6fb43c20..HEAD` is clean over the committed range.
+
+---
+
+## 22. Synthesizer finding S-1 — evidence schema never widened for the G3 step (t_66ba41b0)
+
+Found during synthesis-time verification (t_66ba41b0), one layer beyond the
+verifier's matrix: since Phase 1B (6fb43c20, lifecycle gap G3) `lifecycle.py`
+records a `pre_apply_zero_state` step in every cycle, but the Phase 1A-era
+evidence schema (`evidence.schema.json`) was never widened and the
+run_tests.sh accept-fixture was hand-written to the stale 13-step shape. Net
+effect: every REAL lifecycle-generated evidence file failed
+`render_evidence.py` with `FAIL: schema: Additional properties are not
+allowed ('pre_apply_zero_state' was unexpected)` (rc=3) while the synthetic
+fixture passed — the "evidence schema-valid" claims in the builder,
+executor, and verifier handoffs were true only of the hand-made fixture,
+never of real lifecycle output. This would have broken evidence validation
+at the human-gated live proof, exactly as F-5 did for the ledger.
+
+**Fix (this synthesis, commits on the same branch):**
+
+1. `evidence.schema.json` cycle definition now includes
+   `pre_apply_zero_state` (step_result) in both `properties` and `required`,
+   with a description naming its origin (Phase 1B G3). The step contract is
+   unchanged — the schema now describes what the lifecycle actually emits.
+2. run_tests.sh 3a synthetic fixture updated to the real 14-step cycle shape.
+3. NEW regression test 3d (S-1): generates evidence with the REAL lifecycle
+   (static mode, provider=aws scratch target in the same shape the executor
+   used) and requires `render_evidence.py` rc=0 — the fixture/real divergence
+   that masked this can no longer happen silently.
+
+**Verification:** run_tests.sh ALL PASS (now 36 checks incl. 3d);
+`render_evidence.py` rc=0 on fresh real static evidence at HEAD; the three
+negative renderer paths (private-key leak, DRY_RUN->PASS lie, stale-shape
+fixture via 3a round-trip) still fail closed rc=3; escape suite 36/36;
+tofu fmt clean; 5/5 stacks validate with tofu 1.12.6; gitleaks clean over
+the committed range; Hetzner tree byte-identical; live_mutations=0.
+
+**Disposition of prior claims:** the builder/executor/verifier
+"evidence schema-valid" claims are correct only for the synthetic fixture;
+real-lifecycle evidence was invalid until this fix. Prior phase artifacts
+saved in the task workspaces (run2-evidence-static.json, evidence-static.json
+etc.) now validate against the fixed schema, so the recorded evidence chain
+is retroactively consistent.
+
+---
+
+## 23. Verifier notes V-1 / V-2 — dispositions (t_66ba41b0)
+
+- **V-1 (environmental, not a branch defect):** `bun run lint` exits 1 only
+  because oxlint config discovery descends into the PRE-EXISTING untracked
+  `.worktrees/` tree owned by other concurrent workstreams. The committed
+  tree lints 0 errors. Repo-owner follow-up (out of scope for this phase,
+  zero-TS-touched branch): add `.worktrees/` to the oxlint ignore list or
+  gitignore worktrees. Recorded here so the first PR's lint signal isn't
+  misread.
+- **V-2 (documented caveat):** `bridgecrewio/checkov-action@v12` may resolve
+  a different checkov version than the locally verified 3.3.20. The 7 F-1
+  annotated in-tree skips are version-independent text annotations any
+  checkov >= 2.0 honors, but check-ID drift could surface NEW checks on the
+  AWS modules at PR creation. Watch the first CI run; re-annotate or
+  re-evaluate any new finding on its cost-safety merits — never by adding
+  metered resources to appease the scanner.
+
+---
+
+## 24. Final Phase 1B-COST-SAFETY synthesis record (t_66ba41b0)
+
+Verifier gate: PASS (t_89e051ea, independently re-executed at HEAD 2834e0a9;
+all 14 acceptance PASS fields pass; live_mutations=0 proven). Synthesis ran
+after the gate, consumed the four worker handoffs + fix task t_84c60ec5,
+and re-ran the core gates first-hand at HEAD before closing: run_tests.sh
+ALL PASS, escape suite 36/36, tofu 1.12.6 fmt clean + 5/5 stacks validate,
+lifecycle dry-run AND static rc=0 vs provider=aws scratch target with real
+tofu validate, ledger observed=0, gitleaks clean over 6fb43c20..HEAD.
+Synthesis additionally found and fixed S-1 (§22) — a defect the entire
+worker->executor->verifier chain missed because every layer validated the
+hand-made fixture, not real lifecycle output.
+
+**Strongest permitted claim:**
+
+> OPNORY IAC PHASE 1B-COST-SAFETY AWS FREE-PLAN IMPLEMENTATION VERIFIED —
+> LIVE TWO-CYCLE REPRODUCIBILITY PROOF NOT YET EXECUTED
+
+Not claimed: live provisioning, reproducibility-proven, production
+readiness, HA readiness, SOC 2 compliance. Those require the later
+human-authorized two-cycle live proof.
+
+**Remaining human-gated blockers before the live proof** (unchanged in
+kind; see §20 operator prerequisites): create the `opnory-lab-executor`
+IAM user + policy (placeholders filled), create the S3 state bucket per
+STATE-BACKEND.md, verify the Canonical AMI owner id, export the gate env
+vars, and run `lifecycle.py --mode live --cycles 2`. The Free-plan window
+(~6 months / $100 credits) bounds when this proof can run.

@@ -86,10 +86,12 @@
     "cycle": {
       "type": "object",
       "additionalProperties": false,
+      "description": "One complete lifecycle cycle. The pre_apply_zero_state step (added Phase 1B, lifecycle G3) asserts the tofu state is empty before each cycle's apply; it is required in every cycle record.",
       "required": [
         "cycle",
         "preflight",
         "plan",
+        "pre_apply_zero_state",
         "apply",
         "cloud_init",
         "ansible_converge",
@@ -106,6 +108,7 @@
         "cycle": { "type": "integer", "enum": [1, 2] },
         "preflight": { "$ref": "#/definitions/step_result" },
         "plan": { "$ref": "#/definitions/step_result" },
+        "pre_apply_zero_state": { "$ref": "#/definitions/step_result" },
         "apply": { "$ref": "#/definitions/step_result" },
         "cloud_init": { "$ref": "#/definitions/step_result" },
         "ansible_converge": { "$ref": "#/definitions/step_result" },

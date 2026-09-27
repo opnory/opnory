@@ -183,6 +183,7 @@ cat <<EOF
     {"cycle": $1,
      "preflight": {"status": "pass", "detail": "", "duration_seconds": 0, "mutations": 0},
      "plan": {"status": "dry_run_planned", "detail": "", "duration_seconds": 0, "mutations": 0},
+     "pre_apply_zero_state": {"status": "dry_run_planned", "detail": "", "duration_seconds": 0, "mutations": 0},
      "apply": {"status": "dry_run_planned", "detail": "", "duration_seconds": 0, "mutations": 0},
      "cloud_init": {"status": "dry_run_planned", "detail": "", "duration_seconds": 0, "mutations": 0},
      "ansible_converge": {"status": "dry_run_planned", "detail": "", "duration_seconds": 0, "mutations": 0},
@@ -219,6 +220,40 @@ expect_rc 3 "$PY" "$HERE/scripts/render_evidence.py" "$TMP/ev-bad.json"
 # 3c. overall_result=PASS with DRY_RUN cycles must be rejected.
 sed 's/"overall_result": "DRY_RUN"/"overall_result": "PASS"/' "$TMP/ev-dry.json" > "$TMP/ev-lie.json"
 expect_rc 3 "$PY" "$HERE/scripts/render_evidence.py" "$TMP/ev-lie.json"
+
+# 3d. REAL lifecycle-generated evidence must be schema-valid (S-1 regression,
+# t_66ba41b0). Since Phase 1B (6fb43c20, lifecycle G3) lifecycle.py records a
+# pre_apply_zero_state step in every cycle, but the schema was never widened
+# and the 3a fixture was hand-written to the stale shape — so every REAL
+# evidence file failed render_evidence while the synthetic fixture passed.
+# This test generates evidence with the real lifecycle (static mode, scratch
+# aws target in the same shape the executor used) and requires rc=0 from the
+# renderer, closing the fixture/real divergence permanently.
+cat > "$TMP/lab-aws-regress.json" <<'EOF'
+{
+  "environment": "lab",
+  "provider": "aws",
+  "tofu Working directory": "infra/environments/lab",
+  "state_identity": "s3:opnory-iac-state/lab.tfstate",
+  "expected_dns_zone": "opnory.com",
+  "allowed_provider_account_hint": "deadbeefcafe",
+  "aws_free_plan_attestation": "human-confirmed-free-plan-regression",
+  "ssh_user": "opnory",
+  "ansible_playbook": "infra/ansible/site.yml",
+  "compose_project_dir": "/srv/opnory",
+  "mutation_budget": 60,
+  "human_authorization_env": "OPNORY_IAC_LIVE_AUTHORIZED"
+}
+EOF
+if "$PY" "$HERE/scripts/lifecycle.py" --target "$TMP/lab-aws-regress.json" --mode static \
+    --ledger "$TMP/ledger-regress.jsonl" --evidence-out "$TMP/ev-real.json" \
+    >"$TMP/ev-real.log" 2>&1; then
+  expect_rc 0 "$PY" "$HERE/scripts/render_evidence.py" "$TMP/ev-real.json"
+else
+  echo "FAIL: real-lifecycle evidence regression: lifecycle static run failed (see 3d)"
+  cat "$TMP/ev-real.log"
+  fail=1
+fi
 
 echo
 if [ "$fail" -eq 0 ]; then
