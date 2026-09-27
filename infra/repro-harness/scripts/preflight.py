@@ -48,6 +48,22 @@ PROVIDER_RESOURCE_PREFIXES = {
     "aws": re.compile(r"aws_[a-z0-9_]+"),
     "hetzner": re.compile(r"hcloud_[a-z_]+"),
 }
+# Resource types that are structurally UNABLE to carry the lab label/tags
+# attribute (verified against the real provider schemas via
+# `tofu providers schema -json`): associations and routes are child
+# plumbing of an already-labeled parent (aws_route -> aws_route_table,
+# hcloud_firewall_attachment -> hcloud_firewall, ...). They are exempt
+# from the label assertion BY SCHEMA, not by omission — the exemption is
+# provider-keyed and every entry is justified here.
+PROVIDER_UNLABELABLE_RESOURCES = {
+    "aws": frozenset({
+        "aws_route",                    # no `tags` attribute in schema
+        "aws_route_table_association",  # no `tags` attribute in schema
+    }),
+    "hetzner": frozenset({
+        "hcloud_firewall_attachment",  # no `labels` attribute in schema
+    }),
+}
 
 
 class Check:
@@ -156,7 +172,16 @@ def check_lab_label_assertion(config: dict) -> list[Check]:
     carry the lab-only label set. Static source scan (fail-closed).
     Provider-keyed as of Phase 1B-COST-SAFETY: the resource regex comes from
     PROVIDER_RESOURCE_PREFIXES; unknown providers fail closed on the
-    provider-implementation check above."""
+    provider-implementation check above.
+
+    F-2/F-3 (t_84c60ec5): the regex is built with the resource type as group(1)
+    and the resource name as group(2) — the provider prefix pattern itself has
+    no groups. Satisfaction is BLOCK-LEVEL only (a shared local.labels/tags
+    reference inside the block, or the three lab labels embedded directly);
+    the old `or "local.labels" in text` file-level fallback masked
+    block-level violations. Resources whose provider schema has no
+    labels/tags attribute (PROVIDER_UNLABELABLE_RESOURCES) are exempt with
+    the reason recorded there."""
     checks: list[Check] = []
     repo_root = Path(__file__).resolve().parents[3]
     provider = config.get("provider", "")
@@ -172,18 +197,27 @@ def check_lab_label_assertion(config: dict) -> list[Check]:
             f"no resource-prefix mapping for provider {provider!r}; refusing",
         ))
         return checks
+    unlabelable = PROVIDER_UNLABELABLE_RESOURCES.get(provider, frozenset())
     offenders: list[str] = []
+    exempt: list[str] = []
     required_labels = (
         re.compile(r'environment\s*=\s*"lab"'),
         re.compile(r'managed-by\s*=\s*"opnory-iac"'),
         re.compile(r'swarm\s*=\s*"iac-1b"'),
     )
+    # The prefix pattern has NO capture groups of its own: wrap it so the
+    # resource type is group(1) and the resource name is group(2). Calling
+    # match.group(2) on the unwrapped pattern raised IndexError (F-2).
     resource_blocks = re.compile(
-        r'resource\s+"' + prefix_re.pattern + r'"\s+"([^"]+)"'
+        r'resource\s+"(' + prefix_re.pattern + r')"\s+"([^"]+)"'
     )
     for tf_path in sorted(provider_dir.rglob("*.tf")):
         text = tf_path.read_text(encoding="utf-8")
         for match in resource_blocks.finditer(text):
+            rtype = match.group(1)
+            if rtype in unlabelable:
+                exempt.append(f"{rtype}.{match.group(2)}")
+                continue
             # Locate the end of this resource block (best-effort brace match).
             start = match.end()
             depth = 0
@@ -198,20 +232,25 @@ def check_lab_label_assertion(config: dict) -> list[Check]:
                         break
                 idx += 1
             body = text[start:idx]
-            # A resource satisfies the assertion when it references the
-            # shared local.labels (which declares the lab set) OR embeds the
-            # three lab labels directly.
-            uses_shared = "local.labels" in body or "local.labels" in text
+            # A resource satisfies the assertion when its BLOCK references
+            # the shared local.labels (which declares the lab set) OR embeds
+            # the three lab labels directly. Block-level only (F-3): a
+            # local.labels reference elsewhere in the file does NOT satisfy
+            # this block.
+            uses_shared = "local.labels" in body
             direct = all(p.search(body) for p in required_labels)
             if not (uses_shared or direct):
                 offenders.append(
-                    f"{tf_path.relative_to(repo_root)}: resource {match.group(1)}.{match.group(2)} missing lab labels"
+                    f"{tf_path.relative_to(repo_root)}: resource {rtype}.{match.group(2)} missing lab labels"
                 )
+    detail = (f"infra/providers/{provider} resources carry lab-only labels"
+              if not offenders else "; ".join(offenders))
+    if exempt:
+        detail += f" (schema-exempt, no labels/tags attribute: {', '.join(sorted(exempt))})"
     checks.append(Check(
         "target:lab-labels-assertion",
         not offenders,
-        "; ".join(offenders) if offenders else
-        f"infra/providers/{provider} resources carry lab-only labels",
+        detail,
     ))
     return checks
 

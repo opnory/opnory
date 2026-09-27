@@ -67,12 +67,22 @@ resource "aws_instance" "this" {
     cpu_credits = "standard"
   }
 
+  # checkov:skip=CKV_AWS_126:Free-plan cost-safety — detailed monitoring is a
+  # metered per-instance-metric charge; the disposable lab instance needs
+  # only the free basic monitoring.
+  # checkov:skip=CKV2_AWS_41:Free-plan cost-safety / least privilege — an
+  # instance profile widens the blast radius: the lab host runs the compose
+  # stack only and needs NO AWS API access; no IAM role is deliberately
+  # attached (the executor policy contains no iam:* actions at all, so a
+  # role could not be passed even if one were declared — asserted by
+  # aws_escape_guards.sh structural check iam:no-admin-poweruser-purchase-billing).
+  monitoring = false
+
   metadata_options {
     http_tokens   = "required" # IMDSv2 only
     http_endpoint = "enabled"
   }
 
-  monitoring = false
   # ebs_optimized is free on this instance generation
   ebs_optimized = true
 

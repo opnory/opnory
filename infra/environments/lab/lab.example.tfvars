@@ -13,4 +13,3 @@ operator_cidr      = "203.0.113.10/32"
 aws_availability_zone = "us-east-2a"
 instance_type         = "t3a.medium"
 ami_owner             = "<12-digit-canonical-owner-id>"
-

@@ -23,6 +23,14 @@ resource "aws_vpc" "lab" {
   enable_dns_hostnames = true
   enable_dns_support   = true
 
+  # checkov:skip=CKV2_AWS_11:Free-plan cost-safety — flow logging requires a
+  # metered CloudWatch Logs delivery surface plus an IAM role to publish;
+  # the disposable lab VPC carries nothing to audit. See PHASE-1B-SYNTHESIS.md §20.
+  # checkov:skip=CKV2_AWS_12:Free-plan cost-safety — managing the default SG
+  # would add a 15th resource block to the frozen 14-block mutation graph
+  # (preflight aws:resource-graph-count) and widen the least-privilege IAM
+  # surface; nothing attaches the default SG — the lab instance uses only
+  # the explicit lab SG (22/80/443 exactly, per firewall-policy).
   tags = local.labels
 }
 
@@ -32,6 +40,10 @@ resource "aws_subnet" "lab" {
   availability_zone       = var.availability_zone
   map_public_ip_on_launch = true # public IPv4 auto-assign; no aws_eip (guard 8)
 
+  # checkov:skip=CKV_AWS_130:Free-plan cost-safety — the ACME HTTP-01
+  # challenge and the verify_opnory.sh dns_name==host_address assertion
+  # REQUIRE a public IPv4; it is charged only while the instance runs and is
+  # released by destroy (post_destroy_residue). No aws_eip exists (guard 8).
   tags = local.labels
 }
 
@@ -63,6 +75,11 @@ resource "aws_security_group" "lab" {
   description = "opnory lab firewall (firewall-policy policy.json)"
   vpc_id      = aws_vpc.lab.id
 
+  # checkov:skip=CKV2_AWS_5:Graph false positive — the SG IS attached, via
+  # module "network" output security_group_id consumed by
+  # aws_instance.this's vpc_security_group_ids in providers/aws/compute
+  # (see environments/lab/main.tf module wiring); checkov's module graph
+  # does not resolve the cross-module reference.
   tags = local.labels
 }
 
@@ -77,6 +94,8 @@ resource "aws_vpc_security_group_ingress_rule" "ssh_operator" {
   from_port         = 22
   to_port           = 22
   ip_protocol       = "tcp"
+
+  tags = local.labels
 }
 
 resource "aws_vpc_security_group_ingress_rule" "http_acme" {
@@ -86,6 +105,13 @@ resource "aws_vpc_security_group_ingress_rule" "http_acme" {
   from_port         = 80
   to_port           = 80
   ip_protocol       = "tcp"
+
+  # checkov:skip=CKV_AWS_260:Free-plan cost-safety / functional requirement —
+  # port 80 is REQUIRED open to the world for the ACME HTTP-01 challenge and
+  # the https redirect; it implements firewall-policy policy.json exactly
+  # (80/tcp from any). Caddy terminates and redirects; nothing else listens.
+
+  tags = local.labels
 }
 
 resource "aws_vpc_security_group_ingress_rule" "https" {
@@ -95,6 +121,8 @@ resource "aws_vpc_security_group_ingress_rule" "https" {
   from_port         = 443
   to_port           = 443
   ip_protocol       = "tcp"
+
+  tags = local.labels
 }
 
 # policy.json outbound: "allow-all".
@@ -103,4 +131,6 @@ resource "aws_vpc_security_group_egress_rule" "allow_all" {
   description       = "outbound allow-all per firewall-policy"
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "-1"
+
+  tags = local.labels
 }

@@ -101,6 +101,11 @@ class Context:
         self.args = args
         self.config = config
         self.ledger_path = Path(args.ledger)
+        # F-5 (t_84c60ec5): once the ledger init is refused, this run does
+        # NOT own the ledger — later cycles must not append audit markers to
+        # a file whose ownership failed. Gates the cycle>=2 cycle_start
+        # record in run_cycle.
+        self.ledger_owned = False
         self.tofu_dir = REPO_ROOT / (config.get("tofu Working directory")
                                      or config.get("tofu_working_directory", ""))
         # Plan files can contain attribute values; keep them in a private
@@ -377,8 +382,44 @@ def step_post_destroy_residue(ctx: Context) -> StepResult:
 
 def run_cycle(ctx: Context, cycle: int) -> dict:
     results: dict[str, StepResult] = {}
-    ctx.ledger("init", "--cycle", str(cycle), "--commit", ctx.args.commit,
-               "--force")
+
+    # Ledger cumulativity (F-5, t_84c60ec5): the ledger is initialized ONCE
+    # per lifecycle run (cycle 1) and never re-initialized — assert-budget /
+    # totals therefore observe the CUMULATIVE mutations across both cycles
+    # (14 blocks x create+delete x 2 cycles = 56 <= 60), which is what the
+    # declared mutation_budget arithmetic describes. The old per-cycle
+    # `init --force` truncated the ledger to the last cycle (max 28) and
+    # made the budget a per-cycle bound instead of the cumulative contract.
+    # A fresh init on an existing ledger fails closed in mutation_ledger.py
+    # (refuses without --force); the harness never passes --force, so a
+    # leftover ledger from an earlier run BLOCKS the run instead of being
+    # silently discarded.
+    if cycle == 1:
+        init_rc, _ = ctx.ledger("init", "--cycle", "1", "--commit",
+                                ctx.args.commit)
+        if init_rc != 0:
+            results["preflight"] = StepResult(
+                "fail",
+                f"mutation ledger init refused (rc={init_rc}): ledger "
+                f"{ctx.ledger_path} already exists — remove or archive it "
+                "before starting a lifecycle run",
+            )
+            for step in STEPS[1:]:
+                results[step] = StepResult("skipped", "aborted upstream")
+            return {
+                "cycle": cycle,
+                **{k: v.to_dict() for k, v in results.items()},
+                "cycle_result": "FAIL",
+            }
+        ctx.ledger_owned = True
+    elif ctx.ledger_owned:
+        # Cycle >= 2 audit marker: the init entry from cycle 1 anchors the
+        # ledger; record that THIS cycle started before the real preflight
+        # step runs below. A ledger step named "preflight" would misattribute
+        # the marker — preflight reports its result as a lifecycle StepResult,
+        # never as a ledger entry. noop actions never count toward observed.
+        ctx.ledger("record", "--cycle", str(cycle), "--step", "cycle_start",
+                   "--action", "noop", "--count", "0")
 
     # Wall-clock cap anchor (G5). live mode only — dry-run/static cannot
     # leave compute running, so the cap does not apply.
