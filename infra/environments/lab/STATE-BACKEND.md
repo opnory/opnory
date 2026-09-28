@@ -18,11 +18,16 @@ tofu init \
   -backend-config="encrypt=true"
 ```
 
-- `use_lockfile=true` uses **S3-native state locking** (`.tfstate-lock`
-  object). This requires **OpenTofu >= 1.10** (landed in 1.10.0; the repo's
-  CI tofu pin is bumped accordingly). No DynamoDB lock table: DynamoDB is an
-  extra metered service, an extra out-of-band creation step, and extra IAM
-  surface — rejected on Free-plan cost-safety grounds.
+- `use_lockfile=true` uses **S3-native state locking**: OpenTofu writes a
+  lock object at `<key>.tflock` (verified in OpenTofu 1.12.6 source:
+  `lockFileSuffix = ".tflock"`), which lands at `lab.tfstate.tflock` —
+  inside the `lab.tfstate*` prefix the executor IAM policy already
+  allows. (An earlier revision of this file named the suffix
+  `.tfstate-lock`; that was wrong.) This requires **OpenTofu >= 1.10**
+  (landed in 1.10.0; the repo's CI tofu pin is bumped accordingly). No
+  DynamoDB lock table: DynamoDB is an extra metered service, an extra
+  out-of-band creation step, and extra IAM surface — rejected on
+  Free-plan cost-safety grounds.
 - `encrypt=true` applies SSE-S3 default encryption. **No KMS**: a customer
   key is a metered service and unnecessary for lab state.
 

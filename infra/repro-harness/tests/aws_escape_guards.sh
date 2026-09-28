@@ -109,6 +109,17 @@ n_instances=$(grep -rEc 'resource\s+"aws_instance"' $AWS_DIR 2>/dev/null | awk -
 if [ "$n_instances" -eq 1 ]; then ok "g12:exactly-one-aws_instance (count=$n_instances)"; else bad "g12:expected exactly 1 aws_instance, found $n_instances"; fi
 assert_present "g12:credit-standard-pin" 'cpu_credits\s*=\s*"standard"' "$AWS_DIR/compute/main.tf"
 assert_present "g12:imdsv2-required" 'http_tokens\s*=\s*"required"' "$AWS_DIR/compute/main.tf"
+# IAM cannot flip an instance to "unlimited" CPU credits at runtime (the only
+# surplus-billing escape): ModifyInstanceCreditSpecification must be absent
+# (security t_76e3b6d1 — the HCL cpu_credits="standard" pin alone does not
+# stop a principal with modify access from enabling Unlimited mode, where
+# surplus credits bill $0.05/vCPU-hr).
+python3 - "$POLICY" <<'EOF' && ok "g12:iam-no-unlimited-credit-flip" || bad "g12:iam-no-unlimited-credit-flip"
+import json, sys
+pol = json.load(open(sys.argv[1]))
+blob = json.dumps(pol)
+sys.exit(1 if "ModifyInstanceCreditSpecification" in blob else 0)
+EOF
 
 # --- Guard 13: unexpected EBS expansion --------------------------------------
 assert_absent "g13:standalone-ebs-volume" 'resource\s+"aws_ebs_volume"' $TF_FILES
@@ -160,6 +171,39 @@ required = ["DeleteVpc", "DeleteSubnet", "DeleteInternetGateway", "DetachInterne
             "DeleteRouteTable", "DisassociateRouteTable", "DeleteRoute", "DeleteSecurityGroup",
             "DeleteKeyPair", "TerminateInstances"]
 missing = [a for a in required if a not in blob]
+sys.exit(0 if not missing else print(f"missing: {missing}", file=sys.stderr) or 1)
+EOF
+
+# --- Guard 17 (security t_76e3b6d1): provider read-path completeness ---------
+# terraform-provider-aws v6.66.0 read-back chain, verified in provider source:
+#   aws_key_pair create -> resourceKeyPairRead -> DescribeKeyPairs
+#   aws_instance create -> Update -> Read -> Flatten ->
+#       DescribeInstanceTypes (instance-type resolution, unconditional)
+#       DescribeInstanceAttribute (DisableApiStop/DisableApiTermination)
+#       DescribeInstanceCreditSpecifications (burstable types; already in list)
+# A policy missing these fails the FIRST live apply at create read-back and
+# every later refresh — fail-closed but unpassable. Pin them structurally so
+# a future "unused action" trim cannot silently reintroduce the gap.
+python3 - "$POLICY" <<'EOF' && ok "g17:provider-read-path-covered" || bad "g17:provider-read-path-covered"
+import json, sys
+pol = json.load(open(sys.argv[1]))
+allows = []
+for s in pol["Statement"]:
+    if s.get("Effect") != "Allow":
+        continue
+    acts = s["Action"] if isinstance(s["Action"], list) else [s["Action"]]
+    allows.extend(acts)
+    if "ec2:CreateTags" in acts:
+        res = s["Resource"] if isinstance(s["Resource"], list) else [s["Resource"]]
+        if not any("security-group-rule/*" in r for r in res):
+            # SG rule resources carry tags; tag-on-create is evaluated against
+            # the security-group-rule resource-level CreateTags (AWS SAR).
+            print("missing: security-group-rule/* in CreateTags resource set",
+                  file=sys.stderr)
+            sys.exit(1)
+required_reads = ["ec2:DescribeKeyPairs", "ec2:DescribeInstanceTypes",
+                 "ec2:DescribeInstanceAttribute", "ec2:DescribeInstanceCreditSpecifications"]
+missing = [a for a in required_reads if a not in allows]
 sys.exit(0 if not missing else print(f"missing: {missing}", file=sys.stderr) or 1)
 EOF
 
