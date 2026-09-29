@@ -2,7 +2,7 @@
 
 **Verifier gate:** PASS (t_52a43bce, main@cfaabdf8).
 **Selected provider:** Hetzner Cloud (`hetznercloud/hcloud` ~> 1.69.0) —
-*superseded for the live proof target by Phase 1B-COST-SAFETY; see §20.*
+_superseded for the live proof target by Phase 1B-COST-SAFETY; see §20._
 **Strongest claim produced by this synthesis:**
 
 > OPNORY IAC PHASE 1B PROVIDER IMPLEMENTATION VERIFIED —
@@ -510,3 +510,104 @@ IAM user + policy (placeholders filled), create the S3 state bucket per
 STATE-BACKEND.md, verify the Canonical AMI owner id, export the gate env
 vars, and run `lifecycle.py --mode live --cycles 2`. The Free-plan window
 (~6 months / $100 credits) bounds when this proof can run.
+
+---
+
+## 25. Final Phase 1B-AWS-FREE-PLAN swarm synthesis record (t_feddb97f)
+
+Swarm t_b6c59987 (workers t_fd0d26f7 architect, t_76e3b6d1 security,
+t_3aaa951a builder, t_d3575a3d executor; verifier t_14a8c719). The
+verifier gate passed at HEAD c11586a8: every worker claim was re-executed
+first-hand with the real toolchain plus independent adversarial negatives,
+and all 14 swarm acceptance criteria hold. Synthesis ran after the gate,
+consumed all five handoffs, and re-ran the core gates first-hand at HEAD
+before closing:
+
+- escape suite 38/38 (g1-g17 + IAM structural + NAT-gateway negative
+  fixture), run_tests.sh ALL PASS (incl. S-1 real-lifecycle regression);
+- real OpenTofu 1.12.6: fmt clean and init -backend=false + validate OK
+  on all 5 stacks (lab env, aws compute, aws network, hetzner compute,
+  hetzner network);
+- two-cycle lifecycle vs a provider=aws scratch target: dry-run rc=0 AND
+  static rc=0, evidence schema-VALID in both modes, ledger observed=0;
+  step-by-step statuses identical to the verifier's attached evidence;
+- preflight 22/22 in both static and dry-run modes; live-mode attempt
+  aborts at preflight rc=1 with observed=0 (fail-closed, first-hand);
+- IAM policy census: 15 statements / 59 distinct Allow actions,
+  ModifyInstanceCreditSpecification absent, zero forbidden namespaces,
+  1 explicit marketplace Deny — matches the security handoff and the
+  verifier's independent census;
+- resource census: 14 billable-graph blocks per cycle (13 AWS + 1
+  Cloudflare; the terraform_data environment guard is excluded by the
+  preflight regex), ledger expectation 14x2x2=56<=60, headroom 4;
+- Hetzner tree byte-identical vs 6fb43c20 over the full 12-commit range;
+  git diff --check clean; gitleaks clean over 6fb43c20..HEAD and over
+  infra/ (the 12 repo-wide no-git findings are all in untracked files
+  outside infra — .env.entra.local, ops/self-hosted* env files, and
+  .worktrees/ copies — untouched by this branch).
+
+Broader repo gate (this branch touches no TS, so results are cached where
+applicable): turbo typecheck 32/32 OK, turbo build 20/20 OK. `bun test`:
+361 pass / 56 skip / 5 fail — the 5 failures are Entra conformance tests
+in packages/integration-runtime that require live OPNORY_ENTRA_* env
+credentials and run-to-fail without them; reproduced identically at the
+pre-branch base 6fb43c20 and at origin/main in a disposable worktree, so
+they are pre-existing and unrelated to this infra-only branch (the
+parallel Okta tests correctly skip; the Entra ones lack the skip guard).
+`bun run lint` fails only on the pre-existing V-1 issue (an
+oxlint.config.ts inside another workstream's untracked .worktrees/ uses
+an unsupported root-only option); the committed tree lints with 0 errors
+(packages/apps/infra: 687 pre-existing warnings, none added by this
+branch).
+
+**What the swarm actually changed** relative to the pre-gate state: the
+architecture was already landed (as-built record t_fd0d26f7 at 3187388e,
+including the prior swarm's F-1..F-7 and S-1 fixes), so no worker
+re-implemented anything. Security hardening S-2..S-6 (commit 16150c75):
+three missing read-path IAM actions, security-group-rule CreateTags ARN
+coverage, removal of the only unlimited-surplus-billing IAM escape, the
+.tflock lock-suffix doc correction, plus regression guards g12/g17.
+Builder doc migration (commit c11586a8): PROVIDER-UNRESOLVED.md moved off
+the stale Hetzner-as-selected content to the AWS selection with the
+double-supersession record.
+
+**Synthesizer finding S-7 (fixed here):** prettier formatting. The
+security lane's new iam/README.md (branch-introduced file) failed
+`prettier --check` on table-cell padding; fixed with prettier --write. One
+branch-added line in this document (§ header line 5, `*...*` should be
+`_..._`) also failed; fixed. The remaining prettier warnings in
+infra/README.md, infra/repro-harness/README.md,
+infra/modules/{firewall-policy,host-contract}/README.md and older
+sections of this document are pre-branch debt (verified failing at
+6fb43c20), left untouched per mutation discipline. CI does not gate on
+prettier.
+
+**Handoff citation errors, resolved for the record:** the executor
+handoff cited "75 unique IAM actions" — the correct census at HEAD is 59
+distinct Allow actions (61 raw occurrences across statements; security
+handoff and IAM README agree on 59). The executor handoff also said the
+aws CLI is absent — the CLI exists at ~/.local/bin/aws but
+~/.aws/credentials does not exist and the live preflight proves
+credentials do not resolve, so the substantive zero-live-mutation claim
+holds.
+
+**Strongest permitted claim:**
+
+> OPNORY IAC PHASE 1B AWS FREE-PLAN IMPLEMENTATION VERIFIED —
+> LIVE TWO-CYCLE REPRODUCIBILITY PROOF NOT YET EXECUTED
+
+Not claimed: live provisioning, reproducibility-proven, production
+readiness, HA readiness, SOC 2 compliance, or that the account is
+actually on the Free plan (that is human evidence by design, witnessed
+at the G2 gate). Proof level is 3-4 static: real toolchain re-execution
+plus adversarial negatives; live provider behavior is not claimed.
+
+**Remaining human-gated blockers before the live proof** (unchanged):
+the OPNORY_AWS_FREE_PLAN_CONFIRMED attestation, the opnory-lab-executor
+IAM user + policy with <ACCOUNT_ID>, <CANONICAL_OWNER_ID> and
+<STATE_BUCKET> placeholders filled, the console-verified Canonical AMI
+owner id, the S3 state bucket per STATE-BACKEND.md, then the gate env
+vars and `lifecycle.py --mode live --cycles 2`. Zero AWS, Cloudflare,
+and Hetzner live mutations occurred across the entire swarm; $0
+out-of-pocket cost was verified at the static/dry-run level only, and
+the live proof remains human-gated.
